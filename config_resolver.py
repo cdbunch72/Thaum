@@ -1,4 +1,5 @@
 # Thaum Engine v1.0.0
+# Copyright 2026 Clinton Bunch. All rights reserved.
 # This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
 
 import os
@@ -14,7 +15,7 @@ def resolve_config_key(config_block, key_name, logger, required=True, default=No
     # 1. Handle Missing Key
     if val is None:
         if required:
-            raise ValueError(f"CRITICAL: '{key_name}' is required. See Thaum Wiki.")
+            raise ValueError(f"CRITICAL: '{key_name}' is required. See Thaum Documentation.")
         return default
 
     # 2. Handle Explicit "I want to disable this" (Empty String)
@@ -40,7 +41,7 @@ def _resolve_source(value, field_name, logger):
     # Env Variable Source
     if value.startswith("env:"):
         env_var = value[4:]
-        logger.debug(f"[{field_name}] resolving from env: {env_var}")
+        logger.verbose(f"[{field_name}] resolving from env: {env_var}")
         resolved = os.environ.get(env_var)
         if resolved is None:
             raise ValueError(f"Environment variable '{env_var}' not set.")
@@ -57,7 +58,7 @@ def _resolve_source(value, field_name, logger):
         
         for path in paths:
             if os.path.isfile(path):
-                logger.debug(f"[{field_name}] resolving from secret: {path}")
+                logger.verbose(f"[{field_name}] resolving from secret: {path}")
                 with open(path, "r") as f:
                     return f.read().strip()
         
@@ -66,7 +67,7 @@ def _resolve_source(value, field_name, logger):
     # Explicit File Source
     elif value.startswith("file:"):
         file_path = value[5:]
-        logger.debug(f"[{field_name}] resolving from file: {file_path}")
+        logger.verbose(f"[{field_name}] resolving from file: {file_path}")
         if not os.path.isfile(file_path):
             raise ValueError(f"File not found at '{file_path}'.")
         with open(file_path, "r") as f:
@@ -74,7 +75,7 @@ def _resolve_source(value, field_name, logger):
 
     # Literal Value
     else:
-        logger.debug(f"[{field_name}] resolving from literal.")
+        logger.verbose(f"[{field_name}] resolving from literal.")
         return value
 
 # -- End Function _resolve_source
