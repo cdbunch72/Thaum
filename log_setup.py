@@ -6,6 +6,7 @@ import verboselogs
 import json
 import sys
 from datetime import datetime
+from typing import Any
 
 # Python 3.9+ standard
 try:
@@ -14,26 +15,8 @@ except ImportError:
     # Fallback for older environments
     from backports.zoneinfo import ZoneInfo 
 
-# Global toggle: True will print the full stack trace on errors
-SHOW_STACKTRACE = False
+NO_TIMESTAMP = False
 
-class ComponentFilter(logging.Filter):
-    def __init__(self, noisy_components, root_level):
-        super().__init__()
-        self.noisy_components = noisy_components
-        self.root_level = root_level
-
-    def filter(self, record):
-        # If the root level is DEBUG, let everything through
-        if self.root_level <= logging.DEBUG:
-            return True
-        
-        # If the log is tagged as noisy, suppress it
-        if record.name in self.noisy_components:
-            return False
-            
-        return True
-# -- End ComponentFilter
 
 class ISO8601TimezoneFormatter(logging.Formatter):
     def __init__(self, fmt, tz_string="UTC", fractional_seconds=False):
@@ -55,6 +38,9 @@ class ISO8601TimezoneFormatter(logging.Formatter):
 
     def formatTime(self, record, datefmt=None):
         """Forces ISO 8601 output (e.g., 2023-10-25T14:30:15-05:00)."""
+        global NO_TIMESTAMP
+        if NO_TIMESTAMP:
+            return ''
         dt = datetime.fromtimestamp(record.created, tz=self.tz)
         
         # 'seconds' truncates microseconds; 'auto' includes them
@@ -62,33 +48,38 @@ class ISO8601TimezoneFormatter(logging.Formatter):
         return dt.isoformat(timespec=spec)
 # -- End ISO8601TimezoneFormatter
 
-
-def log_debug_blob(logger, blob_title, data):
+def log_debug_blob(logger: logging.Logger, blob_title: str, data: Any, level: int = logging.DEBUG):
     """
-    Logs a multi-line blob wrapped in delimiters for easy visual scanning.
+    Logs a multi-line blob wrapped in terminal-friendly delimiters (20 chars).
+    Supports dynamic logging levels (DEBUG, SPAM, etc.).
     """
-    # Only log this if the logger's level is DEBUG
-    if logger.isEnabledFor(logging.DEBUG):
-        delimiter = "-" * 50
-        # Pretty print the JSON
-        formatted_json = json.dumps(data, indent=2)
+    if logger.isEnabledFor(level):
+        delimiter = "-" * 20
         
-        # We manually build the lines so we can ensure the timestamp 
-        # is prepended to EVERY line in the block (Grep-friendly)
-        logger.debug(f"BEGIN {blob_title} {delimiter}")
+        # Pretty print the JSON
+        # If it's a dict, dump it, otherwise assume it's already a string
+        formatted_json = json.dumps(data, indent=2) if isinstance(data, dict) else str(data)
+        
+        # Log using the requested level
+        # We use .log() because it accepts the level integer as an argument
+        logger.log(level, f"BEGIN {blob_title} {delimiter}")
         for line in formatted_json.splitlines():
-            logger.debug(line)
-        logger.debug(f"END {blob_title} {delimiter}")
+            logger.log(level, line)
+        logger.log(level, f"END {blob_title} {delimiter}")
+# -- End Function log_debug_blob
 
 def configure_logging(logging_config):
     """
     Sets up a global, single-line, timezone-aware logging system.
     This replaces existing handlers (like Flask's default noise).
     """
+    import logging
     verboselogs.install()
     level_str = logging_config.get("level", "INFO").upper()
     tz_str = logging_config.get("timezone", "UTC")
     use_fractions = logging_config.get("fractional_seconds", False)
+    global NO_TIMESTAMP
+    NO_TIMESTAMP = logging_config.get('no_timestamp',False)
 
     # Configure the formatter
     log_format = "%(asctime)s [%(levelname)s] %(name)s: %(message)s"
