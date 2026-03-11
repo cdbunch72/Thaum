@@ -4,9 +4,24 @@
 # This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
 
 from abc import ABC, abstractmethod
-from typing import List, Optional, Tuple, Callable
+from __future__ import annotations
+from typing import List, Optional, Tuple, Callable, Dict, Any, Protocol
 from thaum.identity import ThaumPerson
+from dataclasses import dataclass, field
 import re
+
+@dataclass
+class MessageContext:
+    """The canonical object passed to every hears() handler."""
+    room_id: str
+    person: ThaumPerson
+    message: str
+    message_id: str
+    raw_event: Dict[str,Any] = field(default_factory=dict)
+
+class BotHearsHandler(Protocol):
+    """ Signature for handlers for the hears decorator"""
+    def __call__(self, bot: 'BaseBot', ctx: MessageContext, match: re.Match) -> None: ...
 
 class BaseBot(ABC):
     """
@@ -14,7 +29,9 @@ class BaseBot(ABC):
     Any platform-specific driver (Webex, Teams, Slack) must implement these methods.
     """
     
-    def __init__(self, name: str, endpoint: str):
+    plugin_name: str = 'base'
+
+    def __init__(self, name: str, endpoint: str, alert_plugin: 'BaseAlertPlugin'):
         self.name = name
         self.endpoint = endpoint
         # Initialize state here
@@ -53,14 +70,18 @@ class BaseBot(ABC):
     # -- End Method delete_room
     
     @abstractmethod
-    def get_person(person_id: str) -> ThaumPerson:
+    def get_person(self, person_id: str) -> ThaumPerson:
         """Takes a bot_type-specific person_id and returns a ThaumPerson"""
         pass
     # -- End Method get_person
 
+    def handle_event(self, event: Dict[str, Any]) -> None:
+        """Called by the bot's webhook route"""
+        pass
+
     def hears(self, pattern: str):
         """Decorator to register a regex pattern to a handler."""
-        def decorator(handler):
+        def decorator(handler: BotHearsHandler):
             self._hears_routes.append((re.compile(pattern, re.IGNORECASE), handler))
             return handler
         return decorator
