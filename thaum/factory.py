@@ -11,7 +11,7 @@ from config_resolver import resolve_config_key
 
 BOTS: Dict[str, BaseBot] = {}
 
-def initialize_bots(config: Dict[str, Any]) -> None:
+def initialize_bots(bot_type: str, config: Dict[str, Any]) -> None:
     for bot_key, bot_config in config.get("bots", {}).items():
         bot_name = bot_config.get("name", bot_key)
         boot_logger = logging.getLogger(f"bootstrap.{bot_name}")
@@ -21,7 +21,7 @@ def initialize_bots(config: Dict[str, Any]) -> None:
             secret = resolve_config_key(bot_config, "secret", boot_logger, required=False, default="RANDOM", allow_empty=True)
             endpoint = bot_config.get("endpoint") or f"{config['server']['base_url']}/webhooks/{bot_key}"
             
-            bot = create_bot("webex", bot_name, endpoint, token=token, secret=secret)
+            bot = create_bot(bot_type, bot_name, endpoint, token=token, secret=secret)
             
             # Feature Flags
             bot.emergency_enabled = bot_config.get("emergency_enabled", True)
