@@ -3,13 +3,18 @@
 # This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
 
 import logging
-from typing import Dict, Any, Optional, List
-from thaum.identity import ThaumPerson
+from __future__ import annotations
+from typing import Dict, Any, Optional, List, TYPE_CHECKING
+from thaum.identity import ThaumPerson,get_person_by_id,cache_person
 from webexpythonsdk import WebexAPI
-from bots.base import BaseBot
+from bots.base import BaseBot,MessageContext
+from log_setup import log_debug_blob
+
 
 class WebexBot(BaseBot):
     """Concrete driver for Webex."""
+
+    plugin_name: str = 'webex'
 
     def __init__(self, name: str, endpoint: str, token: str, secret: Optional[str]):
         super().__init__(name, endpoint)
@@ -43,9 +48,15 @@ class WebexBot(BaseBot):
     def add_members(self, room_id: str, members: List[ThaumPerson]) -> None:
         for m in members:
             # Logic: '@' in string indicates email, else assume personId
-            key = "personEmail" if "@" in m else "personId"
+            if m.platform_ids[self.plugin_name]:
+                key="personId"
+                v=m.platform_ids[self.plugin_name]
+            else:
+                key="personEmail"
+                v=m.email
+            
             try:
-                self.api.memberships.create(roomId=room_id, **{key: m})
+                self.api.memberships.create(roomId=room_id, **{key: v})
             except Exception as e:
                 self.logger.error(f"Failed to add {m} to {room_id}: {e}")
     # -- End Method add_members
@@ -55,6 +66,46 @@ class WebexBot(BaseBot):
         self.logger.info(f"Room {room_id} imploded.")
     # -- End Method delete_room
 
+
+    def _get_person_from_api(self, person_id: str) -> ThaumPerson:
+        """
+        Fetches a person from the Webex API and returns a ThaumPerson.
+        """
+        try:
+            # 1. Fetch the person object
+            person = self.api.people.get(person_id)
+            
+            # 2. Extract the canonical email (take the first one if multiple exist)
+            email = person.emails[0] if person.emails else None
+            
+            # 3. Handle cases where API might not return an email (rare but possible)
+            if not email:
+                self.logger.warning(f"Webex person {person_id} has no email. Using ID as fallback.")
+                email = f"{person_id}@{self.plugin_name}"
+                
+            # 4. Map to ThaumPerson
+            return ThaumPerson(
+                email=email,
+                display_name=person.displayName,
+                platform_ids={self.plugin_name: person_id},
+                source_plugin=self.plugin_name # e.g., 'webex_bot'
+            )
+        except Exception as e:
+            self.logger.error(f"Failed to fetch person {person_id} from Webex: {e}")
+            # Return a 'placeholder' person so the system doesn't crash
+            return None
+    # -- End Method get_person_from_api
+
+    def get_person(self,person_id) -> ThaumPerson:
+        p=get_person_by_id(self.plugin_name,person_id)
+        if not p:
+            p=self._get_person_from_api(person_id)
+            if p:
+                p=cache_person(p)
+            else:
+                p=ThaumPerson(email=f"{person_id}@{self.plugin_name}",platform_ids={self.plugin_name: person_id})
+        return p
+    
     def validate_signature(self, payload_body: bytes, signature: Optional[str]) -> bool:
         if self.secret is None: return True
         if not signature: return False
@@ -64,7 +115,7 @@ class WebexBot(BaseBot):
         return hmac.compare_digest(hashed.hexdigest(), signature)
     # -- End Method validate_signature
 
-    def process_message(self, message_id: str) -> Optional[str]:
+    def _process_message(self, message_id: str) -> Optional[str]:
         """
         Fetches the message and returns the clean text ONLY if 
         it's a DM or a mention. Otherwise returns None.
@@ -90,11 +141,13 @@ class WebexBot(BaseBot):
         return None
 # -- End Method process_message
 
-    def _handle_event(self, event: Dict[str, Any]) -> None:
+    def handle_event(self, event: Dict[str, Any]) -> None:
         """
         Dispatches incoming webhook events.
         'event' is the raw JSON dictionary from the Webex API.
         """
+        self.logger.spam("handle_event:")
+        log_debug_blob(self.logger,data,logging.SPAM)
         resource: Optional[str] = event.get('resource')
         data: Dict[str, Any] = event.get('data', {})
 
@@ -104,20 +157,19 @@ class WebexBot(BaseBot):
                 return
 
             # Fetch the clean text
-            clean_text = self.process_message(data['id'])
+            clean_text = self._process_message(data['id'])
             if clean_text is None:
                 self.logger.debug("Message ignored: Not a DM or Mention.")
                 return
 
-            # Create a simple message object for our handlers
-            # Using a class or SimpleNamespace here makes the handlers type-safe
-            from types import SimpleNamespace
-            message = SimpleNamespace(
-                roomId=data['roomId'], 
-                personId=data['personId'], 
-                text=clean_text
+            person=self.get_person(data['personId'])
+            message=MessageContext(
+                room_id=data['roomId'],
+                person=person,
+                message=clean_text,
+                message_id=data['id'],
+                raw_event=event
             )
-
             # Match routes
             for regex, handler in self._hears_routes:
                 match = regex.search(clean_text)
