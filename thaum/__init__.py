@@ -2,11 +2,6 @@
 # Copyright 2026 <<Name>>. All rights reserved.
 # This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
 
-from typing import Dict
-from bots.base import BaseBot
-
-# Global registry for bot appliances
-BOTS: Dict[str, BaseBot] = {}
-
 from thaum.engine import create_incident_room, acknowledge_incident
-from thaum.handlers import bind_thaum_handlers
+from thaum.handlers import bind_thaum_handlers, BOTS
+from thaum.identity import ThaumPerson,ThaumTeam,register_person,register_team,get_person_by_id,get_team
