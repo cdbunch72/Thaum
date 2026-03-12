@@ -4,6 +4,37 @@
 
 import os
 import logging
+import tomllib
+from typing import Dict, Any
+
+logger = logging.getLogger("thaum.config")
+
+def load_and_validate(path: str) -> Dict[str, Any]:
+    """Loads the file format-agnostically."""
+    try:
+        with open(path, "rb") as f:
+            config = tomllib.load(f)
+    except tomllib.TOMLDecodeError as e:
+        logger.critical(f"Config file contains invalid TOML: {e}")
+        raise
+    except Exception as e:
+        logger.critical(f"Unknown error reading config: {e}")
+        raise
+
+    # Validate mandatory [server] section
+    server = config.get("server")
+    if not server:
+        raise ValueError("config.toml is missing mandatory [server] section.")
+
+    # Validate specific keys
+    required = ["bot_type", "base_url", "webhook_prefix"]
+    for key in required:
+        if key not in server:
+            raise ValueError(f"[server] section missing mandatory key: {key}")
+
+       
+    return config
+
 
 def resolve_config_key(config_block, key_name, logger, required=True, default=None, allow_empty=False):
     """
