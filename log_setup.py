@@ -2,18 +2,11 @@
 # This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
 
 import logging
-import verboselogs
 import json
 import sys
 from datetime import datetime
 from typing import Any
-
-# Python 3.9+ standard
-try:
-    from zoneinfo import ZoneInfo
-except ImportError:
-    # Fallback for older environments
-    from backports.zoneinfo import ZoneInfo 
+from zoneinfo import ZoneInfo
 
 NO_TIMESTAMP = False
 
@@ -73,8 +66,7 @@ def configure_logging(logging_config):
     Sets up a global, single-line, timezone-aware logging system.
     This replaces existing handlers (like Flask's default noise).
     """
-    import logging
-    verboselogs.install()
+
     level_str = logging_config.get("level", "INFO").upper()
     tz_str = logging_config.get("timezone", "UTC")
     use_fractions = logging_config.get("fractional_seconds", False)
