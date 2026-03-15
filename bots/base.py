@@ -5,10 +5,14 @@
 
 from abc import ABC, abstractmethod
 from __future__ import annotations
-from typing import List, Optional, Tuple, Callable, Dict, Any, Protocol
-from thaum.identity import ThaumPerson
+from typing import List, Optional, Tuple, Callable, Dict, Any, Protocol, TYPE_CHECKING
+from thaum.types import ThaumPerson
 from dataclasses import dataclass, field
+from pydantic import BaseModel, model_validator
 import re
+
+if TYPE_CHECKING:
+    from alerts.base import BaseAlertPlugin
 
 @dataclass
 class MessageContext:
@@ -64,7 +68,7 @@ class BaseBot(ABC):
     # -- End Method add_members
 
     @abstractmethod
-    def delete_room(self, room_id: str) -> None:
+    def delete_room(self, room_id: str, person: ThaumPerson) -> None:
         """Permanently removes/implodes the room."""
         pass
     # -- End Method delete_room
@@ -74,7 +78,8 @@ class BaseBot(ABC):
         """Takes a bot_type-specific person_id and returns a ThaumPerson"""
         pass
     # -- End Method get_person
-
+    
+    @abstractmethod
     def handle_event(self, event: Dict[str, Any]) -> None:
         """Called by the bot's webhook route"""
         pass
@@ -91,3 +96,34 @@ class BaseBot(ABC):
         self._action_callbacks.append(handler)
         return handler
 # -- End Class BaseBot
+
+class BaseBotConfig(BaseModel):
+    name: str
+    high_pri_on: Optional[bool] = True
+    send_alerts: Optional[bool] = True
+    responders: List[str]
+    room_title_template: str
+    alert_plugin_type: Optional[str] = 'NullPlugin'
+    @model_validator(mode='after')
+    def consistent_alert_settings(self) -> 'BaseBotConfig':
+        # --- Rule 1: send_alerts requires a real plugin ---
+        if self.send_alerts and self.alert_plugin_type == "NullPlugin":
+            raise ValueError(
+                f"{self.name}: send_alerts=True requires alert_plugin_type != 'NullPlugin'."
+            )
+
+        # --- Rule 2: no alerts means NullPlugin must be selected ---
+        if not self.send_alerts and self.alert_plugin_type != "NullPlugin":
+            raise ValueError(
+                f"{self.name}: send_alerts=False requires alert_plugin_type='NullPlugin'."
+            )
+
+        # --- Rule 3: high priority requires the other toggles ---
+        if self.high_pri_on:
+            if not self.send_alerts:
+                raise ValueError(
+                    f" {self.name}: high_pri_on=True requires send_alerts to also be True."
+                )
+
+        return self
+    # -- End consistent_alert_settings
