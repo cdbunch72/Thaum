@@ -5,9 +5,10 @@
 import logging
 from __future__ import annotations
 from typing import Dict, Any, Optional, List, TYPE_CHECKING
-from thaum.identity import ThaumPerson,get_person_by_id,cache_person
+from thaum.identity import get_person_by_id,cache_person
+from thaum.types import ThaumPerson, ResolvedSecret
 from webexpythonsdk import WebexAPI
-from bots.base import BaseBot,MessageContext
+from bots.base import BaseBot, MessageContext, BaseBotConfig
 from log_setup import log_debug_blob
 
 
@@ -16,13 +17,15 @@ class WebexBot(BaseBot):
 
     plugin_name: str = 'webex'
 
-    def __init__(self, name: str, endpoint: str, token: str, secret: Optional[str]):
-        super().__init__(name, endpoint)
-        self.logger = logging.getLogger(f"bot.{name}")
-        self.api = WebexAPI(access_token=token)
+    def __init__(self, config: 'WebexBotConfig'):
+        super().__init__(config)
+        self.logger = logging.getLogger(f"bot.{config.name}")
+        self.api = WebexAPI(access_token=config.token.get_secret_value())
         self.me = self.api.people.me()
-        self.secret = secret
-        self.responders: List[str] = []
+        self.hmac_secret = (
+            None if config.hmac_secret is None
+            else config.hmac_secret.get_secret_value()
+        )
         
         # Internal state for bot behavior
         self._hears_routes = []
@@ -61,9 +64,26 @@ class WebexBot(BaseBot):
                 self.logger.error(f"Failed to add {m} to {room_id}: {e}")
     # -- End Method add_members
 
-    def delete_room(self, room_id: str) -> None:
-        self.api.rooms.delete(room_id)
-        self.logger.info(f"Room {room_id} imploded.")
+    def delete_room(self, room_id: str, person: Optional[ThaumPerson] = None) -> None:
+        """Implodes the room ONLY if bot is the creator."""
+        display_name = person.for_display() if person else "An unknown user"
+        
+        try:
+            room = self.api.rooms.get(room_id)
+            
+            if room.creatorId != self.me.id:
+                self.logger.warning(f"Unauthorized attempt to delete room '{room.title}' by {display_name}")
+                self.say(room_id, f"Access Denied: {self.name} did not create room '{room.title}'")
+                return # Stop here, don't crash the server
+                
+            self.api.rooms.delete(room_id)
+            self.logger.verbose(f"Room {room_id} deleted by {display_name}.")
+            
+        except Exception as e:
+            # Here is the only place you actually need an exception handler
+            self.logger.error(f"Catastrophic failure deleting {room_id}: {e}")
+            self.say(room_id, "Critical failure during room deletion.")
+
     # -- End Method delete_room
 
 
@@ -185,6 +205,10 @@ class WebexBot(BaseBot):
         # -- End Resource 'attachmentActions'
 # -- End Method _handle_event
 # -- End Class WebexBot
+
+class WebexBotConfig(BaseBotConfig):
+    token: ResolvedSecret
+    hmac_secret: ResolvedSecret
 
 def create_instance_bot(name: str, endpoint: str, **kwargs) -> WebexBot:
     """Factory interface for the Webex driver."""
