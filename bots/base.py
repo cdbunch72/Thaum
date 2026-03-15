@@ -42,7 +42,7 @@ class BaseBot(ABC):
         self.room_title_template = config.room_title_template
         self.emergency_warning_message = config.emergency_warning_message
         # Initialize state here
-        self._hears_routes: List[Tuple[re.Pattern, Callable]] = []
+        self._hears_routes: List[Tuple[int, re.Pattern, Callable]] = []
         self._action_callbacks: List[Callable] = []
     # -- End Method __init__
 
@@ -87,10 +87,11 @@ class BaseBot(ABC):
         """Called by the bot's webhook route"""
         pass
 
-    def hears(self, pattern: str):
+    def hears(self, pattern: str, priority: int=50):
         """Decorator to register a regex pattern to a handler."""
         def decorator(handler: BotHearsHandler):
-            self._hears_routes.append((re.compile(pattern, re.IGNORECASE), handler))
+            self._hears_routes.append((priority,re.compile(pattern, re.IGNORECASE), handler))
+            self._hears_routes.sort(key=lambda x: x[0])
             return handler
         return decorator
 
