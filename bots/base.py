@@ -5,14 +5,11 @@
 
 from abc import ABC, abstractmethod
 from __future__ import annotations
-from typing import List, Optional, Tuple, Callable, Dict, Any, Protocol, TYPE_CHECKING
+from typing import List, Optional, Tuple, Callable, Dict, Any, Protocol
 from thaum.types import ThaumPerson
 from dataclasses import dataclass, field
 from pydantic import BaseModel, model_validator
 import re
-
-if TYPE_CHECKING:
-    from alerts.base import BaseAlertPlugin
 
 @dataclass
 class MessageContext:
@@ -35,9 +32,12 @@ class BaseBot(ABC):
     
     plugin_name: str = 'base'
 
-    def __init__(self, name: str, endpoint: str, alert_plugin: 'BaseAlertPlugin'):
-        self.name = name
-        self.endpoint = endpoint
+    def __init__(self, config: 'BaseBotConfig'):
+        self.name = config.name
+        self.send_alerts = config.send_alerts
+        self.high_pri_on = config.high_pri_on
+        self.alert_plugin_type = config.alert_plugin_type
+        self.responders = config.responders
         # Initialize state here
         self._hears_routes: List[Tuple[re.Pattern, Callable]] = []
         self._action_callbacks: List[Callable] = []
