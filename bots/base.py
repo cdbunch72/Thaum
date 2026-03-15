@@ -38,6 +38,9 @@ class BaseBot(ABC):
         self.high_pri_on = config.high_pri_on
         self.alert_plugin_type = config.alert_plugin_type
         self.responders = config.responders
+        self.team_description = config.team_description
+        self.room_title_template = config.room_title_template
+        self.emergency_warning_message = config.emergency_warning_message
         # Initialize state here
         self._hears_routes: List[Tuple[re.Pattern, Callable]] = []
         self._action_callbacks: List[Callable] = []
@@ -102,8 +105,11 @@ class BaseBotConfig(BaseModel):
     high_pri_on: Optional[bool] = True
     send_alerts: Optional[bool] = True
     responders: List[str]
-    room_title_template: str
+    room_title_template: Optional[str] = '{{requester_name}} - {{team_description}} {{date}}'
     alert_plugin_type: Optional[str] = 'NullPlugin'
+    team_description: str
+    emergency_warning_message: Optional[str]
+
     @model_validator(mode='after')
     def consistent_alert_settings(self) -> 'BaseBotConfig':
         # --- Rule 1: send_alerts requires a real plugin ---
