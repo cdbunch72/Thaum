@@ -3,8 +3,8 @@
 # This file source licensed under the Mozilla Public License 2.0
 
 import time
-from  pydantic import ConfigDict, PrivateAttr,model_validator,BaseModel
-from typing import Optional,Tuple
+from  pydantic import ConfigDict,model_validator,BaseModel
+from typing import Optional
 from enum import StrEnum,IntEnum
 from thaum.utils import resolve_base_url
 import logging
