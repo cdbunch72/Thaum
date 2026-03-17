@@ -22,9 +22,9 @@ class MessageContext:
 
 class BotHearsHandler(Protocol):
     """ Signature for handlers for the hears decorator"""
-    def __call__(self, bot: 'BaseBot', ctx: MessageContext, match: re.Match) -> None: ...
+    def __call__(self, bot: 'BaseChatBot', ctx: MessageContext, match: re.Match) -> None: ...
 
-class BaseBot(ABC):
+class BaseChatBot(ABC):
     """
     The Base Contract for all Thaum Bot drivers.
     Any platform-specific driver (Webex, Teams, Slack) must implement these methods.
@@ -32,7 +32,7 @@ class BaseBot(ABC):
     
     plugin_name: str = 'base'
 
-    def __init__(self, config: 'BaseBotConfig'):
+    def __init__(self, config: 'BaseChatBotConfig'):
         self.name = config.name
         self.send_alerts = config.send_alerts
         self.high_pri_on = config.high_pri_on
@@ -99,9 +99,9 @@ class BaseBot(ABC):
         """Decorator to register a callback for card actions."""
         self._action_callbacks.append(handler)
         return handler
-# -- End Class BaseBot
+# -- End Class BaseChatBot
 
-class BaseBotConfig(BaseModel):
+class BaseChatBotConfig(BaseModel):
     name: str
     high_pri_on: Optional[bool] = True
     send_alerts: Optional[bool] = True
@@ -112,7 +112,7 @@ class BaseBotConfig(BaseModel):
     emergency_warning_message: Optional[str]
 
     @model_validator(mode='after')
-    def consistent_alert_settings(self) -> 'BaseBotConfig':
+    def consistent_alert_settings(self) -> 'BaseChatBotConfig':
         # --- Rule 1: send_alerts requires a real plugin ---
         if self.send_alerts and self.alert_plugin_type == "NullPlugin":
             raise ValueError(

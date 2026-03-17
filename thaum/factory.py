@@ -3,13 +3,13 @@
 
 import logging
 from bots.factory import create_bot
-from bots.base import BaseBot
+from bots.base import BaseChatBot
 from typing import Dict,Any
 from thaum.handlers import bind_thaum_handlers
 from plugin_loader import get_plugin
-from config_resolver import resolve_config_key
+from config import resolve_config_key
 
-BOTS: Dict[str, BaseBot] = {}
+BOTS: Dict[str, BaseChatBot] = {}
 
 def initialize_bots(bot_type: str, config: Dict[str, Any]) -> None:
     for bot_key, bot_config in config.get("bots", {}).items():

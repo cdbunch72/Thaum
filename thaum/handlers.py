@@ -2,16 +2,16 @@
 # Copyright 2026 <<Name>>. All rights reserved.
 # This source file licensed under the Mozilla Public License 2.0
 
+from jinja2 import Template
 from thaum.engine import create_incident_room, acknowledge_incident
 from typing import TYPE_CHECKING
 import re
 
 if TYPE_CHECKING:
-    from bots.base import BaseBot,MessageContext
+    from bots.base import BaseChatBot,MessageContext
     from thaum.types import ThaumPerson
 
-# thaum/handlers.py
-from jinja2 import Template
+
 
 # Define the template globally (or in a separate file if it gets too long)
 USAGE_TEMPLATE = """
@@ -39,11 +39,11 @@ usage|commands|?
 
 
 
-def bind_thaum_handlers(bot: 'BaseBot') -> None:
+def bind_thaum_handlers(bot: 'BaseChatBot') -> None:
     """Connects Bot events to Engine business logic."""
     
     # Handles the Help or conditionally the emergency command
-    def handle_help_emergency(bot: 'BaseBot', message: 'MessageContext', match: re.Match):
+    def handle_help_emergency(bot: 'BaseChatBot', message: 'MessageContext', match: re.Match):
         cmd, summary = match.group('cmd').lower(), match.group('summary')
         create_incident_room(bot, summary or "...", cmd == "emergency", message.person)
     # -- End Function handle_help_emergency
@@ -57,17 +57,17 @@ def bind_thaum_handlers(bot: 'BaseBot') -> None:
     # conditionally register the alert and ack commands
     if bot.send_alerts:
         @bot.hears(r"^alert(?:\s*:\s*(?P<msg>.*))",priority=10)
-        def handle_alert(bot: 'BaseBot', message: 'MessageContext', match: re.Match):
+        def handle_alert(bot: 'BaseChatBot', ctx: 'MessageContext', match: re.Match):
             msg=match.group('msg')
-            bot.alert_plugin.trigger_alert(msg,message.room_id)
+            bot.alert_plugin.trigger_alert(msg,ctx.room_id,ctx.person)
     
         @bot.hears(r"^ack\s+(?P<alert_id>[A-Z2-9]{4}).*$",priority=10)
-        def handle_ack(bot: 'BaseBot', message: 'MessageContext', match: re.Match):
-            acknowledge_incident(bot, match.group('alert_id'), message.personId)
+        def handle_ack(bot: 'BaseChatBot', ctx: 'MessageContext', match: re.Match):
+            acknowledge_incident(bot, match.group('alert_id'), ctx.person)
     # -- End if send_alerts
     
     @bot.hears(r"^\s*(implode).*$", priority=80)
-    def handle_implode(bot: 'BaseBot', ctx: 'MessageContext', match: re.Match):
+    def handle_implode(bot: 'BaseChatBot', ctx: 'MessageContext', match: re.Match):
         bot.delete_room(ctx.room_id,ctx.person)
     
     @bot.hears(r"^\s*(usage|commands|\?).*",priority=90)
@@ -77,7 +77,7 @@ def bind_thaum_handlers(bot: 'BaseBot') -> None:
         bot.say(ctx.room_id, rendered, markdown=True)
     
     @bot.hears(r"^(?P<cmd>\S+)\s+.*$",priority=99)
-    def handle_unknown(bot: 'BaseBot', ctx: 'MessageContext', match: re.Match):
+    def handle_unknown(bot: 'BaseChatBot', ctx: 'MessageContext', match: re.Match):
         bot.say(ctx.room_id,f"Unknown command {match.group('cmd')}. Please use @{bot.name} usage to see a list of commands")
 
     

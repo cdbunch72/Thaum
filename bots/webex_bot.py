@@ -5,19 +5,19 @@
 import logging
 from __future__ import annotations
 from typing import Dict, Any, Optional, List, TYPE_CHECKING
-from thaum.identity import get_person_by_id,cache_person
+from thaum.identity import get_person_by_id,resolve_person
 from thaum.types import ThaumPerson, ResolvedSecret
 from webexpythonsdk import WebexAPI
-from bots.base import BaseBot, MessageContext, BaseBotConfig
+from bots.base import BaseChatBot, MessageContext, BaseChatBotConfig
 from log_setup import log_debug_blob
 
 
-class WebexBot(BaseBot):
+class WebexChatBot(BaseChatBot):
     """Concrete driver for Webex."""
 
     plugin_name: str = 'webex'
 
-    def __init__(self, config: 'WebexBotConfig'):
+    def __init__(self, config: 'WebexChatBotConfig'):
         super().__init__(config)
         self.logger = logging.getLogger(f"bot.{config.name}")
         self.api = WebexAPI(access_token=config.token.get_secret_value())
@@ -121,7 +121,7 @@ class WebexBot(BaseBot):
         if not p:
             p=self._get_person_from_api(person_id)
             if p:
-                p=cache_person(p)
+                p=resolve_person(p)
             else:
                 p=ThaumPerson(email=f"{person_id}@{self.plugin_name}",platform_ids={self.plugin_name: person_id})
         return p
@@ -204,15 +204,15 @@ class WebexBot(BaseBot):
                 callback(self, action)
         # -- End Resource 'attachmentActions'
 # -- End Method _handle_event
-# -- End Class WebexBot
+# -- End Class WebexChatBot
 
-class WebexBotConfig(BaseBotConfig):
+class WebexChatBotConfig(BaseChatBotConfig):
     token: ResolvedSecret
     hmac_secret: ResolvedSecret
 
-def create_instance_bot(name: str, endpoint: str, **kwargs) -> WebexBot:
+def create_instance_bot(name: str, endpoint: str, **kwargs) -> WebexChatBot:
     """Factory interface for the Webex driver."""
     token = kwargs.get("token")
     secret = kwargs.get("secret")
-    return WebexBot(name, endpoint, token, secret)
+    return WebexChatBot(name, endpoint, token, secret)
 # -- End Function create_instance_bot

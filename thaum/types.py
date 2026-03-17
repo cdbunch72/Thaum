@@ -13,7 +13,7 @@ from dataclasses import dataclass, field
 from typing import Dict, List, Optional,TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from bots.base import BaseBot
+    from bots.base import BaseChatBot
 
 BaseUrlSource=StrEnum('BaseUrlSource',["CONFIG","ENVIRONMENT","GOOGLE","AZURE","AWS"])
 class LogLevel(IntEnum):
@@ -42,7 +42,7 @@ class ThaumPerson:
 
 @dataclass
 class ThaumTeam:
-    bot: 'BaseBot'
+    bot: 'BaseChatBot'
     team_name: str
     members: List[ThaumPerson] = field(default_factory=list)
     last_cached: float = field(default_factory=time.time)

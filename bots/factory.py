@@ -5,11 +5,11 @@
 import importlib
 import os
 import logging
-from bots.base import BaseBot
+from bots.base import BaseChatBot
 
 logger = logging.getLogger("bots.factory")
 
-def create_bot(bot_type: str, name: str, endpoint: str, **kwargs) -> BaseBot:
+def create_bot(bot_type: str, name: str, endpoint: str, **kwargs) -> BaseChatBot:
     """
     Dynamically loads the bot driver and calls the standard entry point.
     """
