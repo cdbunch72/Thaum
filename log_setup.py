@@ -2,11 +2,13 @@
 # This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
 
 import logging
+import verboselogs
 import json
 import sys
 from datetime import datetime
 from typing import Any
 from zoneinfo import ZoneInfo
+from thaum.types import LogConfig
 
 NO_TIMESTAMP = False
 
@@ -61,17 +63,17 @@ def log_debug_blob(logger: logging.Logger, blob_title: str, data: Any, level: in
         logger.log(level, f"END {blob_title} {delimiter}")
 # -- End Function log_debug_blob
 
-def configure_logging(logging_config):
+def configure_logging(logging_config: LogConfig):
     """
     Sets up a global, single-line, timezone-aware logging system.
     This replaces existing handlers (like Flask's default noise).
     """
 
-    level_str = logging_config.get("level", "INFO").upper()
-    tz_str = logging_config.get("timezone", "UTC")
-    use_fractions = logging_config.get("fractional_seconds", False)
+    tz_str = logging_config.timezone
+    use_fractions = logging_config.fractional_seconds
+    
     global NO_TIMESTAMP
-    NO_TIMESTAMP = logging_config.get('no_timestamp',False)
+    NO_TIMESTAMP = logging_config.no_timestamp
 
     # Configure the formatter
     log_format = "%(asctime)s [%(levelname)s] %(name)s: %(message)s"
@@ -79,7 +81,7 @@ def configure_logging(logging_config):
 
     # Configure root logger
     root_logger = logging.getLogger()
-    root_logger.setLevel(getattr(logging, level_str, logging.INFO))
+    root_logger.setLevel(logging_config.level)
 
     # Remove default handlers to prevent duplicated logs/stack traces
     if root_logger.hasHandlers():
