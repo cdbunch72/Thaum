@@ -2,99 +2,248 @@
 # Copyright 2026 <<Name>>. All rights reserved.
 # This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
 
-import sqlite3
 import time
-import threading
-from dataclasses import dataclass, field
-from typing import Dict, List, Optional,TYPE_CHECKING
+import logging
+from typing import Optional, List
+from sqlalchemy import (
+    create_engine,
+    Table,
+    Column,
+    String,
+    Integer,
+    Float,
+    ForeignKey,
+    MetaData,
+    PrimaryKeyConstraint,
+    select,
+    delete
+)
+from thaum.types import ThaumPerson, ThaumTeam
 
-if TYPE_CHECKING:
-    from bots.base import BaseBot
-
-# --- Data Structures ---
-@dataclass
-class ThaumPerson:
-    email: str
-    display_name: str
-    platform_ids: Dict[str, str] = field(default_factory=dict)
-    source_plugin: str = "unknown"
-
-    @property
-    def for_display(self) -> str:
-        if self.display_name:
-            return self.display_name
-        return self.email
+from filelock import FileLock
 
 
-@dataclass
-class ThaumTeam:
-    bot: 'BaseBot'
-    team_name: str
-    members: List[ThaumPerson] = field(default_factory=list)
-    last_cached: float = field(default_factory=time.time)
-    ttl: int = 14400 
+CACHE_LOCK = "/run/thaum/cache.lock"
+ONE_WEEK = 604800
 
-    @property
-    def is_fresh(self) -> bool:
-        return (time.time() - self.last_cached) < self.ttl
+logger = logging.getLogger("thaum.identity")
+metadata = MetaData()
 
-# --- Persistence Layer ---
-_local = threading.local()
+# --- Schema Definition ---
+# -----------------------------
+# PEOPLE TABLE
+# -----------------------------
+people_table = Table(
+    "people",
+    metadata,
+    Column("email", String, primary_key=True),
+    Column("display_name", String, nullable=True),
+    Column("source_plugin", String, nullable=True),
+    Column("name_last_updated", Float, nullable=False),  # epoch timestamp
+)
 
-def _get_conn():
-    if not hasattr(_local, "conn"):
-        _local.conn = sqlite3.connect(":memory:", check_same_thread=False)
-        _local.conn.execute("PRAGMA foreign_keys = ON")
-        _local.conn.executescript("""
-            CREATE TABLE people (email TEXT PRIMARY KEY, display_name TEXT, source_plugin TEXT, name_last_updated REAL);
-            CREATE TABLE platform_ids (platform TEXT, platform_id TEXT, email TEXT, PRIMARY KEY (platform, platform_id), FOREIGN KEY(email) REFERENCES people(email) ON DELETE CASCADE);
-            CREATE TABLE teams (team_name TEXT PRIMARY KEY, last_cached REAL, ttl INTEGER);
-            CREATE TABLE team_members (team_name TEXT, email TEXT, PRIMARY KEY (team_name, email), FOREIGN KEY(email) REFERENCES people(email));
-        """)
-    return _local.conn
+# -----------------------------
+# PLATFORM IDS TABLE
+# -----------------------------
+platform_ids_table = Table(
+    "platform_ids",
+    metadata,
+    Column("platform_key", String, nullable=False),   # plugin name
+    Column("platform_id", String, nullable=False),    # plugin-specific user ID
+    Column("email", String, ForeignKey("people.email"), nullable=False),
 
-# --- Public API ---
+    PrimaryKeyConstraint("platform_key", "platform_id")
+)
 
-def cache_person(p: ThaumPerson) -> Optional[ThaumPerson]:
+# -----------------------------
+# TEAMS TABLE
+# -----------------------------
+teams_table = Table(
+    "teams",
+    metadata,
+    Column("team_name", String, primary_key=True),
+    Column("last_cached", Float, nullable=False),
+    Column("ttl", Integer, nullable=False),
+)
+
+# -----------------------------
+# TEAM MEMBERS TABLE
+# -----------------------------
+team_members_table = Table(
+    "team_members",
+    metadata,
+    Column("team_name", String, ForeignKey("teams.team_name"), nullable=False),
+    Column("email", String, ForeignKey("people.email"), nullable=False),
+
+    PrimaryKeyConstraint("team_name", "email")
+)
+# --- Internal Module State ---
+_engine = None
+
+def init_identity_db(db_url: str):
+    global _engine
+    _engine = create_engine(db_url, connect_args={"check_same_thread": False})
+    metadata.create_all(_engine)
+# -- End Function init_identity_db
+
+# --- Functional API ---
+
+
+def get_person_by_email(email: str) -> ThaumPerson:
+    with _engine.begin() as conn:
+        row = conn.execute(
+            select(people_table).where(people_table.c.email == email)
+        ).fetchone()
+
+        if not row:
+            return None  # or raise
+
+        pid_rows = conn.execute(
+            select(platform_ids_table).where(platform_ids_table.c.email == email)
+        ).fetchall()
+
+    platform_ids = {r.platform_key: r.platform_id for r in pid_rows}
+
+    return ThaumPerson(
+        email=row.email,
+        display_name=row.display_name,
+        source_plugin=row.source_plugin,
+        platform_ids=platform_ids,
+    )
+# -- End get_person_by_email
+
+def resolve_person(fragment: ThaumPerson) -> ThaumPerson:
+    """
+    Merge a partial ThaumPerson fragment into the canonical identity record,
+    then return the fully merged ThaumPerson.
+    """
     now = time.time()
-    one_week = 604800
-    with _get_conn():
-        _get_conn().execute("""
-            INSERT INTO people (email, display_name, source_plugin, name_last_updated) 
-            VALUES (?, ?, ?, ?)
-            ON CONFLICT(email) DO UPDATE SET
-                display_name = CASE WHEN display_name IS NULL OR display_name = '' OR (? - name_last_updated) > ? THEN excluded.display_name ELSE display_name END,
-                source_plugin = CASE WHEN display_name IS NULL OR display_name = '' OR (? - name_last_updated) > ? THEN excluded.source_plugin ELSE source_plugin END,
-                name_last_updated = CASE WHEN display_name IS NULL OR display_name = '' OR (? - name_last_updated) > ? THEN ? ELSE name_last_updated END
-        """, (p.email, p.display_name, p.source_plugin, now, now, one_week, now, one_week, now, one_week, now, p.email))
-        
-        for platform, pid in p.platform_ids.items():
-            _get_conn().execute("INSERT OR IGNORE INTO platform_ids (platform, platform_id, email) VALUES (?, ?, ?)", (platform, pid, p.email))
-    return get_person_by_email(p.email)
 
-def get_person_by_email(email: str) -> Optional[ThaumPerson]:
-    row = _get_conn().execute("SELECT email, display_name, source_plugin FROM people WHERE email = ?", (email,)).fetchone()
-    if not row: return None
-    p_ids = {r[0]: r[1] for r in _get_conn().execute("SELECT platform, platform_id FROM platform_ids WHERE email = ?", (email,)).fetchall()}
-    return ThaumPerson(email=row[0], display_name=row[1], platform_ids=p_ids, source_plugin=row[2])
+    with FileLock(CACHE_LOCK):
+        with _engine.begin() as conn:
+            existing = conn.execute(
+                select(people_table).where(people_table.c.email == fragment.email)
+            ).fetchone()
+
+            if existing:
+                should_update_name = (
+                    not existing.display_name
+                    or existing.display_name.strip() == ""
+                    or (now - existing.name_last_updated) > ONE_WEEK
+                )
+
+                update_values = {}
+                if should_update_name and fragment.display_name:
+                    update_values["display_name"] = fragment.display_name
+                    update_values["source_plugin"] = fragment.source_plugin
+                    update_values["name_last_updated"] = now
+
+                if update_values:
+                    conn.execute(
+                        people_table.update()
+                        .where(people_table.c.email == fragment.email)
+                        .values(**update_values)
+                    )
+            else:
+                conn.execute(
+                    people_table.insert().values(
+                        email=fragment.email,
+                        display_name=fragment.display_name,
+                        source_plugin=fragment.source_plugin,
+                        name_last_updated=now,
+                    )
+                )
+            # -- End if existing
+            for plugin_name, pid in fragment.platform_ids.items():
+                try:
+                    conn.execute(
+                        platform_ids_table.insert().values(
+                            platform_key=plugin_name,
+                            platform_id=pid,
+                            email=fragment.email,
+                        )
+                    )
+                except Exception:
+                    pass
+        # -- End with con
+    # -- End with FileLock
+
+    return get_person_by_email(fragment.email)
+
+# -- End Function resolve_person
+
 
 def get_person_by_id(platform: str, p_id: str) -> Optional[ThaumPerson]:
-    res = _get_conn().execute("SELECT email FROM platform_ids WHERE platform = ? AND platform_id = ?", (platform, p_id)).fetchone()
-    return get_person_by_email(res[0]) if res else None
+    with _engine.begin() as conn:
+        row = conn.execute(
+            select(platform_ids_table.c.email)
+            .where(platform_ids_table.c.platform_key == platform)
+            .where(platform_ids_table.c.platform_id == p_id)
+        ).fetchone()
+
+    return get_person_by_email(row.email) if row else None
+# -- End get_person_by_id
 
 def cache_team(t: ThaumTeam) -> Optional[ThaumTeam]:
-    with _get_conn():
-        _get_conn().execute("INSERT OR REPLACE INTO teams (team_name, last_cached, ttl) VALUES (?, ?, ?)", (t.team_name, t.last_cached, t.ttl))
-        _get_conn().execute("DELETE FROM team_members WHERE team_name = ?", (t.team_name,))
-        _get_conn().executemany("INSERT INTO team_members (team_name, email) VALUES (?, ?)", [(t.team_name, m.email) for m in t.members])
+    with _engine.begin() as conn:
+
+        # 1. Insert or replace team row
+        conn.execute(
+            teams_table.insert()
+            .values(
+                team_name=t.team_name,
+                last_cached=t.last_cached,
+                ttl=t.ttl
+            )
+            .prefix_with("OR REPLACE")  # SQLite-compatible
+        )
+
+        # 2. Delete existing members
+        conn.execute(
+            delete(team_members_table)
+            .where(team_members_table.c.team_name == t.team_name)
+        )
+
+        # 3. Insert new members
+        if t.members:
+            conn.execute(
+                team_members_table.insert(),
+                [
+                    {"team_name": t.team_name, "email": m.email}
+                    for m in t.members
+                ]
+            )
+
+    # 4. Return the merged team
     return get_team(t.team_name)
+# -- End cache_team
 
 def get_team(name: str) -> Optional[ThaumTeam]:
-    row = _get_conn().execute("SELECT last_cached, ttl FROM teams WHERE team_name = ?", (name,)).fetchone()
-    if not row: return None
-    
-    # Fetch members
-    emails = _get_conn().execute("SELECT email FROM team_members WHERE team_name = ?", (name,)).fetchall()
-    members = [get_person_by_email(e[0]) for e in emails]
-    
-    return ThaumTeam(team_name=name, members=members, last_cached=row[0], ttl=row[1])
+    with _engine.begin() as conn:
+
+        # 1. Fetch team row
+        row = conn.execute(
+            select(teams_table)
+            .where(teams_table.c.team_name == name)
+        ).fetchone()
+
+        if not row:
+            return None
+
+        # 2. Fetch member emails
+        email_rows = conn.execute(
+            select(team_members_table.c.email)
+            .where(team_members_table.c.team_name == name)
+        ).fetchall()
+
+    # 3. Convert to ThaumPerson objects
+    members = [get_person_by_email(e.email) for e in email_rows]
+
+    # 4. Build the team object
+    return ThaumTeam(
+        team_name=name,
+        members=members,
+        last_cached=row.last_cached,
+        ttl=row.ttl
+    )
+# -- End get_team
