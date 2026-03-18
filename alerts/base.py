@@ -9,7 +9,11 @@ import hmac
 import hashlib
 import time
 import logging
-from typing import Dict, Any, Callable, Optional
+from typing import Dict, Any, Callable, Tuple, TYPE_CHECKING
+from thaum.types import AlertPriority,ThaumPerson
+
+if TYPE_CHECKING:
+    from bots.base import BaseChatBot
 
 class BaseAlertPlugin:
     """
@@ -24,7 +28,7 @@ class BaseAlertPlugin:
         self.logger = logging.getLogger(f"plugin.{self.__class__.__name__}")
     # -- End Method __init__
 
-    def attach_bot(self, bot) -> None:
+    def attach_bot(self, bot: 'BaseChatBot') -> None:
         """Binds the bot and updates the logger context."""
         self.bot = bot
         self.logger = logging.getLogger(f"bot.{bot.name}.plugin.{self.__class__.__name__}")
@@ -70,7 +74,7 @@ class BaseAlertPlugin:
         raise NotImplementedError
     # -- End Method validate_connection
 
-    def trigger_alert(self, summary: str, is_emergency: bool, room_id: str) -> str:
+    def trigger_alert(self, summary: str, room_id: str, sender: ThaumPerson, priority=AlertPriority.NORMAL) -> Tuple[str, str]:
         """Trigger an alert via the 3rd party API."""
         raise NotImplementedError
     # -- End Method trigger_alert

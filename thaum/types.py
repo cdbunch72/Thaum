@@ -5,7 +5,7 @@
 import time
 from  pydantic import ConfigDict,model_validator,BaseModel
 from typing import Optional
-from enum import StrEnum,IntEnum
+from enum import StrEnum,IntEnum,auto
 from thaum.utils import resolve_base_url
 import logging
 import verboselogs
@@ -25,6 +25,9 @@ class LogLevel(IntEnum):
     WARNING  = logging.WARNING
     ERROR    = logging.ERROR
     CRITICAL = logging.CRITICAL
+class AlertPriority(StrEnum):
+    NORMAL = auto()
+    HIGH   = auto()
 
 @dataclass
 class ThaumPerson:

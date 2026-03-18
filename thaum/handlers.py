@@ -5,11 +5,12 @@
 from jinja2 import Template
 from thaum.engine import create_incident_room, acknowledge_incident
 from typing import TYPE_CHECKING
+from thaum.types import ThaumPerson,AlertPriority
 import re
 
 if TYPE_CHECKING:
     from bots.base import BaseChatBot,MessageContext
-    from thaum.types import ThaumPerson
+    
 
 
 
@@ -45,7 +46,8 @@ def bind_thaum_handlers(bot: 'BaseChatBot') -> None:
     # Handles the Help or conditionally the emergency command
     def handle_help_emergency(bot: 'BaseChatBot', message: 'MessageContext', match: re.Match):
         cmd, summary = match.group('cmd').lower(), match.group('summary')
-        create_incident_room(bot, summary or "...", cmd == "emergency", message.person)
+        priority=AlertPriority.HIGH if cmd == "emergency" else AlertPriority.NORMAL
+        create_incident_room(bot, summary or "...", message.person, priority)
     # -- End Function handle_help_emergency
 
     # register both commands to the same handler
