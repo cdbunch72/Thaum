@@ -11,6 +11,7 @@ import time
 import logging
 from typing import Dict, Any, Callable, Tuple, TYPE_CHECKING
 from thaum.types import AlertPriority,ThaumPerson
+import secrets
 
 if TYPE_CHECKING:
     from bots.base import BaseChatBot
@@ -22,6 +23,7 @@ class BaseAlertPlugin:
     """
     
     supports_status_webhooks: bool = False
+    _ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
 
     def __init__(self, **config: Any):
         self.config = config
@@ -73,6 +75,10 @@ class BaseAlertPlugin:
         """Verify API connectivity at boot."""
         raise NotImplementedError
     # -- End Method validate_connection
+
+    @classmethod
+    def _generate_short_id(cls, length: int = 4) -> str:
+        return "".join(secrets.choice(cls._ALPHABET) for _ in range(length))
 
     def trigger_alert(self, summary: str, room_id: str, sender: ThaumPerson, priority=AlertPriority.NORMAL) -> Tuple[str, str]:
         """Trigger an alert via the 3rd party API."""
