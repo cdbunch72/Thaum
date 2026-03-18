@@ -210,9 +210,10 @@ class WebexChatBotConfig(BaseChatBotConfig):
     token: ResolvedSecret
     hmac_secret: ResolvedSecret
 
-def create_instance_bot(name: str, endpoint: str, **kwargs) -> WebexChatBot:
+def get_config_model():
+    return WebexChatBotConfig
+
+def create_instance_bot(config: WebexChatBotConfig) -> WebexChatBot:
     """Factory interface for the Webex driver."""
-    token = kwargs.get("token")
-    secret = kwargs.get("secret")
-    return WebexChatBot(name, endpoint, token, secret)
+    return WebexChatBot(config)
 # -- End Function create_instance_bot

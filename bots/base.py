@@ -108,6 +108,7 @@ class BaseChatBotConfig(BaseModel):
     responders: List[str]
     room_title_template: Optional[str] = '{{requester_name}} - {{team_description}} {{date}}'
     alert_plugin_type: Optional[str] = 'NullPlugin'
+    alert: Optional[dict[str, Any]]
     team_description: str
     emergency_warning_message: Optional[str]
 
