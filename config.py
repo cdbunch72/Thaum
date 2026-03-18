@@ -1,11 +1,12 @@
-# Thaum Engine v1.0.0
+# Thaum v1.0.0
 # Copyright 2026 Clinton Bunch. All rights reserved.
 # This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
 
 import os
 import logging
 import tomllib
-from typing import Dict, Any
+from typing import Dict, Any, Optional
+from thaum.types import ServerConfig,LogConfig
 
 logger = logging.getLogger("thaum.config")
 
@@ -13,7 +14,7 @@ def load_and_validate(path: str) -> Dict[str, Any]:
     """Loads the file format-agnostically."""
     try:
         with open(path, "rb") as f:
-            config = tomllib.load(f)
+            config_raw = tomllib.load(f)
     except tomllib.TOMLDecodeError as e:
         logger.critical(f"Config file contains invalid TOML: {e}")
         raise
@@ -22,18 +23,20 @@ def load_and_validate(path: str) -> Dict[str, Any]:
         raise
 
     # Validate mandatory [server] section
-    server = config.get("server")
+    server = config_raw.get("server")
     if not server:
         raise ValueError("config.toml is missing mandatory [server] section.")
+    config ={}
+    config['raw']=config_raw
+    try:
+        config['server']=ServerConfig(**server)
+        config['log']=LogConfig(**config_raw.get('logging',{}))
+    except (Exception) as e:
+        logger.critical(f"Configuration Validation Error: {e}")
+        raise
 
-    # Validate specific keys
-    required = ["bot_type", "base_url", "webhook_prefix"]
-    for key in required:
-        if key not in server:
-            raise ValueError(f"[server] section missing mandatory key: {key}")
-
-       
     return config
+#-- End load_and_validate
 
 
 def resolve_config_key(config_block, key_name, logger, required=True, default=None, allow_empty=False):
