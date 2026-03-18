@@ -9,7 +9,7 @@ import hmac
 import hashlib
 import time
 import logging
-from typing import Dict, Any, Callable, Tuple, TYPE_CHECKING
+from typing import Dict, Any, Callable, Tuple, TYPE_CHECKING, Final
 from thaum.types import AlertPriority,ThaumPerson
 import secrets
 
@@ -23,7 +23,7 @@ class BaseAlertPlugin:
     """
     
     supports_status_webhooks: bool = False
-    _ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
+    _ALPHABET: Final[str] = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
 
     def __init__(self, **config: Any):
         self.config = config
