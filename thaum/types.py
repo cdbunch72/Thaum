@@ -47,13 +47,33 @@ class ThaumPerson:
 class ThaumTeam:
     bot: 'BaseChatBot'
     team_name: str
-    members: List[ThaumPerson] = field(default_factory=list)
+
+    lookup_id: str | None = None     # DN or canonical directory key
+    alert_id: str | None = None      # Jira team ID
+
+    _members: list[ThaumPerson] = field(default_factory=list)
     last_cached: float = field(default_factory=time.time)
-    ttl: int = 14400 
+    ttl: int = 14400  # 4 hours
 
     @property
     def is_fresh(self) -> bool:
         return (time.time() - self.last_cached) < self.ttl
+
+    def get_members(self) -> list[ThaumPerson]:
+        """Return members, refreshing from lookup plugin if stale."""
+        lookup = self.bot.lookup_plugin
+
+        if not self.is_fresh and lookup is not None:
+            try:
+                new_members = lookup.lookup_team_members(self)
+                if new_members:
+                    self._members = new_members
+                    self.last_cached = time.time()
+            except Exception as e:
+                # Log through the bot
+                self.bot.log.warning(f"Failed to refresh membership for team '{self.team_name}': {e}")
+
+        return list(self._members)
 # -- End ThaumTeam
 
 # -- Pydantic config classes
