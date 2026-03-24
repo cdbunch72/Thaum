@@ -1,3 +1,6 @@
 emerald_utils
 Flask
 webexpythonsdk
+SQLAlchemy
+filelock
+ldap3
