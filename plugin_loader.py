@@ -1,11 +1,14 @@
+# plugin_loader.py
 # Thaum Engine v1.0.0
+# Copyright 2026 Clinton Bunch
+# SPDX-License-Identifier: MPL-2.0
 # This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
 
 import os
 import importlib.util
 import inspect
 import logging
-from log_setup import SHOW_STACKTRACE
+from log_setup import should_log_exception_trace
 from alerts.base import BaseAlertPlugin
 
 # The global registry where we store our dynamically loaded plugins
@@ -45,8 +48,8 @@ def load_plugins(alerts_dir="./alerts"):
         except Exception as e:
             # SysAdmin-friendly error reporting: Which file, what error, and optional stack trace
             logger.error(
-                f"Failed to load plugin '{filename}': {e.__class__.__name__} - {str(e)}", 
-                exc_info=SHOW_STACKTRACE
+                f"Failed to load plugin '{filename}': {e.__class__.__name__} - {str(e)}",
+                exc_info=should_log_exception_trace(),
             )
 # -- End Function load_plugins
 
