@@ -1,5 +1,6 @@
 # thaum/engine.py
-# Copyright 2026 <<Name>>. All rights reserved.
+# Copyright 2026 Clinton Bunch. All rights reserved.
+# SPDX-License-Identifier: MPL-2.0
 
 import logging
 import datetime
@@ -24,14 +25,14 @@ def create_incident_room(bot: 'BaseChatBot', summary: str, speaker: ThaumPerson,
         context = {
             "summary": summary[:30],
             "requester_name": speaker.for_display(),
-            "team_description": bot.config.team_description,
+            "team_description": bot.team_description,
             "date": datetime.now().strftime("%Y-%m-%d"),
         }
         room_title = template.render(**context)
         room_id = bot.create_room(room_title)
         
-        # Add participants (bot.responders is a list of ThaumPerson)
-        bot.add_members(room_id, [speaker] + bot.responders)
+        responders = bot.responders.get_responders()
+        bot.add_members(room_id, [speaker, *responders])
         bot.say(room_id, f"**Summary:** {summary}")
         # Trigger plugin
         (short_id,jira_id)=bot.alert_plugin.trigger_alert(summary, room_id, speaker, priority)

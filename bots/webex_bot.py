@@ -1,11 +1,13 @@
 # bots/webex_bot.py
 # Thaum Engine v1.0.0
+# Copyright 2026 Clinton Bunch
+# SPDX-License-Identifier: MPL-2.0
 # This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
 
-import logging
 from __future__ import annotations
+import logging
 from typing import Dict, Any, Optional, List, TYPE_CHECKING
-from thaum.identity import get_person_by_id,resolve_person
+from pydantic import model_validator
 from thaum.types import ThaumPerson, ResolvedSecret
 from webexpythonsdk import WebexAPI
 from bots.base import BaseChatBot, MessageContext, BaseChatBotConfig
@@ -20,6 +22,7 @@ class WebexChatBot(BaseChatBot):
     def __init__(self, config: 'WebexChatBotConfig'):
         super().__init__(config)
         self.logger = logging.getLogger(f"bot.{config.name}")
+        self.log = self.logger
         self.api = WebexAPI(access_token=config.token.get_secret_value())
         self.me = self.api.people.me()
         self.hmac_secret = (
@@ -50,13 +53,11 @@ class WebexChatBot(BaseChatBot):
 
     def add_members(self, room_id: str, members: List[ThaumPerson]) -> None:
         for m in members:
-            # Logic: '@' in string indicates email, else assume personId
-            if m.platform_ids[self.plugin_name]:
-                key="personId"
-                v=m.platform_ids[self.plugin_name]
+            pid = m.platform_ids.get(self.plugin_name)
+            if pid:
+                key, v = "personId", pid
             else:
-                key="personEmail"
-                v=m.email
+                key, v = "personEmail", m.email
             
             try:
                 self.api.memberships.create(roomId=room_id, **{key: v})
@@ -113,25 +114,35 @@ class WebexChatBot(BaseChatBot):
         except Exception as e:
             self.logger.error(f"Failed to fetch person {person_id} from Webex: {e}")
             # Return a 'placeholder' person so the system doesn't crash
-            return None
+            return ThaumPerson(
+                email=f"{person_id}@{self.plugin_name}",
+                display_name="",
+                platform_ids={self.plugin_name: person_id},
+                source_plugin=self.plugin_name,
+            )
     # -- End Method get_person_from_api
 
     def get_person(self,person_id) -> ThaumPerson:
-        p=get_person_by_id(self.plugin_name,person_id)
-        if not p:
-            p=self._get_person_from_api(person_id)
-            if p:
-                p=resolve_person(p)
-            else:
-                p=ThaumPerson(email=f"{person_id}@{self.plugin_name}",platform_ids={self.plugin_name: person_id})
-        return p
+        lookup = getattr(self, "lookup_plugin", None)
+        if lookup is not None:
+            cached = lookup.get_person_by_id(self.plugin_name, person_id)
+            if cached is not None:
+                return cached
+
+        # Cache miss (or lookup plugin not attached): resolve via Webex API,
+        # then merge/cache the partial object by email.
+        fragment = self._get_person_from_api(person_id)
+        if lookup is not None:
+            return lookup.merge_person(fragment)
+        return fragment
     
     def validate_signature(self, payload_body: bytes, signature: Optional[str]) -> bool:
-        if self.secret is None: return True
+        if self.hmac_secret is None:
+            return True
         if not signature: return False
         
         import hmac, hashlib
-        hashed = hmac.new(self.secret.encode(), payload_body, hashlib.sha1)
+        hashed = hmac.new(self.hmac_secret.encode(), payload_body, hashlib.sha1)
         return hmac.compare_digest(hashed.hexdigest(), signature)
     # -- End Method validate_signature
 
@@ -166,10 +177,10 @@ class WebexChatBot(BaseChatBot):
         Dispatches incoming webhook events.
         'event' is the raw JSON dictionary from the Webex API.
         """
-        self.logger.spam("handle_event:")
-        log_debug_blob(self.logger,data,logging.SPAM)
         resource: Optional[str] = event.get('resource')
         data: Dict[str, Any] = event.get('data', {})
+        self.logger.spam("handle_event:")
+        log_debug_blob(self.logger, data, logging.SPAM)
 
         if resource == 'messages':
             # Ignore messages sent by the bot itself
@@ -190,12 +201,12 @@ class WebexChatBot(BaseChatBot):
                 message_id=data['id'],
                 raw_event=event
             )
-            # Match routes
-            for regex, handler in self._hears_routes:
-                match = regex.search(clean_text)
+            # Match routes (same tuple shape as BaseChatBot.hears: priority, pattern, handler)
+            for _priority, pattern, handler in self._hears_routes:
+                match = pattern.search(clean_text)
                 if match:
                     handler(self, message, match)
-                    break 
+                    break
         # -- End Resource 'messages'
 
         elif resource == 'attachmentActions':
@@ -208,7 +219,16 @@ class WebexChatBot(BaseChatBot):
 
 class WebexChatBotConfig(BaseChatBotConfig):
     token: ResolvedSecret
-    hmac_secret: ResolvedSecret
+    hmac_secret: Optional[ResolvedSecret] = None
+
+    @model_validator(mode='before')
+    @classmethod
+    def normalize_hmac_secret(cls, data: Any) -> Any:
+        # Backward compatibility: allow legacy "secret" key in config.
+        if isinstance(data, dict) and "hmac_secret" not in data and "secret" in data:
+            data = dict(data)
+            data["hmac_secret"] = data.pop("secret")
+        return data
 
 def get_config_model():
     return WebexChatBotConfig

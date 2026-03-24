@@ -1,19 +1,23 @@
+# thaum/types.py
 # Thaum
-# Copyright 2026, Clinton Bunch.  All Rights Reserved
+# Copyright 2026, Clinton Bunch. All Rights Reserved
+# SPDX-License-Identifier: MPL-2.0
 # This file source licensed under the Mozilla Public License 2.0
 
 import time
-from  pydantic import ConfigDict,model_validator,BaseModel
-from typing import Optional
+from pydantic import ConfigDict, model_validator, BaseModel, SecretStr, BeforeValidator
+from typing import Optional, Annotated, Dict, List, TYPE_CHECKING
 from enum import StrEnum,IntEnum,auto
 from thaum.utils import resolve_base_url
+from emerald_utils.experimental.secrets_resolver import resolve_secret
 import logging
 import verboselogs
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional,TYPE_CHECKING
 
 if TYPE_CHECKING:
     from bots.base import BaseChatBot
+
+ResolvedSecret = Annotated[SecretStr, BeforeValidator(resolve_secret)]
 
 BaseUrlSource=StrEnum('BaseUrlSource',["CONFIG","ENVIRONMENT","GOOGLE","AZURE","AWS"])
 class LogLevel(IntEnum):
@@ -76,12 +80,48 @@ class ThaumTeam:
         return list(self._members)
 # -- End ThaumTeam
 
+@dataclass
+class RespondersList:
+    people: List[ThaumPerson] = field(default_factory=list)
+    teams: List[ThaumTeam] = field(default_factory=list)
+
+    def get_responders(self) -> List[ThaumPerson]:
+        responders = list(self.people)
+        for team in self.teams:
+            responders.extend(team.get_members())
+        return responders
+
+    def __add__(self, other: object) -> "RespondersList":
+        if isinstance(other, RespondersList):
+            return RespondersList(
+                people=[*self.people, *other.people],
+                teams=[*self.teams, *other.teams],
+            )
+        if isinstance(other, ThaumPerson):
+            return RespondersList(people=[*self.people, other], teams=list(self.teams))
+        if isinstance(other, ThaumTeam):
+            return RespondersList(people=list(self.people), teams=[*self.teams, other])
+        return NotImplemented
+
+    def __radd__(self, other: object) -> "RespondersList":
+        if other == 0:
+            return self
+        return self.__add__(other)
+# -- End RespondersList
+
 # -- Pydantic config classes
 class ServerConfig(BaseModel):
     base_url: str
     url_source: Optional[BaseUrlSource] = None
     bot_url_prefix: Optional[str] = '/bot'
     bot_type: str
+    lookup_plugin: str = "null"
+    # Runtime log override reloader.
+    # If > 0, workers automatically re-apply the override when the override file changes.
+    # Default enables polling once per second.
+    log_override_poll_seconds: float = 1.0
+    log_override_watchdog: bool = False
+    log_override_path: str = "/run/thaum/log_override"
     model_config = ConfigDict(
         extra='forbid',          # Reject extra keys in TOML (Prevents typos)
         #frozen=True,             # Make the config immutable after load (Safety!)

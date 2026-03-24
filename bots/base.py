@@ -1,12 +1,14 @@
 # bots/base.py
 # Thaum Engine v1.0.0
 # Copyright 2026 Clinton Bunch
+# SPDX-License-Identifier: MPL-2.0
 # This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
 
-from abc import ABC, abstractmethod
 from __future__ import annotations
+from abc import ABC, abstractmethod
+import logging
 from typing import List, Optional, Tuple, Callable, Dict, Any, Protocol
-from thaum.types import ThaumPerson
+from thaum.types import ThaumPerson, RespondersList
 from dataclasses import dataclass, field
 from pydantic import BaseModel, model_validator
 import re
@@ -34,13 +36,19 @@ class BaseChatBot(ABC):
 
     def __init__(self, config: 'BaseChatBotConfig'):
         self.name = config.name
+        self.logger = logging.getLogger(f"bot.{self.name}")
+        # Some identity/team flows expect a `.log` attribute for warnings.
+        self.log = self.logger
         self.send_alerts = config.send_alerts
         self.high_pri_on = config.high_pri_on
         self.alert_plugin_type = config.alert_plugin_type
-        self.responders = config.responders
+        self.responder_refs = list(config.responders)
+        self.responders = RespondersList()
         self.team_description = config.team_description
         self.room_title_template = config.room_title_template
         self.emergency_warning_message = config.emergency_warning_message
+        # Set by the server bootstrap code; shared by all bots on a server.
+        self.lookup_plugin: Optional[Any] = None
         # Initialize state here
         self._hears_routes: List[Tuple[int, re.Pattern, Callable]] = []
         self._action_callbacks: List[Callable] = []

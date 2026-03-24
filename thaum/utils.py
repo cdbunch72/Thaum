@@ -1,8 +1,14 @@
+# thaum/utils.py
+# Copyright 2026 Clinton Bunch. All rights reserved.
+# SPDX-License-Identifier: MPL-2.0
+# This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
+
 from enum import Enum, auto
 from typing import Tuple, Optional
-from thaum.types import BaseUrlSource
 import os
 import logging
+
+from thaum.types import BaseUrlSource
 
 logger = logging.getLogger("thaum.utils")
 

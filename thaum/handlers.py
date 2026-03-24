@@ -1,5 +1,6 @@
 # thaum/handlers.py
-# Copyright 2026 <<Name>>. All rights reserved.
+# Copyright 2026 Clinton Bunch. All rights reserved.
+# SPDX-License-Identifier: MPL-2.0
 # This source file licensed under the Mozilla Public License 2.0
 
 from jinja2 import Template
@@ -94,12 +95,13 @@ def bind_thaum_handlers(bot: 'BaseChatBot') -> None:
         # 2. Extract and Validate inputs with defaults
         summary = action.inputs.get("summary", "No summary provided")
         is_emergency = action.inputs.get("is_emergency") == "true"
+        priority = AlertPriority.HIGH if is_emergency else AlertPriority.NORMAL
         
         # 3. Resolve Identity via Driver-HAL
         # This keeps the Engine purely based on ThaumPerson objects
         speaker = bot.get_person(action.personId)
         
         # 4. Engine Call
-        create_incident_room(bot, summary, is_emergency, speaker)
+        create_incident_room(bot, summary, speaker, priority)
     # -- End Function handle_actions
 # -- End Function bind_thaum_handlers
