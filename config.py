@@ -1,5 +1,6 @@
 # Thaum v1.0.0
 # Copyright 2026 Clinton Bunch. All rights reserved.
+# SPDX-License-Identifier: MPL-2.0
 # This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
 
 import os
@@ -7,6 +8,7 @@ import logging
 import tomllib
 from typing import Dict, Any, Optional
 from thaum.types import ServerConfig,LogConfig
+from lookup.instance import initialize_lookup_plugin
 
 logger = logging.getLogger("thaum.config")
 
@@ -28,6 +30,8 @@ def load_and_validate(path: str) -> Dict[str, Any]:
         raise ValueError("config.toml is missing mandatory [server] section.")
     config ={}
     config['raw']=config_raw
+    config['lookup']=config_raw.get("lookup", {})
+    config['bots']=config_raw.get("bots", {})
     try:
         config['server']=ServerConfig(**server)
         config['log']=LogConfig(**config_raw.get('logging',{}))
@@ -37,6 +41,16 @@ def load_and_validate(path: str) -> Dict[str, Any]:
 
     return config
 #-- End load_and_validate
+
+
+def initialize_runtime_plugins(config: Dict[str, Any]) -> None:
+    """
+    Initialize singleton runtime plugins from validated configuration.
+    Intended to be called once during server bootstrap.
+    """
+    server_cfg: ServerConfig = config["server"]
+    lookup_cfg = config.get("lookup", {})
+    initialize_lookup_plugin(server_cfg.lookup_plugin, lookup_cfg)
 
 
 def resolve_config_key(config_block, key_name, logger, required=True, default=None, allow_empty=False):
