@@ -14,6 +14,14 @@ from config import normalize_alert_block
 
 BOTS: Dict[str, BaseChatBot] = {}
 
+
+def register_all_bot_webhooks() -> None:
+    """Call after Flask (or other) routes are registered and the app is listening."""
+    for bot in BOTS.values():
+        bot.register_bot_webhook()
+# -- End Function register_all_bot_webhooks
+
+
 def initialize_bots(bot_type: str, config: Dict[str, Any]) -> None:
     server_cfg = config["server"]  # ServerConfig (pydantic model)
 
@@ -23,8 +31,9 @@ def initialize_bots(bot_type: str, config: Dict[str, Any]) -> None:
         
         try:
             bot_cfg = dict(bot_config)
-            bot_cfg.setdefault("endpoint", f"{server_cfg.base_url}/webhooks/{bot_key}")
+            bot_cfg.setdefault("endpoint", f"{server_cfg.base_url}/bot/{bot_key}")
             bot = create_bot(bot_type, bot_cfg)
+            bot.bot_key = bot_key
             bot.lookup_plugin = get_lookup_plugin()
 
             raw_alert_cfg = normalize_alert_block(bot_config.get("alert", {}))

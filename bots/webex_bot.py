@@ -214,21 +214,77 @@ class WebexChatBot(BaseChatBot):
             for callback in self._action_callbacks:
                 callback(self, action)
         # -- End Resource 'attachmentActions'
-# -- End Method _handle_event
+    # -- End Method handle_event
+
+    def register_bot_webhook(self) -> None:
+        """
+        Register Webex webhooks after the Thaum HTTP route for ``self.endpoint`` is live.
+
+        Uses two filtered ``messages`` / ``created`` hooks (both invoke ``handle_event``) to
+        cut traffic versus an unfiltered subscription: ``roomType=direct`` (DMs) and
+        ``mentionedPeople=me`` (group rooms where the bot is @-mentioned). Also registers
+        ``attachmentActions`` / ``created`` for Adaptive Card actions.
+
+        Prunes any existing hooks that use the same ``targetUrl`` (including legacy unfiltered
+        message hooks). A DM that also @-mentions the bot may match both filters and deliver
+        two events for the same message.
+        """
+        target = (self.endpoint or "").strip()
+        if not target:
+            self.logger.error("Cannot register Webex webhooks: bot endpoint is not configured.")
+            return
+
+        def _normalize_url(url: str) -> str:
+            return url.rstrip("/")
+
+        nt = _normalize_url(target)
+        try:
+            for wh in list(self.api.webhooks.list()):
+                if wh.targetUrl and _normalize_url(wh.targetUrl) == nt:
+                    self.api.webhooks.delete(wh.id)
+        except Exception as e:
+            self.logger.warning("While pruning old Webex webhooks: %s", e)
+
+        secret = self.hmac_secret
+        name_prefix = f"Thaum {self.name}"
+        if self.bot_key:
+            name_prefix = f"{name_prefix} [{self.bot_key}]"
+
+        try:
+            self.api.webhooks.create(
+                name=f"{name_prefix} messages (direct)",
+                targetUrl=target,
+                resource="messages",
+                event="created",
+                filter="roomType=direct",
+                secret=secret,
+            )
+            self.api.webhooks.create(
+                name=f"{name_prefix} messages (mentioned)",
+                targetUrl=target,
+                resource="messages",
+                event="created",
+                filter="mentionedPeople=me",
+                secret=secret,
+            )
+            self.api.webhooks.create(
+                name=f"{name_prefix} attachmentActions",
+                targetUrl=target,
+                resource="attachmentActions",
+                event="created",
+                secret=secret,
+            )
+            self.logger.info("Registered Webex webhooks for bot_key=%r -> %s", self.bot_key, target)
+        except Exception as e:
+            self.logger.error("Failed to register Webex webhooks: %s", e)
+            raise
+    # -- End Method register_bot_webhook
 # -- End Class WebexChatBot
 
 class WebexChatBotConfig(BaseChatBotConfig):
     token: ResolvedSecret
     hmac_secret: Optional[ResolvedSecret] = None
 
-    @model_validator(mode='before')
-    @classmethod
-    def normalize_hmac_secret(cls, data: Any) -> Any:
-        # Backward compatibility: allow legacy "secret" key in config.
-        if isinstance(data, dict) and "hmac_secret" not in data and "secret" in data:
-            data = dict(data)
-            data["hmac_secret"] = data.pop("secret")
-        return data
 
 def get_config_model():
     return WebexChatBotConfig

@@ -49,6 +49,9 @@ class BaseChatBot(ABC):
         self.emergency_warning_message = config.emergency_warning_message
         # Set by the server bootstrap code; shared by all bots on a server.
         self.lookup_plugin: Optional[Any] = None
+        # Configured in thaum.factory.initialize_bots: TOML bot id for /bot/<bot_key> routing.
+        self.bot_key: Optional[str] = None
+        self.endpoint = config.endpoint
         # Initialize state here
         self._hears_routes: List[Tuple[int, re.Pattern, Callable]] = []
         self._action_callbacks: List[Callable] = []
@@ -94,6 +97,16 @@ class BaseChatBot(ABC):
     def handle_event(self, event: Dict[str, Any]) -> None:
         """Called by the bot's webhook route"""
         pass
+    # -- End Method handle_event
+
+    @abstractmethod
+    def register_bot_webhook(self) -> None:
+        """
+        Register inbound webhooks with the chat platform after HTTP routes are live
+        (e.g. ``POST .../bot/<bot_key>``). Use ``self.endpoint`` and ``self.bot_key`` as needed.
+        """
+        pass
+    # -- End Method register_bot_webhook
 
     def hears(self, pattern: str, priority: int=50):
         """Decorator to register a regex pattern to a handler."""
@@ -111,6 +124,8 @@ class BaseChatBot(ABC):
 
 class BaseChatBotConfig(BaseModel):
     name: str
+    # Public HTTPS URL for this bot's events (factory default: ``{base_url}/bot/{bot_key}``).
+    endpoint: str
     high_pri_on: Optional[bool] = True
     send_alerts: Optional[bool] = True
     responders: List[str]
