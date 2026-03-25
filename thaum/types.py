@@ -5,10 +5,11 @@
 # This file source licensed under the Mozilla Public License 2.0
 
 import time
+import os
+from pathlib import Path
 from pydantic import ConfigDict, model_validator, BaseModel, SecretStr, BeforeValidator
 from typing import Optional, Annotated, Dict, List, TYPE_CHECKING
 from enum import StrEnum,IntEnum,auto
-from thaum.utils import resolve_base_url
 from emerald_utils.experimental.secrets_resolver import resolve_secret
 import logging
 import verboselogs
@@ -19,7 +20,37 @@ if TYPE_CHECKING:
 
 ResolvedSecret = Annotated[SecretStr, BeforeValidator(resolve_secret)]
 
-BaseUrlSource=StrEnum('BaseUrlSource',["CONFIG","ENVIRONMENT","GOOGLE","AZURE","AWS"])
+logger = logging.getLogger("thaum.types")
+
+BaseUrlSource = StrEnum(
+    "BaseUrlSource",
+    ["CONFIG", "ENVIRONMENT", "GOOGLE", "AZURE", "AWS"],
+)
+
+
+def _resolve_base_url(config_base_url: Optional[str]) -> tuple[str, BaseUrlSource]:
+    """
+    Returns the resolved URL and its source of truth.
+    Strict fail-fast implementation.
+    """
+    if config_base_url:
+        return config_base_url.rstrip('/'), BaseUrlSource.CONFIG
+
+    if env_url := os.environ.get("THAUM_BASE_URL"):
+        return env_url.rstrip('/'), BaseUrlSource.ENVIRONMENT
+
+    if "K_SERVICE" in os.environ:
+        return os.environ.get("K_SERVICE_URL", "").rstrip('/'), BaseUrlSource.GOOGLE
+
+    if "WEBSITE_HOSTNAME" in os.environ:
+        return f"https://{os.environ['WEBSITE_HOSTNAME']}".rstrip('/'), BaseUrlSource.AZURE
+
+    if "AWS_APP_RUNNER_SERVICE_URL" in os.environ:
+        return os.environ["AWS_APP_RUNNER_SERVICE_URL"].rstrip('/'), BaseUrlSource.AWS
+
+    logger.critical("No base_url configured and no cloud environment detected.")
+    raise ValueError("System cannot determine public Base URL. Configure base_url or THAUM_BASE_URL.")
+
 class LogLevel(IntEnum):
     SPAM     = verboselogs.SPAM
     DEBUG    = logging.DEBUG
@@ -122,6 +153,8 @@ class ServerConfig(BaseModel):
     log_override_poll_seconds: float = 1.0
     log_override_watchdog: bool = False
     log_override_path: str = "/run/thaum/log_override"
+    # Shared runtime state (webhook bearer warn markers, etc.); must be absolute.
+    thaum_state_dir: str = "/run/thaum"
     model_config = ConfigDict(
         extra='forbid',          # Reject extra keys in TOML (Prevents typos)
         #frozen=True,             # Make the config immutable after load (Safety!)
@@ -130,9 +163,18 @@ class ServerConfig(BaseModel):
     @model_validator(mode='after')
     def resolve_url(self) -> 'ServerConfig':
         # This function runs after fields are set
-        (self.base_url,self.url_source) = resolve_base_url(self.base_url)
+        (self.base_url,self.url_source) = _resolve_base_url(self.base_url)
         return self
     # -- End resolve_url
+
+    @model_validator(mode='after')
+    def resolve_thaum_state_dir(self) -> 'ServerConfig':
+        p = Path(self.thaum_state_dir)
+        if not p.is_absolute():
+            raise ValueError("server.thaum_state_dir must be an absolute path")
+        self.thaum_state_dir = str(p)
+        return self
+    # -- End resolve_thaum_state_dir
 # -- End ServerConfig
 
 class LogConfig(BaseModel):

@@ -9,8 +9,40 @@ import tomllib
 from typing import Dict, Any, Optional
 from thaum.types import ServerConfig,LogConfig
 from lookup.instance import initialize_lookup_plugin
+from alerts.webhook_bearer import set_thaum_state_dir
 
 logger = logging.getLogger("thaum.config")
+
+def _normalize_alert_block(alert_cfg: Any) -> Dict[str, Any]:
+    """
+    Normalize alert plugin config from either style:
+      1) {"plugin": "jira", ...plugin fields...}
+      2) {"jira": {...plugin fields...}}
+    Returns {"plugin": "<name>", ...plugin fields...}
+    """
+    if not isinstance(alert_cfg, dict) or not alert_cfg:
+        return {}
+
+    if "plugin" in alert_cfg:
+        return dict(alert_cfg)
+
+    plugin_keys = [k for k, v in alert_cfg.items() if isinstance(v, dict)]
+    if len(plugin_keys) != 1:
+        raise ValueError(
+            "Alert config must define exactly one plugin table when using nested "
+            "[bots.<id>.alert.<plugin>] syntax."
+        )
+
+    plugin_name = plugin_keys[0]
+    merged = dict(alert_cfg[plugin_name])
+    merged["plugin"] = plugin_name
+    return merged
+
+
+def normalize_alert_block(alert_cfg: Any) -> Dict[str, Any]:
+    """Public wrapper: flatten nested `[bots.*.alert.<plugin>]` TOML into a single dict with `plugin` key."""
+    return _normalize_alert_block(alert_cfg)
+
 
 def load_and_validate(path: str) -> Dict[str, Any]:
     """Loads the file format-agnostically."""
@@ -28,10 +60,24 @@ def load_and_validate(path: str) -> Dict[str, Any]:
     server = config_raw.get("server")
     if not server:
         raise ValueError("config.toml is missing mandatory [server] section.")
+    defaults_cfg = config_raw.get("defaults", {})
+
+    normalized_bots: Dict[str, Any] = {}
+    for bot_id, bot_cfg in config_raw.get("bots", {}).items():
+        if not isinstance(bot_cfg, dict):
+            raise ValueError(f"Bot '{bot_id}' must be configured as a table/object.")
+        nb = dict(bot_cfg)
+        if nb.get("alert"):
+            nb["alert"] = _normalize_alert_block(nb["alert"])
+        else:
+            nb["alert"] = {}
+        normalized_bots[bot_id] = nb
+
     config ={}
     config['raw']=config_raw
+    config['defaults']=defaults_cfg
     config['lookup']=config_raw.get("lookup", {})
-    config['bots']=config_raw.get("bots", {})
+    config['bots']=normalized_bots
     try:
         config['server']=ServerConfig(**server)
         config['log']=LogConfig(**config_raw.get('logging',{}))
@@ -49,6 +95,7 @@ def initialize_runtime_plugins(config: Dict[str, Any]) -> None:
     Intended to be called once during server bootstrap.
     """
     server_cfg: ServerConfig = config["server"]
+    set_thaum_state_dir(server_cfg.thaum_state_dir)
     lookup_cfg = config.get("lookup", {})
     initialize_lookup_plugin(server_cfg.lookup_plugin, lookup_cfg)
 

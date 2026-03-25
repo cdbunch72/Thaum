@@ -5,11 +5,12 @@
 import logging
 from bots.factory import create_bot
 from bots.base import BaseChatBot
-from typing import Dict,Any
+from typing import Any, Dict
 from thaum.handlers import bind_thaum_handlers
 from thaum.types import ThaumPerson, RespondersList
-from plugin_loader import get_plugin
+from plugin_loader import get_plugin, get_plugin_config_model
 from lookup.instance import get_lookup_plugin
+from config import normalize_alert_block
 
 BOTS: Dict[str, BaseChatBot] = {}
 
@@ -25,6 +26,17 @@ def initialize_bots(bot_type: str, config: Dict[str, Any]) -> None:
             bot_cfg.setdefault("endpoint", f"{server_cfg.base_url}/webhooks/{bot_key}")
             bot = create_bot(bot_type, bot_cfg)
             bot.lookup_plugin = get_lookup_plugin()
+
+            raw_alert_cfg = normalize_alert_block(bot_config.get("alert", {}))
+            plugin_name = raw_alert_cfg.get("plugin", "NullPlugin")
+            defaults_root = config.get("defaults") or {}
+            defaults_alert = defaults_root.get("alert") or {}
+            default_alert_cfg = defaults_alert.get(plugin_name, {}) or {}
+            if default_alert_cfg and not isinstance(default_alert_cfg, dict):
+                raise ValueError(f"[defaults.alert.{plugin_name}] must be a table/object.")
+            merged_alert_dict: Dict[str, Any] = {**default_alert_cfg, **raw_alert_cfg}
+            config_model = get_plugin_config_model(plugin_name)
+            p_cfg = config_model(**merged_alert_dict)
             resolved_responders = RespondersList()
             for ref in getattr(bot, "responder_refs", []):
                 if ref.startswith("person:"):
@@ -58,15 +70,10 @@ def initialize_bots(bot_type: str, config: Dict[str, Any]) -> None:
             bot.responders = resolved_responders
 
             # Plugin Loading
-            p_cfg = bot_config.get("alert", {})
-            plugin = get_plugin(p_cfg.get("plugin", "NullPlugin"), p_cfg)
+            plugin = get_plugin(plugin_name, p_cfg)
             plugin.attach_bot(bot)
             bot.alert_plugin = plugin
-            
-            # Auth
-            if plugin.supports_status_webhooks:
-                bot.auth_token = p_cfg.get("auth_token")
-            
+
             bind_thaum_handlers(bot)
             BOTS[bot_key] = bot
             boot_logger.info(f"Thaum bot '{bot_name}' initialized.")
