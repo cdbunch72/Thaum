@@ -21,7 +21,7 @@ def create_lookup(lookup_type: str, config_raw: dict[str, Any]) -> BaseLookupPlu
     Dynamically load a lookup plugin module and build one instance.
     """
     try:
-        module = importlib.import_module(f"lookup.{lookup_type}")
+        module = importlib.import_module(f"lookup.plugins.{lookup_type}")
         factory_func = getattr(module, "create_instance_lookup")
         # Support TOML shape:
         #   [lookup]
@@ -38,8 +38,8 @@ def create_lookup(lookup_type: str, config_raw: dict[str, Any]) -> BaseLookupPlu
             raise TypeError(f"Lookup '{lookup_type}' is not a BaseLookupPlugin descendant")
         return lookup
     except ImportError as e:
-        lookup_dir = os.path.join(os.path.dirname(__file__), ".")
-        ignore_files = {"base.py", "factory.py", "instance.py", "__init__.py"}
+        lookup_dir = os.path.join(os.path.dirname(__file__), "plugins")
+        ignore_files = {"__init__.py"}
         available = [
             f.replace(".py", "")
             for f in os.listdir(lookup_dir)

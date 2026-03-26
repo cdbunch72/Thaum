@@ -26,9 +26,9 @@ def _module_function_names(path: Path) -> set[str]:
 class PluginEntrypointContractsTest(unittest.TestCase):
     def test_alert_plugins_expose_required_entrypoints(self) -> None:
         # Alerts now use a strict contract: config model + typed factory.
-        alerts_dir = Path(__file__).resolve().parents[1] / "alerts"
+        alerts_dir = Path(__file__).resolve().parents[1] / "alerts" / "plugins"
         for module_file in _iter_plugin_files(
-            alerts_dir, {"base", "__init__", "webhook_bearer"}
+            alerts_dir, {"__init__"}
         ):
             fn_names = _module_function_names(module_file)
             self.assertTrue(
@@ -42,8 +42,8 @@ class PluginEntrypointContractsTest(unittest.TestCase):
 
     def test_bot_plugins_expose_required_entrypoints(self) -> None:
         # Bots are loaded through bots.factory with the same contract shape.
-        bots_dir = Path(__file__).resolve().parents[1] / "bots"
-        for module_file in _iter_plugin_files(bots_dir, {"base", "factory", "__init__"}):
+        bots_dir = Path(__file__).resolve().parents[1] / "bots" / "plugins"
+        for module_file in _iter_plugin_files(bots_dir, {"__init__"}):
             fn_names = _module_function_names(module_file)
             self.assertTrue(
                 "get_config_model" in fn_names,
@@ -56,11 +56,8 @@ class PluginEntrypointContractsTest(unittest.TestCase):
 
     def test_lookup_plugins_expose_required_entrypoints(self) -> None:
         # Lookup plugins are loaded through lookup.factory.
-        lookup_dir = Path(__file__).resolve().parents[1] / "lookup"
-        for module_file in _iter_plugin_files(
-            lookup_dir,
-            {"base", "factory", "instance", "db_bootstrap", "models", "__init__"},
-        ):
+        lookup_dir = Path(__file__).resolve().parents[1] / "lookup" / "plugins"
+        for module_file in _iter_plugin_files(lookup_dir, {"__init__"}):
             fn_names = _module_function_names(module_file)
             self.assertTrue(
                 "create_instance_lookup" in fn_names,

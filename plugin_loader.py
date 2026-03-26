@@ -28,18 +28,18 @@ class _PluginRegistryEntry(TypedDict):
 
 def _load_plugin_module(plugin_name: str) -> None:
     logger = logging.getLogger("plugin_loader")
-    module = importlib.import_module(f"alerts.{plugin_name}")
+    module = importlib.import_module(f"alerts.plugins.{plugin_name}")
     plugin_classes: list[type[BaseAlertPlugin]] = []
     for _name, obj in inspect.getmembers(module, inspect.isclass):
         if issubclass(obj, BaseAlertPlugin) and obj is not BaseAlertPlugin:
             plugin_classes.append(obj)
 
     if not plugin_classes:
-        raise ValueError(f"alerts.{plugin_name} does not define a BaseAlertPlugin subclass.")
+        raise ValueError(f"alerts.plugins.{plugin_name} does not define a BaseAlertPlugin subclass.")
     if len(plugin_classes) > 1:
         names = ", ".join(c.__name__ for c in plugin_classes)
         raise ValueError(
-            f"alerts.{plugin_name} defines multiple BaseAlertPlugin subclasses ({names}); "
+            f"alerts.plugins.{plugin_name} defines multiple BaseAlertPlugin subclasses ({names}); "
             "keep one plugin class per plugin module."
         )
 

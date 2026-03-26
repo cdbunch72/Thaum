@@ -18,7 +18,7 @@ def create_bot(bot_type: str, config_raw: dict[str, Any]) -> BaseChatBot:
     """
     bot_name=config_raw.get('name','<unknown>')
     try:
-        module = importlib.import_module(f"bots.{bot_type}")
+        module = importlib.import_module(f"bots.plugins.{bot_type}")
         
         # Call the standard entry point (using getattr to handle missing function errors)
         ConfigModel=module.get_config_model()
@@ -28,8 +28,8 @@ def create_bot(bot_type: str, config_raw: dict[str, Any]) -> BaseChatBot:
 
     except (ImportError) as e:
         # Resolve the directory relative to this file to be safe
-        bots_dir = os.path.join(os.path.dirname(__file__), ".")
-        ignore_files = {"base.py", "factory.py", "__init__.py"}
+        bots_dir = os.path.join(os.path.dirname(__file__), "plugins")
+        ignore_files = {"__init__.py"}
         available = [
             f.replace(".py", "") 
             for f in os.listdir(bots_dir) 
