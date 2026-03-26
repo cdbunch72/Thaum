@@ -1,3 +1,6 @@
+# Install from a local checkout or git until published, e.g.:
+#   pip install -e ../emerald_utils
+#   pip install "emerald_utils @ git+https://github.com/<org>/emerald_utils.git@main"
 emerald_utils
 Flask
 webexpythonsdk

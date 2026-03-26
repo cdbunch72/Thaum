@@ -9,6 +9,7 @@ import tomllib
 from typing import Dict, Any, Optional
 from thaum.types import ServerConfig,LogConfig
 from lookup.instance import initialize_lookup_plugin
+from lookup.db_bootstrap import init_lookup_db, resolve_lookup_db_url
 from alerts.webhook_bearer import set_thaum_state_dir
 
 logger = logging.getLogger("thaum.config")
@@ -97,6 +98,7 @@ def initialize_runtime_plugins(config: Dict[str, Any]) -> None:
     server_cfg: ServerConfig = config["server"]
     set_thaum_state_dir(server_cfg.thaum_state_dir)
     lookup_cfg = config.get("lookup", {})
+    init_lookup_db(resolve_lookup_db_url(server_cfg, lookup_cfg))
     initialize_lookup_plugin(server_cfg.lookup_plugin, lookup_cfg)
 
 

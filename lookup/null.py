@@ -18,7 +18,7 @@ from thaum.types import ThaumPerson, ThaumTeam
 class NullLookupPlugin(BaseLookupPlugin):
     """
     No remote identity backend.
-    Uses BaseLookupPlugin SQLAlchemy cache only.
+    Uses BaseLookupPlugin persistence on :class:`emerald_utils.db.EmeraldDB` only.
     """
 
     plugin_name = "null"
@@ -26,7 +26,6 @@ class NullLookupPlugin(BaseLookupPlugin):
     def __init__(self, **config: Any):
         cfg = NullLookupPluginConfig(**config)
         super().__init__(
-            db_url=cfg.db_url,
             cache_lock_path=cfg.cache_lock_path,
             default_team_ttl_seconds=cfg.default_team_ttl_seconds,
         )

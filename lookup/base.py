@@ -11,85 +11,36 @@ import os
 import tempfile
 import time
 from abc import ABC, abstractmethod
-from typing import Dict, List, Optional, Any
+from typing import Any, Dict, List, Optional
 
 from filelock import FileLock
 from pydantic import BaseModel, ConfigDict
-from sqlalchemy import (
-    Column,
-    Float,
-    ForeignKey,
-    Integer,
-    MetaData,
-    PrimaryKeyConstraint,
-    String,
-    Table,
-    delete,
-    create_engine,
-    select,
-    text,
-)
+from sqlalchemy import delete, select
 
+from emerald_utils.db import get_session
+
+from lookup.models import (
+    SchemaPerson,
+    SchemaPlatformId,
+    SchemaTeam,
+    SchemaTeamMember,
+    SchemaTeamPlatformId,
+)
 from thaum.types import ThaumPerson, ThaumTeam
 
 logger = logging.getLogger("thaum.lookup")
 
 ONE_WEEK = 604800
 DEFAULT_CACHE_LOCK_PATH = os.path.join(tempfile.gettempdir(), "thaum_cache.lock")
+DEFAULT_LOOKUP_DB_URL = "sqlite:///:memory:"
 
-_metadata = MetaData()
-
-# --- PEOPLE TABLE -------------------------------------------------------------
-_people_table = Table(
-    "people",
-    _metadata,
-    Column("email", String, primary_key=True),
-    Column("display_name", String, nullable=True),
-    Column("source_plugin", String, nullable=True),
-    Column("name_last_updated", Float, nullable=False),  # epoch timestamp
-)
-
-# --- PLATFORM IDS TABLE ------------------------------------------------------
-_platform_ids_table = Table(
-    "platform_ids",
-    _metadata,
-    Column("platform_key", String, nullable=False),  # plugin name: webex, jira, ldap, etc.
-    Column("platform_id", String, nullable=False),  # plugin-specific user id
-    Column("email", String, ForeignKey("people.email"), nullable=False),
-    PrimaryKeyConstraint("platform_key", "platform_id"),
-)
-
-# --- TEAMS TABLE --------------------------------------------------------------
-_teams_table = Table(
-    "teams",
-    _metadata,
-    Column("team_name", String, primary_key=True),
-    Column("last_cached", Float, nullable=False),
-    Column("ttl", Integer, nullable=False),
-)
-
-# --- TEAM MEMBERS TABLE ------------------------------------------------------
-_team_members_table = Table(
-    "team_members",
-    _metadata,
-    Column("team_name", String, ForeignKey("teams.team_name"), nullable=False),
-    Column("email", String, ForeignKey("people.email"), nullable=False),
-    PrimaryKeyConstraint("team_name", "email"),
-)
-
-# --- TEAM PLATFORM IDS TABLE ------------------------------------------------
-_team_platform_ids_table = Table(
-    "team_platform_ids",
-    _metadata,
-    Column("platform_key", String, nullable=False),
-    Column("platform_id", String, nullable=False),
-    Column("team_name", String, ForeignKey("teams.team_name"), nullable=False),
-    PrimaryKeyConstraint("platform_key", "platform_id"),
-)
 
 class BaseLookupPluginConfig(BaseModel):
     """
-    Shared SQLAlchemy cache configuration for all lookup plugins.
+    Shared lookup cache configuration for all lookup plugins.
+
+    The process-global DB is opened via :func:`emerald_utils.db.init_db` (see
+    :func:`lookup.db_bootstrap.init_lookup_db` / server bootstrap), not per-plugin.
 
     Expected TOML:
       [lookup]
@@ -101,7 +52,7 @@ class BaseLookupPluginConfig(BaseModel):
       [lookup.<plugin_name>]
     """
 
-    db_url: str = "sqlite:///thaum_lookup_cache.db"
+    db_url: str = DEFAULT_LOOKUP_DB_URL
     cache_lock_path: Optional[str] = None
     default_team_ttl_seconds: int = 14400
 
@@ -112,11 +63,16 @@ class BaseLookupPluginConfig(BaseModel):
 
 # -- End Class BaseLookupPluginConfig
 
+
 class BaseLookupPlugin(ABC):
     """
     Base class for lookup/caching plugins.
 
-    Identity cache rules (SQLAlchemy):
+    Persistence uses ORM models on :class:`emerald_utils.db.EmeraldDB` (tables prefixed
+    with ``schema_`` for portability). Call :func:`lookup.db_bootstrap.init_lookup_db`
+    before constructing plugins.
+
+    Identity cache rules:
       - People are cached by (platform_key, platform_id) -> email -> ThaumPerson.
       - Teams are cached by team name, and optionally mapped by (platform_key, platform_id) -> team_name.
 
@@ -129,30 +85,17 @@ class BaseLookupPlugin(ABC):
          merges by email (and persists any new platform ids).
     """
 
-    #: Optional: the cache instance is shared by a single server.
     plugin_name: str = "lookup"
 
     def __init__(
         self,
-        db_url: str = "sqlite:///thaum_lookup_cache.db",
         *,
         cache_lock_path: Optional[str] = None,
         default_team_ttl_seconds: int = 14400,
     ):
         self.logger = logging.getLogger(f"lookup.{self.plugin_name}")
-        self._engine = create_engine(db_url, connect_args={"check_same_thread": False})
         self._cache_lock_path = cache_lock_path or DEFAULT_CACHE_LOCK_PATH
         self._default_team_ttl_seconds = default_team_ttl_seconds
-        _metadata.create_all(self._engine)
-
-        # Improve concurrent read/write behavior under gunicorn by enabling WAL
-        # when using SQLite.
-        if db_url.strip().lower().startswith("sqlite"):
-            try:
-                with self._engine.begin() as conn:
-                    conn.execute(text("PRAGMA journal_mode=WAL"))
-            except Exception as e:
-                self.logger.warning("Failed to enable SQLite WAL: %s", e)
 
     # --- People ---------------------------------------------------------------
 
@@ -164,32 +107,29 @@ class BaseLookupPlugin(ABC):
 
         Cache lookup key is the bot/plugin name (e.g. `webex`, `jira`, `ldap`).
         """
-        with self._engine.begin() as conn:
-            row = conn.execute(
-                select(_platform_ids_table.c.email).where(
-                    _platform_ids_table.c.platform_key == bot_plugin_name
-                ).where(_platform_ids_table.c.platform_id == person_id)
-            ).fetchone()
-
+        with get_session() as session:
+            row = session.scalar(
+                select(SchemaPlatformId.email).where(
+                    SchemaPlatformId.platform_key == bot_plugin_name,
+                    SchemaPlatformId.platform_id == person_id,
+                )
+            )
             if not row:
                 return None
-
-            return self._get_person_by_email(conn, row.email)
+            return self._get_person_by_email(session, row)
 
     def _get_person_by_email(
-        self, conn: Any, email: str
+        self, session: Any, email: str
     ) -> Optional[ThaumPerson]:
-        row = conn.execute(
-            select(_people_table).where(_people_table.c.email == email)
-        ).fetchone()
-        if not row:
+        row = session.get(SchemaPerson, email)
+        if row is None:
             return None
 
-        pid_rows = conn.execute(
-            select(_platform_ids_table).where(_platform_ids_table.c.email == email)
-        ).fetchall()
+        pid_rows = session.scalars(
+            select(SchemaPlatformId).where(SchemaPlatformId.email == email)
+        ).all()
 
-        platform_ids: Dict[str, str] = {r.platform_key: r.platform_id for r in pid_rows}
+        platform_ids: Dict[str, str] = {p.platform_key: p.platform_id for p in pid_rows}
 
         return ThaumPerson(
             email=row.email,
@@ -206,10 +146,8 @@ class BaseLookupPlugin(ABC):
         now = time.time()
 
         with FileLock(self._cache_lock_path):
-            with self._engine.begin() as conn:
-                existing = conn.execute(
-                    select(_people_table).where(_people_table.c.email == fragment.email)
-                ).fetchone()
+            with get_session() as session:
+                existing = session.get(SchemaPerson, fragment.email)
 
                 if existing:
                     should_update_name = (
@@ -218,21 +156,13 @@ class BaseLookupPlugin(ABC):
                         or (now - existing.name_last_updated) > ONE_WEEK
                     )
 
-                    update_values: Dict[str, Any] = {}
                     if should_update_name and fragment.display_name:
-                        update_values["display_name"] = fragment.display_name
-                        update_values["source_plugin"] = fragment.source_plugin
-                        update_values["name_last_updated"] = now
-
-                    if update_values:
-                        conn.execute(
-                            _people_table.update()
-                            .where(_people_table.c.email == fragment.email)
-                            .values(**update_values)
-                        )
+                        existing.display_name = fragment.display_name
+                        existing.source_plugin = fragment.source_plugin
+                        existing.name_last_updated = now
                 else:
-                    conn.execute(
-                        _people_table.insert().values(
+                    session.add(
+                        SchemaPerson(
                             email=fragment.email,
                             display_name=fragment.display_name,
                             source_plugin=fragment.source_plugin,
@@ -240,42 +170,43 @@ class BaseLookupPlugin(ABC):
                         )
                     )
 
-                # Insert platform ids (duplicates are OK to ignore).
                 for platform_key, pid in fragment.platform_ids.items():
-                    try:
-                        conn.execute(
-                            _platform_ids_table.insert().values(
+                    dup = session.scalar(
+                        select(SchemaPlatformId).where(
+                            SchemaPlatformId.platform_key == platform_key,
+                            SchemaPlatformId.platform_id == pid,
+                        )
+                    )
+                    if dup is None:
+                        session.add(
+                            SchemaPlatformId(
                                 platform_key=platform_key,
                                 platform_id=pid,
                                 email=fragment.email,
                             )
                         )
-                    except Exception:
-                        pass
 
-                return self._get_person_by_email(conn, fragment.email)
+                merged = self._get_person_by_email(session, fragment.email)
+                assert merged is not None
+                return merged
 
     # --- Teams ---------------------------------------------------------------
 
     def get_team_by_name(self, bot: Any, team_name: str) -> Optional[ThaumTeam]:
-        with self._engine.begin() as conn:
-            row = conn.execute(
-                select(_teams_table).where(_teams_table.c.team_name == team_name)
-            ).fetchone()
-
-            if not row:
+        with get_session() as session:
+            row = session.get(SchemaTeam, team_name)
+            if row is None:
                 return None
 
-            email_rows = conn.execute(
-                select(_team_members_table.c.email).where(
-                    _team_members_table.c.team_name == team_name
+            email_rows = session.scalars(
+                select(SchemaTeamMember.email).where(
+                    SchemaTeamMember.team_name == team_name
                 )
-            ).fetchall()
+            ).all()
 
-            # Convert to ThaumPerson objects using the same connection.
             members: List[ThaumPerson] = []
-            for r in email_rows:
-                p = self._get_person_by_email(conn, r.email)
+            for email in email_rows:
+                p = self._get_person_by_email(session, email)
                 if p is not None:
                     members.append(p)
 
@@ -290,17 +221,17 @@ class BaseLookupPlugin(ABC):
     def get_team_by_id(
         self, bot: Any, bot_plugin_name: str, team_id: str
     ) -> Optional[ThaumTeam]:
-        with self._engine.begin() as conn:
-            row = conn.execute(
-                select(_team_platform_ids_table.c.team_name).where(
-                    _team_platform_ids_table.c.platform_key == bot_plugin_name
-                ).where(_team_platform_ids_table.c.platform_id == team_id)
-            ).fetchone()
-
-            if not row:
+        with get_session() as session:
+            name = session.scalar(
+                select(SchemaTeamPlatformId.team_name).where(
+                    SchemaTeamPlatformId.platform_key == bot_plugin_name,
+                    SchemaTeamPlatformId.platform_id == team_id,
+                )
+            )
+            if not name:
                 return None
 
-            return self.get_team_by_name(bot, row.team_name)
+        return self.get_team_by_name(bot, name)
 
     def cache_team(
         self,
@@ -316,48 +247,46 @@ class BaseLookupPlugin(ABC):
         mapping so callers can do `get_team_by_id(...)` by (plugin,id).
         """
         with FileLock(self._cache_lock_path):
-            with self._engine.begin() as conn:
+            with get_session() as session:
                 last_cached = getattr(team, "last_cached", None) or time.time()
                 ttl = getattr(team, "ttl", None) or self._default_team_ttl_seconds
 
-                conn.execute(
-                    _teams_table.insert()
-                    .values(
+                session.merge(
+                    SchemaTeam(
                         team_name=team.team_name,
                         last_cached=last_cached,
                         ttl=ttl,
                     )
-                    .prefix_with("OR REPLACE")  # SQLite-compatible
                 )
 
-                conn.execute(
-                    delete(_team_members_table).where(
-                        _team_members_table.c.team_name == team.team_name
+                session.execute(
+                    delete(SchemaTeamMember).where(
+                        SchemaTeamMember.team_name == team.team_name
                     )
                 )
 
                 members = list(getattr(team, "_members", []))
-                if members:
-                    conn.execute(
-                        _team_members_table.insert(),
-                        [{"team_name": team.team_name, "email": m.email} for m in members],
+                for m in members:
+                    session.add(
+                        SchemaTeamMember(team_name=team.team_name, email=m.email)
                     )
 
                 if bot_plugin_name and team_id:
-                    try:
-                        conn.execute(
-                            _team_platform_ids_table.insert().values(
+                    dup = session.scalar(
+                        select(SchemaTeamPlatformId).where(
+                            SchemaTeamPlatformId.platform_key == bot_plugin_name,
+                            SchemaTeamPlatformId.platform_id == team_id,
+                        )
+                    )
+                    if dup is None:
+                        session.add(
+                            SchemaTeamPlatformId(
                                 platform_key=bot_plugin_name,
                                 platform_id=team_id,
                                 team_name=team.team_name,
                             )
                         )
-                    except Exception:
-                        # Mapping already exists; ignore.
-                        pass
 
-        # Keep/return the live object reference. Callers still get cached members from DB via
-        # `get_team_by_name(...)` if they need full reconstruction.
         return team
 
     def merge_team(
@@ -395,7 +324,6 @@ class BaseLookupPlugin(ABC):
         Return value is a merged list of ThaumPerson objects.
         """
         members = self.fetch_team_members(team)
-        # Persist requires `team._members` so `merge_team(...)` can merge by email.
         team._members = members
         return self.merge_team(team, bot_plugin_name=None, team_id=None)._members
 
@@ -405,4 +333,3 @@ class BaseLookupPlugin(ABC):
         ...
 
 # -- End Class BaseLookupPlugin
-

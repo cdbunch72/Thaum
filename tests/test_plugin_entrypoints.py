@@ -57,7 +57,10 @@ class PluginEntrypointContractsTest(unittest.TestCase):
     def test_lookup_plugins_expose_required_entrypoints(self) -> None:
         # Lookup plugins are loaded through lookup.factory.
         lookup_dir = Path(__file__).resolve().parents[1] / "lookup"
-        for module_file in _iter_plugin_files(lookup_dir, {"base", "factory", "instance", "__init__"}):
+        for module_file in _iter_plugin_files(
+            lookup_dir,
+            {"base", "factory", "instance", "db_bootstrap", "models", "__init__"},
+        ):
             fn_names = _module_function_names(module_file)
             self.assertTrue(
                 "create_instance_lookup" in fn_names,
