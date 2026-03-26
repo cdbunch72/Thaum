@@ -6,12 +6,21 @@
 
 from __future__ import annotations
 import logging
+import secrets
 from typing import Dict, Any, Optional, List, TYPE_CHECKING
-from pydantic import model_validator
+from pydantic import Field, SecretStr, model_validator
 from thaum.types import ThaumPerson, ResolvedSecret
 from webexpythonsdk import WebexAPI
 from bots.base import BaseChatBot, MessageContext, BaseChatBotConfig
 from log_setup import log_debug_blob
+
+if TYPE_CHECKING:
+    from flask import Request as FlaskRequest
+
+
+# Minimum HMAC secret length to avoid accidental weak configuration.
+# Webex accepts arbitrary secrets, but we enforce a lower bound for safety.
+MIN_HMAC_SECRET_CHARS: int = 16
 
 
 class WebexChatBot(BaseChatBot):
@@ -26,7 +35,8 @@ class WebexChatBot(BaseChatBot):
         self.api = WebexAPI(access_token=config.token.get_secret_value())
         self.me = self.api.people.me()
         self.hmac_secret = (
-            None if config.hmac_secret is None
+            None
+            if config.hmac_secret is None
             else config.hmac_secret.get_secret_value()
         )
         
@@ -136,15 +146,39 @@ class WebexChatBot(BaseChatBot):
             return lookup.merge_person(fragment)
         return fragment
     
-    def validate_signature(self, payload_body: bytes, signature: Optional[str]) -> bool:
-        if self.hmac_secret is None:
+    def _validate_signature(self, payload_body: bytes, signature: Optional[str]) -> bool:
+        """Return True if the request signature is valid.
+
+        If ``hmac_secret`` is unset/disabled (empty in config), signatures are not verified.
+        """
+        if not self.hmac_secret:
             return True
-        if not signature: return False
-        
+        if not signature:
+            return False
+
         import hmac, hashlib
+
         hashed = hmac.new(self.hmac_secret.encode(), payload_body, hashlib.sha1)
         return hmac.compare_digest(hashed.hexdigest(), signature)
     # -- End Method validate_signature
+
+    def authenticate_request(self, request: "FlaskRequest") -> bool:
+        """Extract Webex webhook signature + raw body and verify it."""
+        try:
+            # Flask's `request.get_data()` returns the raw body bytes (and caches them on the request object).
+            raw_body = request.get_data(cache=True)  # type: ignore[attr-defined]
+        except Exception:
+            # Fallback for non-Flask request objects.
+            raw_body = getattr(request, "data", b"") or b""
+
+        signature = None
+        try:
+            signature = request.headers.get("X-Spark-Signature")  # type: ignore[attr-defined]
+        except Exception:
+            signature = None
+
+        return self._validate_signature(raw_body, signature)
+    # -- End Method authenticate_request
 
     def _process_message(self, message_id: str) -> Optional[str]:
         """
@@ -283,7 +317,36 @@ class WebexChatBot(BaseChatBot):
 
 class WebexChatBotConfig(BaseChatBotConfig):
     token: ResolvedSecret
-    hmac_secret: Optional[ResolvedSecret] = None
+    hmac_secret: Optional[ResolvedSecret] = Field(
+        default=None,
+        description=(
+            "Webex webhook signing secret (X-Spark-Signature). If the field is omitted, a "
+            "random value is generated at startup (single-process; re-register webhooks after "
+            "restart or pin a secret). Set to empty to disable verification. Any other value "
+            "is used as-is, but must be at least the minimum length."
+        ),
+    )
+
+    @model_validator(mode="after")
+    def normalize_hmac_secret(self) -> WebexChatBotConfig:
+        if self.hmac_secret is not None:
+            s = self.hmac_secret.get_secret_value().strip()
+            if not s:
+                self.hmac_secret = None
+                return self
+            if len(s) < MIN_HMAC_SECRET_CHARS:
+                raise ValueError(
+                    f"hmac_secret is too short; must be >= {MIN_HMAC_SECRET_CHARS} characters "
+                    f"(or set it to empty to disable verification)."
+                )
+            # Keep the secret (non-empty, meets minimum length).
+            return self
+
+        # Field omitted => generate one for this process.
+        # (This is intentionally single-process only, unless you store/pin the generated value.)
+        self.hmac_secret = SecretStr(secrets.token_hex(32))
+        return self
+    # -- End normalize_hmac_secret
 
 
 def get_config_model():

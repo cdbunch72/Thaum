@@ -7,11 +7,14 @@
 from __future__ import annotations
 from abc import ABC, abstractmethod
 import logging
-from typing import List, Optional, Tuple, Callable, Dict, Any, Protocol
+from typing import List, Optional, Tuple, Callable, Dict, Any, Protocol, TYPE_CHECKING
 from thaum.types import ThaumPerson, RespondersList
 from dataclasses import dataclass, field
 from pydantic import BaseModel, model_validator
 import re
+
+if TYPE_CHECKING:
+    from flask import Request as FlaskRequest
 
 @dataclass
 class MessageContext:
@@ -98,6 +101,17 @@ class BaseChatBot(ABC):
         """Called by the bot's webhook route"""
         pass
     # -- End Method handle_event
+
+    @abstractmethod
+    def authenticate_request(self, request: "FlaskRequest") -> bool:
+        """
+        Verify the incoming request before calling `handle_event`.
+
+        Subclasses should extract any required auth material from the request
+        (e.g. headers, raw body) and return True on success.
+        """
+        pass
+    # -- End Method authenticate_request
 
     @abstractmethod
     def register_bot_webhook(self) -> None:
