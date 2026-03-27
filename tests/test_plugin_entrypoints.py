@@ -5,12 +5,17 @@ from pathlib import Path
 
 
 def _iter_plugin_files(package_dir: Path, ignore: set[str]) -> list[Path]:
-    module_names: list[Path] = []
+    module_paths: list[Path] = []
     for module_info in pkgutil.iter_modules([str(package_dir)]):
         if module_info.name in ignore:
             continue
-        module_names.append(package_dir / f"{module_info.name}.py")
-    return sorted(module_names)
+        if module_info.ispkg:
+            init_path = package_dir / module_info.name / "__init__.py"
+            if init_path.is_file():
+                module_paths.append(init_path)
+        else:
+            module_paths.append(package_dir / f"{module_info.name}.py")
+    return sorted(module_paths)
 
 
 def _module_function_names(path: Path) -> set[str]:

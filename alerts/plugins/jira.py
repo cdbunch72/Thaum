@@ -75,6 +75,7 @@ class JiraPlugin(BaseAlertPlugin):
             name = name[5:].strip()
         canonical = self._team_name_by_folded.get(name.casefold())
         return canonical if canonical else name
+    # -- End Method _canonical_team_ref
 
     def _refresh_team_cache(self) -> None:
         """Warm cache with all JSM Ops teams (including teams not referenced in config)."""
@@ -104,6 +105,7 @@ class JiraPlugin(BaseAlertPlugin):
                     lookup.cache_team(t, bot_plugin_name="jira", team_id=team_id)
                 except Exception as e:
                     self.logger.warning("Could not cache Jira team '%s' (%s): %s", team_name, team_id, e)
+    # -- End Method _refresh_team_cache
 
     def _resolve_email_to_account_id(self, email: str) -> Optional[str]:
         key = email.strip().lower()
@@ -118,11 +120,7 @@ class JiraPlugin(BaseAlertPlugin):
             except Exception:
                 cached = None
             if cached is not None:
-                cached_id = (
-                    cached.platform_ids.get("jira")
-                    or cached.platform_ids.get("jira_account")
-                    or cached.platform_ids.get("atlassian")
-                )
+                cached_id = (cached.platform_ids.get("jira"))
                 if cached_id:
                     return cached_id
 
@@ -156,9 +154,7 @@ class JiraPlugin(BaseAlertPlugin):
                         if display_name:
                             fragment.display_name = display_name
                             fragment.source_plugin = "jira"
-                        lookup.merge_person(
-                            fragment
-                        )
+                        lookup.merge_person(fragment)
                     except Exception:
                         pass
                 return account_id
@@ -177,14 +173,13 @@ class JiraPlugin(BaseAlertPlugin):
                         if display_name:
                             fragment.display_name = display_name
                             fragment.source_plugin = "jira"
-                        lookup.merge_person(
-                            fragment
-                        )
+                        lookup.merge_person(fragment)
                     except Exception:
                         pass
                 return account_id
 
         return None
+    # -- End Method _resolve_email_to_account_id
 
     def _resolve_config_responders(self) -> RespondersList:
         """Resolve plugin config responders into a typed RespondersList."""
@@ -212,6 +207,7 @@ class JiraPlugin(BaseAlertPlugin):
             source_plugin="jira_config",
             team_name_normalizer=self._canonical_team_ref,
         )
+    # -- End Method _resolve_config_responders
 
     def _responders_list_to_jira_payload(self, responders: RespondersList) -> list[dict[str, str]]:
         """
@@ -245,6 +241,7 @@ class JiraPlugin(BaseAlertPlugin):
             payload.append({"type": "user", "id": account_id})
 
         return payload
+    # -- End Method _responders_list_to_jira_payload
 
     def validate_connection(self) -> bool:
         """Verify we can read team list and resolve responder references."""
@@ -281,6 +278,7 @@ class JiraPlugin(BaseAlertPlugin):
                 "roomid": room_id,
                 "sender": sender.email,
                 "short_id": short_id,
+                "bot_key": self.bot.bot_key,
             },
         }
         if priority == AlertPriority.HIGH:
