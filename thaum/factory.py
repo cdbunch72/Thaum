@@ -51,7 +51,7 @@ def initialize_bots(bot_type: str, config: Dict[str, Any]) -> None:
                 if ref.startswith("person:"):
                     email = ref[7:].strip()
                     if email:
-                        resolved_responders += ThaumPerson(email=email, display_name=email, source_plugin="config")
+                        resolved_responders += ThaumPerson(email=email)
                     continue
 
                 if ref.startswith("team:"):
@@ -68,7 +68,7 @@ def initialize_bots(bot_type: str, config: Dict[str, Any]) -> None:
                 if "@" in ref:
                     email = ref.strip()
                     if email:
-                        resolved_responders += ThaumPerson(email=email, display_name=email, source_plugin="config")
+                        resolved_responders += ThaumPerson(email=email)
                     continue
 
                 team = bot.lookup_plugin.get_team_by_name(bot, ref)

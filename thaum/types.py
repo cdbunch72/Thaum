@@ -67,7 +67,7 @@ class AlertPriority(StrEnum):
 @dataclass
 class ThaumPerson:
     email: str
-    display_name: str
+    display_name: Optional[str] = None
     platform_ids: Dict[str, str] = field(default_factory=dict)
     source_plugin: str = "unknown"
 

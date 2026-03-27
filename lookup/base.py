@@ -11,7 +11,7 @@ import os
 import tempfile
 import time
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional
 
 from filelock import FileLock
 from pydantic import BaseModel, ConfigDict
@@ -26,7 +26,7 @@ from lookup.models import (
     SchemaTeamMember,
     SchemaTeamPlatformId,
 )
-from thaum.types import ThaumPerson, ThaumTeam
+from thaum.types import RespondersList, ThaumPerson, ThaumTeam
 
 logger = logging.getLogger("thaum.lookup")
 
@@ -138,6 +138,14 @@ class BaseLookupPlugin(ABC):
             source_plugin=row.source_plugin or self.plugin_name,
         )
 
+    def get_person_by_email(self, email: str) -> Optional[ThaumPerson]:
+        """Return a cached person by canonical email, if present."""
+        key = (email or "").strip()
+        if not key:
+            return None
+        with get_session() as session:
+            return self._get_person_by_email(session, key)
+
     def merge_person(self, fragment: ThaumPerson) -> ThaumPerson:
         """
         Merge a partial ThaumPerson fragment into the canonical cache row
@@ -189,6 +197,63 @@ class BaseLookupPlugin(ABC):
                 merged = self._get_person_by_email(session, fragment.email)
                 assert merged is not None
                 return merged
+
+    def resolve_responder_refs(
+        self,
+        bot: Any,
+        refs: List[str],
+        *,
+        source_plugin: str = "config",
+        team_name_normalizer: Optional[Callable[[str], str]] = None,
+    ) -> RespondersList:
+        """
+        Resolve responder references into a typed RespondersList via cached people/teams.
+
+        Supported refs:
+          - person:<email>
+          - team:<team_name>
+          - plain email (contains '@')
+          - bare team name
+        """
+        out = RespondersList()
+        normalize = team_name_normalizer or (lambda s: s.strip())
+
+        for raw in refs:
+            ref = (raw or "").strip()
+            if not ref:
+                continue
+
+            if ref.lower().startswith("person:"):
+                email = ref[7:].strip()
+                if email:
+                    out += ThaumPerson(email=email)
+                continue
+
+            if ref.lower().startswith("team:"):
+                team_name = normalize(ref[5:])
+                if not team_name:
+                    continue
+                team = self.get_team_by_name(bot, team_name)
+                if team is not None:
+                    out += team
+                else:
+                    self.logger.warning("Responder team '%s' was not found in lookup cache.", team_name)
+                continue
+
+            if "@" in ref:
+                out += ThaumPerson(email=ref)
+                continue
+
+            team_name = normalize(ref)
+            if not team_name:
+                continue
+            team = self.get_team_by_name(bot, team_name)
+            if team is not None:
+                out += team
+            else:
+                self.logger.warning("Responder reference '%s' did not resolve as person or team.", ref)
+
+        return out
 
     # --- Teams ---------------------------------------------------------------
 
