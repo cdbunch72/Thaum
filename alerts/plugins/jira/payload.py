@@ -84,6 +84,19 @@ def parse_created_alert_id(response: requests.Response) -> str:
 # -- End Function parse_created_alert_id
 
 
+def build_sender_extra_properties(sender: ThaumPerson, plugin_name: str) -> dict[str, str]:
+    """
+    Sender object for Jira ``extraProperties`` (no email — privacy).
+
+    ``name`` uses display name only; if absent, ``"Someone"`` (email is never sent).
+    ``bot_person_id`` is the chat platform person id for ``plugin_name``, or empty string.
+    """
+    display = (sender.display_name or "").strip() or "Someone"
+    pid = (sender.platform_ids or {}).get(plugin_name, "") or ""
+    return {"name": display, "bot_person_id": pid}
+# -- End Function build_sender_extra_properties
+
+
 def build_trigger_alert_body(
     summary: str,
     bot_name: str,
@@ -95,6 +108,7 @@ def build_trigger_alert_body(
     short_id: str,
     responders_payload: list[dict[str, str]],
     bot_key: str,
+    plugin_name: str,
 ) -> dict[str, Any]:
     severity = priority_high if priority == AlertPriority.HIGH else priority_normal
     alert: dict[str, Any] = {
@@ -105,7 +119,7 @@ def build_trigger_alert_body(
         "responders": responders_payload,
         "extraProperties": {
             "roomid": room_id,
-            "sender": sender.email,
+            "sender": build_sender_extra_properties(sender, plugin_name),
             "short_id": short_id,
             "bot_key": bot_key,
         },

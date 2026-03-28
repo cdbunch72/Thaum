@@ -19,6 +19,8 @@ if TYPE_CHECKING:
 
 class BaseAlertPluginConfig(BaseModel):
     plugin: str
+    # When True, status webhook messages may use platform @-mentions (driver-dependent).
+    status_mentions: bool = True
     model_config = ConfigDict(extra="allow")
 # -- End Class BaseAlertPluginConfig
 

@@ -159,6 +159,7 @@ class JiraPlugin(BaseAlertPlugin):
             short_id,
             responders_payload,
             bk,
+            self.bot.plugin_name,
         )
 
         response = post_alert(url, alert, self.headers, self.auth)

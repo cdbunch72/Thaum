@@ -77,7 +77,7 @@ class WebexChatBot(BaseChatBot):
 
     def delete_room(self, room_id: str, person: Optional[ThaumPerson] = None) -> None:
         """Implodes the room ONLY if bot is the creator."""
-        display_name = person.for_display() if person else "An unknown user"
+        display_name = person.for_display if person else "An unknown user"
         
         try:
             room = self.api.rooms.get(room_id)
@@ -145,7 +145,28 @@ class WebexChatBot(BaseChatBot):
         if lookup is not None:
             return lookup.merge_person(fragment)
         return fragment
-    
+
+    def format_mention(self, person_or_id: ThaumPerson | str | None) -> str:
+        if person_or_id is None:
+            return ""
+        if isinstance(person_or_id, ThaumPerson):
+            pid = person_or_id.platform_ids.get(self.plugin_name)
+            if not pid:
+                lookup = getattr(self, "lookup_plugin", None)
+                if lookup is not None:
+                    try:
+                        resolved = lookup.get_person_by_email(person_or_id.email)
+                    except Exception:
+                        resolved = None
+                    if resolved is not None:
+                        pid = resolved.platform_ids.get(self.plugin_name)
+            if pid:
+                return f"<@personId:{pid}>"
+            return (person_or_id.display_name or "").strip() or person_or_id.email
+        s = str(person_or_id).strip()
+        return f"<@personId:{s}>" if s else ""
+    # -- End Method format_mention
+
     def _validate_signature(self, payload_body: bytes, signature: Optional[str]) -> bool:
         """Return True if the request signature is valid.
 

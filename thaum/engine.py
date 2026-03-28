@@ -20,11 +20,11 @@ def create_incident_room(bot: 'BaseChatBot', summary: str, speaker: ThaumPerson,
     """Orchestrates room creation and plugin triggering."""
     try:
         template_str = getattr(bot, 'room_title_template', "Incident: {summary}")
-        sender = speaker.for_display()
+        sender = speaker.for_display
         template = jinja_env.from_string(template_str)
         context = {
             "summary": summary[:30],
-            "requester_name": speaker.for_display(),
+            "requester_name": speaker.for_display,
             "team_description": bot.team_description,
             "date": datetime.now().strftime("%Y-%m-%d"),
         }
@@ -59,7 +59,7 @@ def create_incident_room(bot: 'BaseChatBot', summary: str, speaker: ThaumPerson,
 def acknowledge_incident(bot: 'BaseChatBot', alias: str, person: ThaumPerson) -> None:
     """Coordinates alert acknowledgment via the plugin."""
     try:
-        person_name = person.for_display()
+        person_name = person.for_display
         bot.alert_plugin.acknowledge_alert(alias, person_name)
     except Exception as e:
         logger.error(f"Engine failure in acknowledge_incident: {e}")

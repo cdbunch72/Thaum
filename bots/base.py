@@ -7,7 +7,7 @@
 from __future__ import annotations
 from abc import ABC, abstractmethod
 import logging
-from typing import List, Optional, Tuple, Callable, Dict, Any, Protocol, TYPE_CHECKING
+from typing import List, Optional, Tuple, Callable, Dict, Any, Protocol, TYPE_CHECKING, Union
 from thaum.types import ThaumPerson, RespondersList
 from dataclasses import dataclass, field
 from pydantic import BaseModel, model_validator
@@ -95,7 +95,31 @@ class BaseChatBot(ABC):
         """Takes a bot_type-specific person_id and returns a ThaumPerson"""
         pass
     # -- End Method get_person
-    
+
+    def format_mention(self, person_or_id: Union[ThaumPerson, str, None]) -> str:
+        """
+        Platform mention token for use in markdown messages, or plain text when unsupported.
+        Accepts a ``ThaumPerson`` or a native chat ``person_id`` string for this bot's
+        ``plugin_name``.
+        """
+        if person_or_id is None:
+            return ""
+        if isinstance(person_or_id, ThaumPerson):
+            pid = person_or_id.platform_ids.get(self.plugin_name)
+            if pid:
+                return self._mention_markdown_for_person_id(pid)
+            return person_or_id.for_display
+        s = str(person_or_id).strip()
+        if not s:
+            return ""
+        return self._mention_markdown_for_person_id(s)
+    # -- End Method format_mention
+
+    def _mention_markdown_for_person_id(self, person_id: str) -> str:
+        """Override in drivers that support @-mentions in ``say(..., markdown=True)``."""
+        return person_id
+    # -- End Method _mention_markdown_for_person_id
+
     @abstractmethod
     def handle_event(self, event: Dict[str, Any]) -> None:
         """Called by the bot's webhook route"""

@@ -6,7 +6,10 @@
 
 from __future__ import annotations
 
+import logging
 from typing import Any, Optional
+
+from jinja2 import Environment, StrictUndefined
 
 from alerts.plugins.jira.config import JiraAlertPluginConfig
 from alerts.plugins.jira.mapping_store import (
@@ -16,6 +19,9 @@ from alerts.plugins.jira.mapping_store import (
     room_id_for_jira_alert,
 )
 from bots.base import BaseChatBot
+from thaum.types import ThaumPerson
+
+_jinja_env = Environment(undefined=StrictUndefined)
 
 
 def _bot_key_str(bot: BaseChatBot) -> str:
@@ -23,21 +29,89 @@ def _bot_key_str(bot: BaseChatBot) -> str:
 # -- End Function _bot_key_str
 
 
-def _display_name_for_username(bot: BaseChatBot, logger: logging.Logger, username: Optional[str]) -> str:
+def _sender_name_and_bot_person_id(
+    bot: BaseChatBot,
+    logger: logging.Logger,
+    extras: dict[str, Any],
+) -> tuple[str, str]:
+    raw = extras.get("sender")
+    if isinstance(raw, dict):
+        name = str(raw.get("name") or "").strip() or "Someone"
+        pid = str(raw.get("bot_person_id") or "").strip()
+        return name, pid
+    if isinstance(raw, str) and raw.strip():
+        u = raw.strip()
+        if "@" in u:
+            lookup = getattr(bot, "lookup_plugin", None)
+            if lookup is not None:
+                try:
+                    person = lookup.get_person_by_email(u)
+                    if person is not None:
+                        return person.for_display, ""
+                except Exception as e:
+                    logger.debug("legacy sender email lookup failed: %s", e)
+            return "Someone", ""
+        return u, ""
+    return "Someone", ""
+# -- End Function _sender_name_and_bot_person_id
+
+
+def _responder_name_and_person(
+    bot: BaseChatBot,
+    logger: logging.Logger,
+    username: Optional[str],
+) -> tuple[str, Optional[ThaumPerson]]:
     u = (username or "").strip()
     if not u:
-        return "Someone"
+        return "Someone", None
     if "@" in u:
         lookup = getattr(bot, "lookup_plugin", None)
         if lookup is not None:
             try:
                 person = lookup.get_person_by_email(u)
                 if person is not None:
-                    return person.for_display()
+                    return person.for_display, person
             except Exception as e:
-                logger.debug("lookup display name for %s failed: %s", u, e)
-    return u
-# -- End Function _display_name_for_username
+                logger.debug("responder lookup for %s failed: %s", u, e)
+        return "Someone", None
+    return u, None
+# -- End Function _responder_name_and_person
+
+
+def _status_message_context(
+    bot: BaseChatBot,
+    cfg: JiraAlertPluginConfig,
+    logger: logging.Logger,
+    extras: dict[str, Any],
+    alert: dict[str, Any],
+) -> dict[str, Any]:
+    sender_name, sender_pid = _sender_name_and_bot_person_id(bot, logger, extras)
+    if cfg.status_mentions and sender_pid:
+        sender_mention = bot.format_mention(sender_pid)
+    else:
+        sender_mention = sender_name
+
+    responder_name, responder_person = _responder_name_and_person(
+        bot, logger, alert.get("username")
+    )
+    if cfg.status_mentions and responder_person is not None:
+        responder_mention = bot.format_mention(responder_person)
+    else:
+        responder_mention = responder_name
+
+    return {
+        "team_description": bot.team_description,
+        "sender_name": sender_name,
+        "sender_mention": sender_mention,
+        "responder_name": responder_name,
+        "responder_mention": responder_mention,
+    }
+# -- End Function _status_message_context
+
+
+def _render_status_template(template_str: str, context: dict[str, Any]) -> str:
+    return _jinja_env.from_string(template_str).render(**context)
+# -- End Function _render_status_template
 
 
 def _resolve_room_id(*, bot_key: str, jira_alert_id: str, extras: dict[str, Any]) -> str:
@@ -100,25 +174,23 @@ def handle_jira_status_webhook(
         logger.warning("Jira status webhook action=%s could not resolve room for alertId=%s", action, jid)
         return
 
+    ctx = _status_message_context(bot, cfg, logger, extras, alert)
+    use_markdown = bool(cfg.status_mentions)
+
     if action == "Acknowledge":
-        name = _display_name_for_username(bot, logger, alert.get("username"))
-        bot.say(
-            room_id,
-            f"{name} has acknowledged the alert and should be joining you shortly. Allow time to login.",
-        )
+        text = _render_status_template(cfg.status_ack_template, ctx)
+        bot.say(room_id, text, markdown=use_markdown)
         return
 
     if action == "UnAcknowledge":
-        name = _display_name_for_username(bot, logger, alert.get("username"))
-        bot.say(
-            room_id,
-            f"{name} is not able to help you after all, escalating to next level. Thank you for your patience.",
-        )
+        text = _render_status_template(cfg.status_unack_template, ctx)
+        bot.say(room_id, text, markdown=use_markdown)
         return
 
     if action == "Escalate":
         if cfg.send_escalate_msg:
-            bot.say(room_id, "The alert has been escalated, thank you for your patience.")
+            text = _render_status_template(cfg.status_escalate_template, ctx)
+            bot.say(room_id, text, markdown=use_markdown)
         return
 
     logger.debug("Jira status webhook unhandled action=%s", action)
