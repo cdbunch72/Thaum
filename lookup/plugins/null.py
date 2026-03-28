@@ -44,3 +44,7 @@ class NullLookupPluginConfig(BaseLookupPluginConfig):
 
 # -- End Class NullLookupPluginConfig
 
+
+def get_config_model():
+    return NullLookupPluginConfig
+

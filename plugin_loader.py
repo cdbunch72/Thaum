@@ -10,25 +10,34 @@ import importlib
 import inspect
 import logging
 import types
-from typing import Any, Callable, Dict, TypedDict, cast
+from typing import Any, Callable, Dict, Tuple, TypedDict, cast
 
 from pydantic import BaseModel
 from log_setup import should_log_exception_trace
 
 from alerts.base import BaseAlertPlugin
 
-# Global registry: plugin module name -> loaded module + plugin class.
-PLUGIN_REGISTRY: Dict[str, _PluginRegistryEntry] = {}
+_PLUGIN_PACKAGE_BY_FAMILY: Dict[str, str] = {
+    "alerts": "alerts.plugins",
+    "bots": "bots.plugins",
+    "lookup": "lookup.plugins",
+}
+
+# (family, name) -> imported module
+_PLUGIN_MODULES: Dict[Tuple[str, str], types.ModuleType] = {}
 
 
-class _PluginRegistryEntry(TypedDict):
+class _AlertPluginRegistryEntry(TypedDict):
     module: types.ModuleType
     plugin_class: type[BaseAlertPlugin]
 
 
-def _load_plugin_module(plugin_name: str) -> None:
+# alert name -> module + plugin class (only for family "alerts")
+_ALERT_REGISTRY: Dict[str, _AlertPluginRegistryEntry] = {}
+
+
+def _register_alert_module(plugin_name: str, module: types.ModuleType) -> None:
     logger = logging.getLogger("plugin_loader")
-    module = importlib.import_module(f"alerts.plugins.{plugin_name}")
     plugin_classes: list[type[BaseAlertPlugin]] = []
     for _name, obj in inspect.getmembers(module, inspect.isclass):
         if issubclass(obj, BaseAlertPlugin) and obj is not BaseAlertPlugin:
@@ -43,34 +52,54 @@ def _load_plugin_module(plugin_name: str) -> None:
             "keep one plugin class per plugin module."
         )
 
-    PLUGIN_REGISTRY[plugin_name] = {
+    _ALERT_REGISTRY[plugin_name] = {
         "module": module,
         "plugin_class": plugin_classes[0],
     }
     logger.debug(
-        "Registered plugin module: %s (class %s)",
+        "Registered alert plugin module: %s (class %s)",
         plugin_name,
         plugin_classes[0].__name__,
     )
 
 
-def ensure_plugin_loaded(plugin_name: str) -> None:
-    if plugin_name in PLUGIN_REGISTRY:
-        return
+def ensure_plugin_loaded(family: str, name: str) -> types.ModuleType:
+    """
+    Import ``{package}.{name}`` for the given family and return the module.
 
-    _load_plugin_module(plugin_name)
+    Families: ``alerts``, ``bots``, ``lookup`` -> ``alerts.plugins``, etc.
+    Alert modules are also registered for :func:`get_plugin` / :func:`get_plugin_config_model`.
+    """
+    if family not in _PLUGIN_PACKAGE_BY_FAMILY:
+        raise ValueError(f"Unknown plugin family {family!r}; expected one of {sorted(_PLUGIN_PACKAGE_BY_FAMILY)}.")
+
+    key = (family, name)
+    if key in _PLUGIN_MODULES:
+        return _PLUGIN_MODULES[key]
+
+    pkg = _PLUGIN_PACKAGE_BY_FAMILY[family]
+    module = importlib.import_module(f"{pkg}.{name}")
+    _PLUGIN_MODULES[key] = module
+
+    if family == "alerts":
+        _register_alert_module(name, module)
+
+    return module
 
 
-def load_plugins(required_plugins: list[str]) -> None:
-    """Load only explicitly requested plugin modules."""
+def load_plugins(family: str, names: list[str]) -> None:
+    """Load every named plugin in a family (idempotent)."""
     logger = logging.getLogger("plugin_loader")
-
-    for plugin_name in required_plugins:
+    for name in names:
         try:
-            ensure_plugin_loaded(plugin_name)
+            ensure_plugin_loaded(family, name)
         except Exception as e:
             logger.error(
-                f"Failed to load plugin '{plugin_name}': {e.__class__.__name__} - {str(e)}",
+                "Failed to load %s plugin %r: %s - %s",
+                family,
+                name,
+                e.__class__.__name__,
+                str(e),
                 exc_info=should_log_exception_trace(),
             )
             raise
@@ -81,9 +110,9 @@ def get_plugin(plugin_name: str, plugin_config: BaseModel) -> BaseAlertPlugin:
     Instantiate an alert plugin from a validated Pydantic config instance.
     Plugin modules must expose create_instance_plugin(config_model_instance).
     """
-    ensure_plugin_loaded(plugin_name)
+    ensure_plugin_loaded("alerts", plugin_name)
 
-    entry = PLUGIN_REGISTRY[plugin_name]
+    entry = _ALERT_REGISTRY[plugin_name]
     module = entry["module"]
 
     factory_func = cast(
@@ -99,12 +128,12 @@ def get_plugin(plugin_name: str, plugin_config: BaseModel) -> BaseAlertPlugin:
 
 def get_plugin_config_model(plugin_name: str) -> type[BaseModel]:
     """
-    Return the plugin module's required config model class.
+    Return the alert plugin module's config model class.
     Plugins must define get_config_model() -> type[BaseModel].
     """
-    ensure_plugin_loaded(plugin_name)
+    ensure_plugin_loaded("alerts", plugin_name)
 
-    entry = PLUGIN_REGISTRY[plugin_name]
+    entry = _ALERT_REGISTRY[plugin_name]
     module = entry["module"]
 
     get_model = cast(

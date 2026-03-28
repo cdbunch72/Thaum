@@ -9,7 +9,7 @@ import logging
 import secrets
 from typing import Dict, Any, Optional, List, TYPE_CHECKING
 from pydantic import Field, SecretStr, model_validator
-from thaum.types import ThaumPerson, ResolvedSecret
+from thaum.types import LogLevel, ResolvedSecret, ThaumPerson
 from webexpythonsdk import WebexAPI
 from bots.base import BaseChatBot, MessageContext, BaseChatBotConfig
 from log_setup import log_debug_blob
@@ -308,7 +308,12 @@ class WebexChatBot(BaseChatBot):
                 event="created",
                 secret=secret,
             )
-            self.logger.info("Registered Webex webhooks for bot_key=%r -> %s", self.bot_key, target)
+            self.logger.log(
+                LogLevel.VERBOSE,
+                "Registered Webex webhooks for bot_key=%r -> %s",
+                self.bot_key,
+                target,
+            )
         except Exception as e:
             self.logger.error("Failed to register Webex webhooks: %s", e)
             raise

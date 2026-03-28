@@ -65,6 +65,10 @@ class PluginEntrypointContractsTest(unittest.TestCase):
         for module_file in _iter_plugin_files(lookup_dir, {"__init__"}):
             fn_names = _module_function_names(module_file)
             self.assertTrue(
+                "get_config_model" in fn_names,
+                f"{module_file.stem} is missing get_config_model()",
+            )
+            self.assertTrue(
                 "create_instance_lookup" in fn_names,
                 f"{module_file.stem} is missing create_instance_lookup(config)",
             )

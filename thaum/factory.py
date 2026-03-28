@@ -2,15 +2,17 @@
 # Copyright 2026 Clinton Bunch. All rights reserved.
 # SPDX-License-Identifier: MPL-2.0
 
+from __future__ import annotations
+
 import logging
-from bots.factory import create_bot
-from bots.base import BaseChatBot
 from typing import Any, Dict
-from thaum.handlers import bind_thaum_handlers
-from thaum.types import ThaumPerson, RespondersList
-from plugin_loader import get_plugin, get_plugin_config_model
+
+from bots.base import BaseChatBot
+from bots.factory import create_bot_from_model
 from lookup.instance import get_lookup_plugin
-from config import normalize_alert_block
+from plugin_loader import get_plugin
+from thaum.handlers import bind_thaum_handlers
+from thaum.types import LogLevel, ThaumPerson, RespondersList
 
 BOTS: Dict[str, BaseChatBot] = {}
 
@@ -23,29 +25,27 @@ def register_all_bot_webhooks() -> None:
 
 
 def initialize_bots(bot_type: str, config: Dict[str, Any]) -> None:
-    server_cfg = config["server"]  # ServerConfig (pydantic model)
+    server_cfg = config["server"]
 
-    for bot_key, bot_config in config.get("bots", {}).items():
-        bot_name = bot_config.get("name", bot_key)
+    BOTS.clear()
+    for bot_key, bot_row in config.get("bots", {}).items():
+        if not isinstance(bot_row, dict):
+            raise ValueError(f"Bot {bot_key!r} must be a table.")
+        bot_name = bot_row.get("name", bot_key)
         boot_logger = logging.getLogger(f"bootstrap.{bot_name}")
-        
+
         try:
-            bot_cfg = dict(bot_config)
-            bot_cfg.setdefault("endpoint", f"{server_cfg.base_url}/bot/{bot_key}")
-            bot = create_bot(bot_type, bot_cfg)
+            validated_bot = bot_row.get("_validated_bot")
+            validated_alert = bot_row.get("_validated_alert")
+            if validated_bot is None or validated_alert is None:
+                raise RuntimeError(
+                    f"Bot {bot_key!r} missing validated config; run bootstrap() before initialize_bots()."
+                )
+
+            bot = create_bot_from_model(bot_type, validated_bot)
             bot.bot_key = bot_key
             bot.lookup_plugin = get_lookup_plugin()
 
-            raw_alert_cfg = normalize_alert_block(bot_config.get("alert", {}))
-            plugin_name = raw_alert_cfg.get("plugin", "NullPlugin")
-            defaults_root = config.get("defaults") or {}
-            defaults_alert = defaults_root.get("alert") or {}
-            default_alert_cfg = defaults_alert.get(plugin_name, {}) or {}
-            if default_alert_cfg and not isinstance(default_alert_cfg, dict):
-                raise ValueError(f"[defaults.alert.{plugin_name}] must be a table/object.")
-            merged_alert_dict: Dict[str, Any] = {**default_alert_cfg, **raw_alert_cfg}
-            config_model = get_plugin_config_model(plugin_name)
-            p_cfg = config_model(**merged_alert_dict)
             resolved_responders = RespondersList()
             for ref in getattr(bot, "responder_refs", []):
                 if ref.startswith("person:"):
@@ -62,7 +62,9 @@ def initialize_bots(bot_type: str, config: Dict[str, Any]) -> None:
                     if team is not None:
                         resolved_responders += team
                     else:
-                        boot_logger.warning(f"Responder team '{team_name}' was not found in lookup cache.")
+                        boot_logger.warning(
+                            "Responder team '%s' was not found in lookup cache.", team_name
+                        )
                     continue
 
                 if "@" in ref:
@@ -75,18 +77,19 @@ def initialize_bots(bot_type: str, config: Dict[str, Any]) -> None:
                 if team is not None:
                     resolved_responders += team
                 else:
-                    boot_logger.warning(f"Responder reference '{ref}' did not resolve as person or team.")
+                    boot_logger.warning(
+                        "Responder reference '%s' did not resolve as person or team.", ref
+                    )
             bot.responders = resolved_responders
 
-            # Plugin Loading
-            plugin = get_plugin(plugin_name, p_cfg)
+            plugin = get_plugin(validated_bot.alert_type, validated_alert)
             plugin.attach_bot(bot)
             bot.alert_plugin = plugin
 
             bind_thaum_handlers(bot)
             BOTS[bot_key] = bot
-            boot_logger.info(f"Thaum bot '{bot_name}' initialized.")
+            boot_logger.log(LogLevel.VERBOSE, "Thaum bot '%s' initialized.", bot_name)
         except Exception as e:
-            boot_logger.critical(f"Failed to bootstrap {bot_name}: {e}")
+            boot_logger.critical("Failed to bootstrap %s: %s", bot_name, e)
             raise
 # -- End Function initialize_bots

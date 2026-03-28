@@ -44,7 +44,7 @@ class BaseChatBot(ABC):
         self.log = self.logger
         self.send_alerts = config.send_alerts
         self.high_pri_on = config.high_pri_on
-        self.alert_plugin_type = config.alert_plugin_type
+        self.alert_type = config.alert_type
         self.responder_refs = list(config.responders)
         self.responders = RespondersList()
         self.team_description = config.team_description
@@ -144,30 +144,27 @@ class BaseChatBotConfig(BaseModel):
     send_alerts: Optional[bool] = True
     responders: List[str]
     room_title_template: Optional[str] = '{{requester_name}} - {{team_description}} {{date}}'
-    alert_plugin_type: Optional[str] = 'NullPlugin'
-    alert: Optional[dict[str, Any]]
+    # Alert plugin module name under ``alerts.plugins``; use ``null`` when send_alerts is False.
+    alert_type: str = "null"
     team_description: str
     emergency_warning_message: Optional[str]
 
     @model_validator(mode='after')
-    def consistent_alert_settings(self) -> 'BaseChatBotConfig':
-        # --- Rule 1: send_alerts requires a real plugin ---
-        if self.send_alerts and self.alert_plugin_type == "NullPlugin":
+    def consistent_alert_settings(self) -> "BaseChatBotConfig":
+        if self.send_alerts and self.alert_type == "null":
             raise ValueError(
-                f"{self.name}: send_alerts=True requires alert_plugin_type != 'NullPlugin'."
+                f"{self.name}: send_alerts=True requires alert_type other than 'null'."
             )
 
-        # --- Rule 2: no alerts means NullPlugin must be selected ---
-        if not self.send_alerts and self.alert_plugin_type != "NullPlugin":
+        if not self.send_alerts and self.alert_type != "null":
             raise ValueError(
-                f"{self.name}: send_alerts=False requires alert_plugin_type='NullPlugin'."
+                f"{self.name}: send_alerts=False requires alert_type='null'."
             )
 
-        # --- Rule 3: high priority requires the other toggles ---
         if self.high_pri_on:
             if not self.send_alerts:
                 raise ValueError(
-                    f" {self.name}: high_pri_on=True requires send_alerts to also be True."
+                    f"{self.name}: high_pri_on=True requires send_alerts to also be True."
                 )
 
         return self

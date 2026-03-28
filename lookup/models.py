@@ -13,6 +13,9 @@ from sqlalchemy.orm import Mapped, mapped_column
 
 from emerald_utils.db import EmeraldDB
 
+# Lookup ORM types subclass EmeraldDB so :func:`emerald_utils.db.init_db` creates their tables.
+# Additional plugins that own SQLAlchemy models should use the same EmeraldDB base.
+
 # Table name prefix (SQLite has no real schemas; use a stable prefix instead).
 SCHEMA_PREFIX = "schema_"
 

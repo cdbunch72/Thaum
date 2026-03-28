@@ -87,6 +87,11 @@ class BaseAlertPlugin:
         raise NotImplementedError
     # -- End Method trigger_alert
 
+    def acknowledge_alert(self, alias: str, person_name: str) -> None:
+        """Optional: integrations that support ack should override."""
+        self.logger.debug("acknowledge_alert not implemented (%s, %s)", alias, person_name)
+    # -- End Method acknowledge_alert
+
     def handle_status_webhook(self, request_data: Dict[str, Any]) -> None:
         """Default handler for /webhook path."""
         self.logger.debug("Received status webhook, but no handler implemented.")

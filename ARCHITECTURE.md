@@ -13,69 +13,46 @@ more bot instances.
 
 ## 1. Bootstrap Sequence
 
-Thaum uses a four-phase bootstrap process to ensure deterministic
-initialization.
+Bootstrap is implemented in `bootstrap.py` and invoked from `app.py` before the
+Flask app is created.
 
-### **Phase 1 - Load Raw Configuration**
+### **Phase 1 - Load and validate core config**
 
-- server.py loads all TOML configuration files via config.py.
+- `config.load_and_validate()` reads `config.toml` and builds `ServerConfig` and
+  `LogConfig`.
 
-- Configuration is parsed into:
+- Bot tables are kept as dicts: each `[bots.<id>]` includes `alert_type` and an
+  optional nested `[bots.<id>.alert]` table for per-bot alert options.
 
-  - ServerConfig
+- `log_setup.configure_logging()` runs next.
 
-  - BotConfig objects (one per bot key)
+### **Phase 2 - Import plugin modules and validate typed configs**
 
-- No plugin modules are imported.
+- `plugin_loader.ensure_plugin_loaded(family, name)` imports lookup, bot driver,
+  and every distinct `alert_type` module.
 
-- No validation beyond syntactic correctness.
+- Lookup, each bot driver row, and each merged alert config (defaults +
+  `[bots.<id>.alert]`) are validated with the plugin’s `get_config_model()`.
 
-- No side effects.
+- ORM models used by lookup live in `lookup/models.py` as subclasses of
+  `EmeraldDB`; importing plugins before `init_db` registers metadata.
 
-### **Phase 2 - Load Plugin Modules and Typed Config Models**
+- **No bot or alert plugin instances** exist yet.
 
-- load_plugins() imports each plugin module.
+### **Phase 3 - Initialize database**
 
-- Each plugin module:
+- `set_thaum_state_dir()` and `lookup.db_bootstrap.init_lookup_db()` call
+  `emerald_utils.db.init_db()` with the resolved DB URL.
 
-  - Defines ORM models as subclasses of EmeraldDB.
+### **Phase 4 - Instantiate lookup, bots, and alert plugins**
 
-  - Exposes a get_plugin_config_model() function.
+- `initialize_lookup_plugin()` then `thaum.factory.initialize_bots()` build
+  runtime objects, attach alert plugins, and `bind_thaum_handlers()`.
 
-- Typed plugin config objects are created and validated.
+### **Phase 5 - HTTP**
 
-- Each plugin config stores a reference to its plugin ClassType.
-
-- Still **no plugin objects are instantiated**.
-
-### **Phase 3 - Initialize Database**
-
-- After all plugin modules are imported, emerald_utils.db.init_db() is
-  called.
-
-- This creates all ORM tables defined by plugins.
-
-- The DB engine and session factory are initialized.
-
-- This is the first moment where side effects occur.
-
-### **Phase 4 - Instantiate Bots and Plugins**
-
-- initialize_bots() constructs bot objects from BotConfig.
-
-- For each bot:
-
-  - Retrieve the bot's AlertPluginConfig.
-
-  - Instantiate the plugin using its stored ClassType.
-
-  - Attach plugin to bot.
-
-  - Register handlers.
-
-  - Perform leader-only initialization.
-
-- After this phase, the system is fully wired.
+- `web.create_app()` registers Flask routes (e.g. `POST /bot/<bot_key>`) and
+  calls `register_all_bot_webhooks()`.
 
 ------------------------------------------------------------------------
 
@@ -95,13 +72,15 @@ Thaum uses a layered configuration model.
 
 ### **BotConfig**
 
-- BaseChatBotConfig
+- Driver-specific model (e.g. Webex) extending ``BaseChatBotConfig``
 
-- AlertPluginConfig
+- Required ``alert_type`` (alert plugin module name; use ``null`` when
+  ``send_alerts`` is false)
 
-- Responder lists
+- Optional ``[bots.<id>.alert]`` table merged with ``[defaults.alert.<alert_type>]``
+  for that bot’s alert instance (e.g. responders)
 
-- Room templates
+- Responder lists, room templates, and other bot fields
 
 ### **PluginConfig**
 
@@ -128,7 +107,8 @@ Each plugin module must:
 
 - Define ORM models as subclasses of EmeraldDB.
 
-- Provide a get_plugin_config_model() function.
+- Expose ``get_config_model()`` (and the family-specific factory:
+  ``create_instance_plugin`` / ``create_instance_bot`` / ``create_instance_lookup``).
 
 - Avoid import-time side effects.
 
@@ -262,7 +242,9 @@ A typical Thaum deployment uses:
 
   ------------
   thaum/\
-  server.py\
+  app.py\
+  bootstrap.py\
+  web.py\
   config.py\
   bots/\
   plugins/\

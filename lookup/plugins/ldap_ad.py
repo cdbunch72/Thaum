@@ -347,3 +347,7 @@ def create_instance_lookup(config_raw: dict) -> LdapAdLookupPlugin:
 
 # -- End Function create_instance_lookup
 
+
+def get_config_model():
+    return LdapAdLookupPluginConfig
+

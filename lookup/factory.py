@@ -6,37 +6,24 @@
 
 from __future__ import annotations
 
-import importlib
 import logging
 import os
 from typing import Any
 
 from lookup.base import BaseLookupPlugin
+from plugin_loader import ensure_plugin_loaded
 
 logger = logging.getLogger("lookup.factory")
 
 
 def create_lookup(lookup_type: str, config_raw: dict[str, Any]) -> BaseLookupPlugin:
     """
-    Dynamically load a lookup plugin module and build one instance.
+    Dynamically load a lookup plugin module and build one instance from a plain dict.
     """
     try:
-        module = importlib.import_module(f"lookup.plugins.{lookup_type}")
+        module = ensure_plugin_loaded("lookup", lookup_type)
         factory_func = getattr(module, "create_instance_lookup")
-        # Support TOML shape:
-        #   [lookup]
-        #   db_url = "..."
-        #   [lookup.<plugin_name>]
-        #   ...
-        plugin_cfg = config_raw.get(lookup_type, {}) if isinstance(config_raw, dict) else {}
-        merged_cfg: dict[str, Any] = dict(config_raw or {})
-        if isinstance(plugin_cfg, dict):
-            merged_cfg.update(plugin_cfg)
-
-        lookup = factory_func(merged_cfg)
-        if not isinstance(lookup, BaseLookupPlugin):
-            raise TypeError(f"Lookup '{lookup_type}' is not a BaseLookupPlugin descendant")
-        return lookup
+        return factory_func(config_raw or {})
     except ImportError as e:
         lookup_dir = os.path.join(os.path.dirname(__file__), "plugins")
         ignore_files = {"__init__.py"}
@@ -45,8 +32,6 @@ def create_lookup(lookup_type: str, config_raw: dict[str, Any]) -> BaseLookupPlu
             for f in os.listdir(lookup_dir)
             if f.endswith(".py") and f not in ignore_files
         ]
-        logger.critical(f"Failed to load lookup plugin '{lookup_type}': {e}")
-        raise ValueError(f"Lookup plugin '{lookup_type}' not found. Available: {available}")
-
+        logger.critical("Failed to load lookup plugin '%s': %s", lookup_type, e)
+        raise ValueError(f"Lookup plugin '{lookup_type}' not found. Available: {available}") from e
 # -- End Function create_lookup
-

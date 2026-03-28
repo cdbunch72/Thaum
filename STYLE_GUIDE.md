@@ -230,7 +230,7 @@ Plugin constructors must **not**:
 
 ### Functions and Methods
 
-- snake_case: load_plugins(), initialize_bots()
+- snake_case: bootstrap(), initialize_bots(), ensure_plugin_loaded()
 
 ### Constants
 
@@ -247,8 +247,9 @@ Plugin constructors must **not**:
 A typical Thaum project uses:
 
   -----------------------------------------------------------------------
-  thaum/\
-  server.py\
+  app.py\
+  bootstrap.py\
+  web.py\
   config.py\
   bots/\
   ....plugins/\
