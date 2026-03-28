@@ -22,6 +22,7 @@ class JiraAlertPluginConfig(BaseAlertPluginConfig):
     priority_normal: str = "P3"
     priority_high: str = "P2"
     status_webhook_bearer: str
+    send_escalate_msg: bool = False
 
     model_config = ConfigDict(extra="allow")
 # -- End Class JiraAlertPluginConfig

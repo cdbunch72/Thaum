@@ -6,18 +6,19 @@
 
 from __future__ import annotations
 
-from typing import Optional
+from typing import Any, Callable, Dict, Optional
 
 from requests.auth import HTTPBasicAuth
 
 from alerts.base import BaseAlertPlugin
 from alerts.plugins.jira.config import JiraAlertPluginConfig
+from alerts.plugins.jira.mapping_store import upsert_pending_row
 from alerts.plugins.jira.payload import (
     build_trigger_alert_body,
-    parse_created_alert_id,
     post_alert,
     responders_list_to_jira_payload,
 )
+from alerts.plugins.jira.status_webhook import handle_jira_status_webhook
 from alerts.plugins.jira.teams import canonical_team_ref, refresh_team_cache
 from alerts.plugins.jira.users import resolve_email_to_account_id as resolve_email_to_account_id_impl
 from thaum.types import AlertPriority, RespondersList, ThaumPerson
@@ -55,6 +56,14 @@ class JiraPlugin(BaseAlertPlugin):
             self.cfg.status_webhook_bearer,
         )
     # -- End Method validate_status_webhook_authorization
+
+    def get_webhook_handlers(self) -> Dict[str, Callable]:
+        return {"/status": self.handle_status_webhook}
+    # -- End Method get_webhook_handlers
+
+    def handle_status_webhook(self, request_data: Dict[str, Any]) -> None:
+        handle_jira_status_webhook(bot=self.bot, cfg=self.cfg, logger=self.logger, payload=request_data)
+    # -- End Method handle_status_webhook
 
     def _canonical_team_ref(self, team_ref: str) -> str:
         return canonical_team_ref(team_ref, self._team_name_by_folded)
@@ -131,13 +140,14 @@ class JiraPlugin(BaseAlertPlugin):
         room_id: str,
         sender: ThaumPerson,
         priority=AlertPriority.NORMAL,
-    ) -> tuple[str, str]:
+    ) -> tuple[str, Optional[str]]:
         short_id = self._generate_short_id(4)
         url = f"{self.api_prefix}/v1/alerts"
 
         responders_typed = self._resolve_config_responders()
         responders_payload = self._responders_list_to_jira_payload(responders_typed)
 
+        bk = str(getattr(self.bot, "bot_key", None) or "")
         alert = build_trigger_alert_body(
             summary,
             self.bot.name,
@@ -148,20 +158,21 @@ class JiraPlugin(BaseAlertPlugin):
             self.cfg.priority_high,
             short_id,
             responders_payload,
-            self.bot.bot_key,
+            bk,
         )
 
         response = post_alert(url, alert, self.headers, self.auth)
         response.raise_for_status()
 
-        jira_alert_id = parse_created_alert_id(response)
+        alias = str(alert.get("alias") or "")
+        upsert_pending_row(short_id, room_id, bk, alias, self.logger)
 
         self.logger.verbose(
-            "Jira alert created: severity=%s alias=%s responders=%d",
+            "Jira alert accepted: severity=%s alias=%s responders=%d",
             alert["priority"],
-            alert["alias"],
+            alias,
             len(responders_payload),
         )
-        return short_id, jira_alert_id
+        return short_id, alias or None
     # -- End Method trigger_alert
 # -- End Class JiraPlugin

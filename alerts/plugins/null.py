@@ -6,7 +6,7 @@
 
 from __future__ import annotations
 
-from typing import Tuple
+from typing import Optional, Tuple
 
 from alerts.base import BaseAlertPlugin, BaseAlertPluginConfig
 from thaum.types import AlertPriority, ThaumPerson
@@ -29,8 +29,8 @@ class NullAlertPlugin(BaseAlertPlugin):
         room_id: str,
         sender: ThaumPerson,
         priority=AlertPriority.NORMAL,
-    ) -> Tuple[str, str]:
-        return ("", "")
+    ) -> Tuple[str, Optional[str]]:
+        return ("", None)
     # -- End Method trigger_alert
 # -- End Class NullAlertPlugin
 

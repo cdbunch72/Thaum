@@ -82,8 +82,19 @@ class BaseAlertPlugin:
         return "".join(secrets.choice(cls._ALPHABET) for _ in range(length))
     # -- End Method _generate_short_id
 
-    def trigger_alert(self, summary: str, room_id: str, sender: ThaumPerson, priority=AlertPriority.NORMAL) -> Tuple[str, str]:
-        """Trigger an alert via the 3rd party API."""
+    def trigger_alert(
+        self,
+        summary: str,
+        room_id: str,
+        sender: ThaumPerson,
+        priority=AlertPriority.NORMAL,
+    ) -> Tuple[str, Optional[str]]:
+        """
+        Trigger an alert via the 3rd party API.
+
+        Returns ``(short_id, alert_id)``. ``alert_id`` is integration-specific (alias, vendor id, etc.)
+        and may be ``None`` when not available without blocking.
+        """
         raise NotImplementedError
     # -- End Method trigger_alert
 

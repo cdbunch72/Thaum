@@ -34,10 +34,22 @@ def create_incident_room(bot: 'BaseChatBot', summary: str, speaker: ThaumPerson,
         responders = bot.responders.get_responders()
         bot.add_members(room_id, [speaker, *responders])
         bot.say(room_id, f"**Summary:** {summary}")
-        # Trigger plugin
-        (short_id,jira_id)=bot.alert_plugin.trigger_alert(summary, room_id, speaker, priority)
-        
-        bot.logger.verbose(f"Room {room_title} ({room_id}) initialized for alert {short_id}.")
+        short_id, alert_id = bot.alert_plugin.trigger_alert(summary, room_id, speaker, priority)
+        if alert_id:
+            bot.logger.verbose(
+                "Room %s (%s) initialized for alert %s (%s).",
+                room_title,
+                room_id,
+                short_id,
+                alert_id,
+            )
+        else:
+            bot.logger.verbose(
+                "Room %s (%s) initialized for alert %s.",
+                room_title,
+                room_id,
+                short_id,
+            )
         return room_id
     except Exception as e:
         bot.logger.error(f"Engine failure in create_incident_room: {e}")
