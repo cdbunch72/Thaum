@@ -1,0 +1,48 @@
+# web.py
+# Thaum Engine v1.0.0
+# Copyright 2026 Clinton Bunch
+# SPDX-License-Identifier: MPL-2.0
+# This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
+
+from __future__ import annotations
+
+import logging
+from typing import Any, Dict
+
+from flask import Flask, jsonify, request
+
+from thaum.factory import BOTS, register_all_bot_webhooks
+
+logger = logging.getLogger("thaum.web")
+
+
+def create_app(config: Dict[str, Any]) -> Flask:
+    """Flask application factory; expects ``bootstrap()`` to have run first."""
+    app = Flask(__name__)
+    app.config["THAUM"] = config
+
+    @app.post("/bot/<bot_key>")
+    def bot_webhook(bot_key: str):
+        bot = BOTS.get(bot_key)
+        if bot is None:
+            return jsonify({"error": "unknown bot"}), 404
+        try:
+            if not bot.authenticate_request(request):
+                return jsonify({"error": "unauthorized"}), 401
+        except Exception as e:
+            logger.warning("Bot auth error for %s: %s", bot_key, e)
+            return jsonify({"error": "unauthorized"}), 401
+
+        payload = request.get_json(force=True, silent=True)
+        if not isinstance(payload, dict):
+            return jsonify({"error": "expected JSON object"}), 400
+        try:
+            bot.handle_event(payload)
+        except Exception as e:
+            logger.exception("handle_event failed for bot %s: %s", bot_key, e)
+            return jsonify({"error": "internal error"}), 500
+        return "", 204
+
+    register_all_bot_webhooks()
+    return app
+# -- End Function create_app
