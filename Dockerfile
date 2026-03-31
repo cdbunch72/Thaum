@@ -10,7 +10,13 @@ ARG PYTHON_VERSION=3.13
 FROM python:${PYTHON_VERSION}-slim AS builder
 
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends git \
+    && apt-get install -y --no-install-recommends \
+        build-essential \
+        gcc \
+        git \
+        libffi-dev \
+        libssl-dev \
+        python3-dev \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /build
@@ -37,12 +43,14 @@ RUN useradd --create-home --uid 1000 --shell /usr/sbin/nologin thaum
 WORKDIR /app
 ENV PATH="/venv/bin:$PATH" \
     PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1
+    PYTHONUNBUFFERED=1 \
+    THAUM_CONFIG_FILE=/etc/thaum/thaum.conf
 
 COPY --from=builder /venv /venv
 COPY --chown=1000:1000 . .
 
 USER 1000
+VOLUME ["/etc/thaum"]
 EXPOSE 5165
 
 # Default 0.0.0.0: reverse proxy (nginx, traefik, host ingress) reaches this container via its
