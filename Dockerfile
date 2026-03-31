@@ -9,6 +9,8 @@ ARG PYTHON_VERSION=3.13
 # --- build stage: venv, deps from git + requirements, then strip pip ---
 FROM python:${PYTHON_VERSION}-slim AS builder
 
+ARG EMERALD_UTILS_REF=main
+
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
         build-essential \
@@ -28,7 +30,7 @@ ENV PATH="/venv/bin:$PATH"
 # Install emerald_utils from GitHub first; omit the PyPI `emerald_utils` line from requirements.
 RUN pip install --no-cache-dir --upgrade pip setuptools wheel \
     && pip install --no-cache-dir \
-        "emerald_utils @ git+https://github.com/cdbunch72/emerald_utils.git@main" \
+        "emerald_utils[azure] @ git+https://github.com/cdbunch72/emerald_utils.git@${EMERALD_UTILS_REF}" \
     && pip install --no-cache-dir gunicorn \
     && grep -v '^emerald_utils[[:space:]]*$' requirements.txt > /tmp/requirements.nopypi-eu.txt \
     && pip install --no-cache-dir -r /tmp/requirements.nopypi-eu.txt \
