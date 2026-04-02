@@ -67,10 +67,14 @@ class BaseAlertPlugin:
         """
         if configured_secret == "":
             return True
+        bot_key = None
+        if getattr(self, "bot", None) is not None:
+            bot_key = getattr(self.bot, "bot_key", None) or getattr(self.bot, "name", None)
         return _validate_webhook_bearer_plaintext(
             authorization_header_value=authorization_header_value,
             expected_secret_text=configured_secret,
             logger=self.logger,
+            bot_key=bot_key,
         )
     # -- End Method _validate_static_webhook_bearer
 
