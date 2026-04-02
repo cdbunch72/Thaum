@@ -5,7 +5,9 @@
 # This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
 
 """
-WSGI entry: ``gunicorn app:app`` (set ``THAUM_CONFIG`` or default ``config.toml``).
+WSGI entry: ``gunicorn --workers 1 app:app`` (use one worker until leader election exists for
+Spark webhook registration). Config: ``THAUM_CONFIG_FILE``, else ``/etc/thaum/thaum.conf`` or
+``thaum.toml`` in the working directory.
 """
 
 from __future__ import annotations
