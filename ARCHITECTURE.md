@@ -221,7 +221,8 @@ Changing the process root log level at runtime is **not** done via a local file.
 `POST /{log_admin_route_id}/log-level` with an **HS256** request signature over a
 documented canonical string. State is stored in the shared DB (`admin_log_level_state`
 and `admin_log_nonce`); optional polling keeps multiple workers aligned. Operators
-typically use `scripts/Set-ThaumLogLevel.ps1` with a small INI profile. Full details:
+typically use `scripts/powershell/Set-ThaumLogLevel.ps1` or
+`scripts/python/thaum_log_override.py` with a small INI profile. Full details:
 [docs/admin-log-level.md](docs/admin-log-level.md).
 
 ------------------------------------------------------------------------

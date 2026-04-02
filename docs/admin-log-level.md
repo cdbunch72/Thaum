@@ -57,9 +57,25 @@ v=1
 - **`admin_log_nonce`** — stores used nonces with `expires_at`; duplicate nonce ⇒ `401`.
 - **`admin_log_level_state`** — singleton row `id=1`: `log_level` (nullable) and `updated_at`. Workers optionally poll this row to apply the same root level.
 
+## Tooling parity
+
+Equivalent script functions exist in both languages:
+
+- Set runtime log level (signed POST):
+  - `scripts/powershell/Set-ThaumLogLevel.ps1`
+  - `scripts/python/thaum_log_override.py`
+- Generate admin route/secret + config snippets:
+  - `scripts/powershell/Generate-ThaumAdminLogConfig.ps1`
+  - `scripts/python/generate_admin_log_config.py`
+- Generate webhook bearer token:
+  - `scripts/powershell/Generate-WebhookBearerToken.ps1`
+  - `scripts/python/generate_webhook_bearer_token.py`
+
+All scripts implement the protocol contract in this document.
+
 ## PowerShell client
 
-Use **[scripts/Set-ThaumLogLevel.ps1](../scripts/Set-ThaumLogLevel.ps1)** with a profile INI (see **[scripts/thaum-admin-log.example.ini](../scripts/thaum-admin-log.example.ini)**):
+Use **[scripts/powershell/Set-ThaumLogLevel.ps1](../scripts/powershell/Set-ThaumLogLevel.ps1)** with a profile INI (see **[scripts/powershell/thaum-admin-log.example.ini](../scripts/powershell/thaum-admin-log.example.ini)**):
 
 ```ini
 [thaum]
@@ -71,8 +87,8 @@ HmacSecretB64Url=your-32-byte-key-base64url
 Or set **`PostUrl`** to the full `https://host/segment/log-level` (path must end with `/<RouteId>/log-level`).
 
 ```powershell
-.\Set-ThaumLogLevel.ps1 -Profile "$env:USERPROFILE\.thaum\admin-log.ini" DEBUG
-.\Set-ThaumLogLevel.ps1 -Profile ... default
+.\scripts\powershell\Set-ThaumLogLevel.ps1 -Profile "$env:USERPROFILE\.thaum\admin-log.ini" DEBUG
+.\scripts\powershell\Set-ThaumLogLevel.ps1 -Profile ... default
 ```
 
 ## Test vector (HS256)
