@@ -59,6 +59,7 @@ def init_lookup_db(db_url: str, *, echo: bool = False, **engine_kw: Any) -> None
     """
     import lookup.models  # noqa: F401 — register ORM tables
     import alerts.plugins.jira.models  # noqa: F401 — register Jira ORM tables
+    import thaum.admin_models  # noqa: F401 — admin log-level nonce + state
 
     merged_kw: Dict[str, Any] = {**engine_kwargs_for_sqlite_url(db_url), **engine_kw}
     init_db(db_url, echo=echo, **merged_kw)

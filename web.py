@@ -11,7 +11,9 @@ from typing import Any, Dict
 
 from flask import Flask, jsonify, request
 
+from thaum.admin_log_level import admin_log_routes_enabled, handle_admin_log_level_post
 from thaum.factory import BOTS, register_all_bot_webhooks
+from thaum.types import ServerConfig
 
 logger = logging.getLogger("thaum.web")
 
@@ -42,6 +44,14 @@ def create_app(config: Dict[str, Any]) -> Flask:
             logger.exception("handle_event failed for bot %s: %s", bot_key, e)
             return jsonify({"error": "internal error"}), 500
         return "", 204
+
+    server: ServerConfig = config["server"]
+    if admin_log_routes_enabled(server):
+        route_id = server.log_admin_route_id.strip()
+
+        @app.post(f"/{route_id}/log-level", endpoint="thaum_admin_log_level")
+        def admin_log_level():
+            return handle_admin_log_level_post(request, server)
 
     @app.post("/alerts/<bot_key>/status")
     def alert_status_webhook(bot_key: str):

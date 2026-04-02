@@ -214,6 +214,16 @@ Multi-line output uses the blob helper for readability.
 
 Stack traces are only emitted at SPAM level.
 
+### Runtime log level (admin API)
+
+Changing the process root log level at runtime is **not** done via a local file. When
+`[server].log_admin_route_id` and a valid HMAC secret are configured, Thaum exposes
+`POST /{log_admin_route_id}/log-level` with an **HS256** request signature over a
+documented canonical string. State is stored in the shared DB (`admin_log_level_state`
+and `admin_log_nonce`); optional polling keeps multiple workers aligned. Operators
+typically use `scripts/Set-ThaumLogLevel.ps1` with a small INI profile. Full details:
+[docs/admin-log-level.md](docs/admin-log-level.md).
+
 ------------------------------------------------------------------------
 
 ## 7. Import-Time Side-Effect Rules

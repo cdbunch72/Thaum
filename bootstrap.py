@@ -14,7 +14,7 @@ from pydantic import BaseModel
 from alerts.webhook_bearer import set_thaum_state_dir
 from bots.factory import validate_bot_config
 from config import load_and_validate
-from log_setup import configure_logging
+from log_setup import apply_runtime_log_level_from_db, configure_logging, start_log_admin_state_poller
 from lookup.db_bootstrap import init_lookup_db, merged_lookup_plugin_config, resolve_lookup_db_url
 from lookup.instance import initialize_lookup_plugin
 from plugin_loader import ensure_plugin_loaded, get_plugin_config_model
@@ -88,6 +88,9 @@ def bootstrap(config_path: str) -> Dict[str, Any]:
 
     db_url = resolve_lookup_db_url(server, lookup_raw)
     init_lookup_db(db_url)
+
+    apply_runtime_log_level_from_db()
+    start_log_admin_state_poller(server)
 
     initialize_lookup_plugin(lookup_type, validated_lookup.model_dump(mode="python"))
 

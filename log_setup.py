@@ -7,31 +7,29 @@ from __future__ import annotations
 
 import json
 import logging
-import os
 import sys
 import threading
 import time
 import verboselogs
-from datetime import datetime
-from typing import Any, Optional
+from datetime import datetime, timezone
+from typing import Any, Optional, Tuple
+
 from zoneinfo import ZoneInfo
 
 from thaum.types import LogConfig, LogLevel, ServerConfig
 
 NO_TIMESTAMP = False
 
-# Path used for runtime log level overrides (defaults; overridden from ServerConfig).
-DEFAULT_LOG_OVERRIDE_PATH = "/run/thaum/log_override"
-LOG_OVERRIDE_PATH = DEFAULT_LOG_OVERRIDE_PATH
-
 _configured_root_level: int = logging.INFO
 _logger_wrappers_installed: bool = False
 
 _original_logger_error = logging.Logger.error
 _original_logger_exception = logging.Logger.exception
-_override_watcher_started: bool = False
-_override_polling_started: bool = False
-_override_watcher_enabled: bool = False
+
+# Last applied (log_level column, updated_at UTC timestamp) from admin_log_level_state.
+_last_db_log_state: Optional[Tuple[Optional[str], float]] = None
+_admin_state_poll_seconds: float = 0.0
+_admin_state_poller_started: bool = False
 
 
 def should_log_exception_trace() -> bool:
@@ -57,125 +55,92 @@ def parse_level_name(name: str) -> Optional[int]:
     return None
 
 
-def _apply_log_override_file() -> None:
-    """Apply / run/thaum/log_override or restore configured root level."""
+def set_runtime_root_log_level(level: Optional[int]) -> None:
+    """Apply runtime override (None = restore configured [logging] level)."""
     root = logging.getLogger()
-    if not os.path.isfile(LOG_OVERRIDE_PATH):
+    if level is None:
         root.setLevel(_configured_root_level)
-        return
-    try:
-        with open(LOG_OVERRIDE_PATH, "r", encoding="utf-8") as f:
-            line = f.readline().strip()
-        level = parse_level_name(line)
-        if level is None:
-            root.setLevel(_configured_root_level)
-        else:
-            root.setLevel(level)
-    except OSError:
-        root.setLevel(_configured_root_level)
+    else:
+        root.setLevel(level)
 
 
-def _maybe_start_override_watcher() -> None:
+def _utc_ts(dt: datetime) -> float:
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return dt.astimezone(timezone.utc).timestamp()
+
+
+def mark_db_log_state_applied(log_level: Optional[str], updated_at: datetime) -> None:
+    """Call after a successful admin POST so the DB poller skips redundant applies."""
+    global _last_db_log_state
+    _last_db_log_state = (log_level, _utc_ts(updated_at))
+
+
+def apply_runtime_log_level_from_db() -> None:
     """
-    Optional watchdog integration: when enabled, apply log overrides whenever
-    the override file is created/modified/replaced.
-
-    Controlled via `ServerConfig.log_override_watchdog`.
+    Read singleton admin_log_level_state and align root logger.
+    Safe to call before row exists; no-op if unchanged vs last apply.
     """
-    global _override_watcher_started
-    if _override_watcher_started:
-        return
+    global _last_db_log_state
 
-    if not _override_watcher_enabled:
-        return
+    from emerald_utils.db import get_session
+
+    from thaum.admin_models import ADMIN_LOG_LEVEL_STATE_ID, AdminLogLevelState
 
     try:
-        from watchdog.events import FileSystemEventHandler  # type: ignore
-        from watchdog.observers import Observer  # type: ignore
+        with get_session() as session:
+            row = session.get(AdminLogLevelState, ADMIN_LOG_LEVEL_STATE_ID)
     except Exception:
-        # watchdog not installed (or broken). Polling can still be enabled via ServerConfig.
         return
 
-    directory = os.path.dirname(LOG_OVERRIDE_PATH) or "."
-    override_basename = os.path.basename(LOG_OVERRIDE_PATH)
-    logger = logging.getLogger("log_setup")
-
-    class _Handler(FileSystemEventHandler):
-        def _matches(self, event) -> bool:
-            src = getattr(event, "src_path", None) or ""
-            return os.path.basename(src) == override_basename
-
-        def on_created(self, event) -> None:
-            if self._matches(event):
-                _apply_log_override_file()
-
-        def on_modified(self, event) -> None:
-            if self._matches(event):
-                _apply_log_override_file()
-
-        def on_moved(self, event) -> None:
-            if self._matches(event):
-                _apply_log_override_file()
-
-        def on_deleted(self, event) -> None:
-            if self._matches(event):
-                _apply_log_override_file()
-
-    if not os.path.isdir(directory):
-        # Don't crash workers if /run/thaum doesn't exist; reloader can be enabled via polling.
-        try:
-            os.makedirs(directory, exist_ok=True)
-        except OSError:
-            logger.warning("log_override watcher could not ensure directory %r exists", directory)
+    if row is None:
+        sig: Tuple[Optional[str], float] = (None, -1.0)
+        if sig == _last_db_log_state:
             return
-
-    observer = Observer()
-    observer.schedule(_Handler(), directory, recursive=False)
-    observer.daemon = True
-    observer.start()
-    _override_watcher_started = True
-
-
-def _maybe_start_override_polling(poll_seconds: float) -> None:
-    """
-    Dependency-free polling reloader.
-    """
-    global _override_polling_started
-    if _override_polling_started:
-        return
-    if poll_seconds <= 0:
+        _last_db_log_state = sig
+        set_runtime_root_log_level(None)
         return
 
-    if poll_seconds <= 0:
+    key: Tuple[Optional[str], float] = (row.log_level, _utc_ts(row.updated_at))
+    if key == _last_db_log_state:
+        return
+    _last_db_log_state = key
+
+    if row.log_level is None or not str(row.log_level).strip():
+        set_runtime_root_log_level(None)
+        return
+    parsed = parse_level_name(str(row.log_level))
+    if parsed is None:
+        set_runtime_root_log_level(None)
+    else:
+        set_runtime_root_log_level(parsed)
+
+
+def start_log_admin_state_poller(server_config: Optional[ServerConfig] = None) -> None:
+    """Background poll of admin_log_level_state (call after init_db)."""
+    global _admin_state_poller_started, _admin_state_poll_seconds
+
+    if _admin_state_poller_started:
+        return
+    if server_config is None:
         return
 
-    try:
-        last_mtime: Optional[float] = os.path.getmtime(LOG_OVERRIDE_PATH)
-    except OSError:
-        last_mtime = None
+    _admin_state_poll_seconds = float(server_config.log_admin_state_poll_seconds)
+    if _admin_state_poll_seconds <= 0:
+        return
+
+    _admin_state_poller_started = True
 
     def _loop() -> None:
-        nonlocal last_mtime
         while True:
+            time.sleep(_admin_state_poll_seconds)
             try:
-                exists = os.path.isfile(LOG_OVERRIDE_PATH)
-                if not exists:
-                    if last_mtime is not None:
-                        last_mtime = None
-                        _apply_log_override_file()
-                else:
-                    mtime = os.path.getmtime(LOG_OVERRIDE_PATH)
-                    if last_mtime is None or mtime != last_mtime:
-                        last_mtime = mtime
-                        _apply_log_override_file()
+                apply_runtime_log_level_from_db()
             except Exception:
-                # Never let the reload loop crash the worker.
                 pass
-            time.sleep(poll_seconds)
 
     t = threading.Thread(target=_loop, daemon=True)
     t.start()
-    _override_polling_started = True
 
 
 def _install_logger_wrappers() -> None:
@@ -225,31 +190,18 @@ class ISO8601TimezoneFormatter(logging.Formatter):
                 self.tz = ZoneInfo("UTC")
 
     def formatTime(self, record, datefmt=None):
-        """Forces ISO 8601 output (e.g., 2023-10-25T14:30:15-05:00)."""
         global NO_TIMESTAMP
         if NO_TIMESTAMP:
             return ""
         dt = datetime.fromtimestamp(record.created, tz=self.tz)
-        
-        # 'seconds' truncates microseconds; 'auto' includes them
-        spec = 'auto' if self.fractional_seconds else 'seconds'
+        spec = "auto" if self.fractional_seconds else "seconds"
         return dt.isoformat(timespec=spec)
 # -- End ISO8601TimezoneFormatter
 
 def log_debug_blob(logger: logging.Logger, blob_title: str, data: Any, level: int = logging.DEBUG):
-    """
-    Logs a multi-line blob wrapped in terminal-friendly delimiters (20 chars).
-    Supports dynamic logging levels (DEBUG, SPAM, etc.).
-    """
     if logger.isEnabledFor(level):
         delimiter = "-" * 20
-        
-        # Pretty print the JSON
-        # If it's a dict, dump it, otherwise assume it's already a string
         formatted_json = json.dumps(data, indent=2) if isinstance(data, dict) else str(data)
-        
-        # Log using the requested level
-        # We use .log() because it accepts the level integer as an argument
         logger.log(level, f"BEGIN {blob_title} {delimiter}")
         for line in formatted_json.splitlines():
             logger.log(level, line)
@@ -289,26 +241,9 @@ def configure_logging(logging_config: LogConfig, server_config: Optional[ServerC
 
     _install_logger_wrappers()
 
-    # Apply runtime log override configuration from server settings.
-    global LOG_OVERRIDE_PATH
-    if server_config is not None:
-        LOG_OVERRIDE_PATH = server_config.log_override_path or DEFAULT_LOG_OVERRIDE_PATH
-        global _override_watcher_enabled
-        _override_watcher_enabled = bool(server_config.log_override_watchdog)
-        poll_seconds = float(server_config.log_override_poll_seconds)
-    else:
-        global _override_watcher_enabled
-        _override_watcher_enabled = False
-        poll_seconds = 1.0
-
-    _apply_log_override_file()
-    _maybe_start_override_watcher()
-    _maybe_start_override_polling(poll_seconds)
-
-    # Silence noisy web server frameworks (e.g., Werkzeug/Flask)
-    # We want them to use our formatter, not their own
-    werkzeug_logger = logging.getLogger('werkzeug')
+    werkzeug_logger = logging.getLogger("werkzeug")
     werkzeug_logger.handlers = [console_handler]
     werkzeug_logger.propagate = False
 
 # -- End Function configure_logging
+

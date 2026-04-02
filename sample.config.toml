@@ -19,9 +19,11 @@ lookup_plugin = "null"
 # Must be absolute. Linux example below; on Windows use e.g. "C:/ProgramData/thaum/state".
 thaum_state_dir = "/run/thaum"
 # bot_url_prefix = "/bot"          # default; webhook path = {base_url}/bot/{bot_key}
-# log_override_poll_seconds = 1.0
-# log_override_watchdog = false
-# log_override_path = "/run/thaum/log_override"
+# --- Signed log-level admin (see docs/admin-log-level.md) ---
+# log_admin_route_id = ""          # e.g. random segment; empty disables the route
+# log_admin_hmac_secret_b64url = "env:THAUM_LOG_ADMIN_HMAC_SECRET_B64U"   # 32 bytes as base64url
+# log_admin_clock_skew_seconds = 300
+# log_admin_state_poll_seconds = 2.0   # 0 = no poll; >0 syncs workers from DB
 
 [logging]
 # All keys optional; see thaum.types.LogConfig (extra keys forbidden).

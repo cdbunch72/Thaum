@@ -20,6 +20,18 @@ if TYPE_CHECKING:
 
 ResolvedSecret = Annotated[SecretStr, BeforeValidator(resolve_secret)]
 
+
+def _optional_resolved_secret(v: object) -> Optional[str]:
+    if v is None:
+        return None
+    s = str(v).strip()
+    if not s:
+        return None
+    return str(resolve_secret(s))
+
+
+OptionalResolvedSecret = Annotated[Optional[str], BeforeValidator(_optional_resolved_secret)]
+
 logger = logging.getLogger("thaum.types")
 
 BaseUrlSource = StrEnum(
@@ -147,12 +159,13 @@ class ServerConfig(BaseModel):
     bot_url_prefix: Optional[str] = '/bot'
     bot_type: str
     lookup_plugin: str = "null"
-    # Runtime log override reloader.
-    # If > 0, workers automatically re-apply the override when the override file changes.
-    # Default enables polling once per second.
-    log_override_poll_seconds: float = 1.0
-    log_override_watchdog: bool = False
-    log_override_path: str = "/run/thaum/log_override"
+    # Signed HTTP admin: POST /{log_admin_route_id}/log-level (empty = disabled).
+    log_admin_route_id: str = ""
+    # 32-byte key as base64url (no padding). Env THAUM_LOG_ADMIN_HMAC_SECRET_B64U overrides when set.
+    log_admin_hmac_secret_b64url: OptionalResolvedSecret = None
+    log_admin_clock_skew_seconds: int = 300
+    # If > 0, poll DB admin_log_level_state.updated_at so all workers stay in sync.
+    log_admin_state_poll_seconds: float = 0.0
     # Shared runtime state (webhook bearer warn markers, etc.); must be absolute.
     thaum_state_dir: str = "/run/thaum"
     model_config = ConfigDict(
