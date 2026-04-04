@@ -12,10 +12,10 @@ from typing import Optional
 from sqlalchemy import DateTime, String
 from sqlalchemy.orm import Mapped, mapped_column
 
-from emerald_utils.db import EmeraldDB
+from gemstone_utils.db import GemstoneDB
 
 
-class WebhookBearerWarnState(EmeraldDB):
+class WebhookBearerWarnState(GemstoneDB):
     """
     Shared throttle for status webhook bearer pre-expiry warnings (SHA-256 of canonical JSON).
 

@@ -10,7 +10,7 @@ import logging
 import re
 from typing import Any, Optional
 
-from emerald_utils.db import get_session
+from gemstone_utils.db import get_session
 from sqlalchemy import select
 
 from alerts.plugins.jira.models import JiraAlertMap

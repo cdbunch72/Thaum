@@ -20,7 +20,7 @@ from flask import Request, jsonify
 from sqlalchemy import delete
 from sqlalchemy.exc import IntegrityError
 
-from emerald_utils.db import get_session
+from gemstone_utils.db import get_session
 
 from log_setup import (
     mark_db_log_state_applied,

@@ -1,7 +1,7 @@
 # Install from a local checkout or git until published, e.g.:
-#   pip install -e ../emerald_utils
-#   pip install "emerald_utils @ git+https://github.com/<org>/emerald_utils.git@main"
-emerald_utils
+#   pip install -e ../gemstone_utils
+#   pip install "gemstone_utils @ git+https://github.com/cdbunch72/gemstone_utils.git@main"
+gemstone_utils
 Flask
 webexpythonsdk
 SQLAlchemy

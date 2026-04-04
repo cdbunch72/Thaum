@@ -10,7 +10,7 @@ from pathlib import Path
 from pydantic import ConfigDict, model_validator, BaseModel, SecretStr, BeforeValidator
 from typing import Optional, Annotated, Dict, List, TYPE_CHECKING
 from enum import StrEnum,IntEnum,auto
-from emerald_utils.experimental.secrets_resolver import resolve_secret
+from gemstone_utils.experimental.secrets_resolver import resolve_secret
 import logging
 import verboselogs
 from dataclasses import dataclass, field

@@ -11,10 +11,10 @@ from typing import Optional
 from sqlalchemy import String
 from sqlalchemy.orm import Mapped, mapped_column
 
-from emerald_utils.db import EmeraldDB
+from gemstone_utils.db import GemstoneDB
 
 
-class JiraAlertMap(EmeraldDB):
+class JiraAlertMap(GemstoneDB):
     """
     Correlates Thaum short_id (primary key) with Jira Ops alert UUID once the Create webhook arrives.
 

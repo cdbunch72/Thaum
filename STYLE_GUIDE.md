@@ -182,7 +182,7 @@ To maintain deterministic startup:
 
 ### Allowed During Import
 
-- Defining ORM models as subclasses of EmeraldDB
+- Defining ORM models as subclasses of GemstoneDB
 
 - Defining config models
 

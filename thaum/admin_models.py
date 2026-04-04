@@ -12,12 +12,12 @@ from typing import Optional
 from sqlalchemy import DateTime, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column
 
-from emerald_utils.db import EmeraldDB
+from gemstone_utils.db import GemstoneDB
 
 ADMIN_LOG_LEVEL_STATE_ID = 1
 
 
-class AdminLogNonce(EmeraldDB):
+class AdminLogNonce(GemstoneDB):
     """Single-use nonces for signed POST /…/log-level (replay protection)."""
 
     __tablename__ = "admin_log_nonce"
@@ -26,7 +26,7 @@ class AdminLogNonce(EmeraldDB):
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
 
 
-class AdminLogLevelState(EmeraldDB):
+class AdminLogLevelState(GemstoneDB):
     """Singleton row (id=1): authoritative runtime log level from admin API."""
 
     __tablename__ = "admin_log_level_state"

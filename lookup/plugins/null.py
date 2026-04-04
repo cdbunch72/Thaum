@@ -15,7 +15,7 @@ from thaum.types import ThaumPerson, ThaumTeam
 class NullLookupPlugin(BaseLookupPlugin):
     """
     No remote identity backend.
-    Uses BaseLookupPlugin persistence on :class:`emerald_utils.db.EmeraldDB` only.
+    Uses BaseLookupPlugin persistence on :class:`gemstone_utils.db.GemstoneDB` only.
     """
 
     plugin_name = "null"

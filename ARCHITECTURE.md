@@ -35,14 +35,14 @@ Flask app is created.
   `[bots.<id>.alert]`) are validated with the plugin’s `get_config_model()`.
 
 - ORM models used by lookup live in `lookup/models.py` as subclasses of
-  `EmeraldDB`; importing plugins before `init_db` registers metadata.
+  `GemstoneDB`; importing plugins before `init_db` registers metadata.
 
 - **No bot or alert plugin instances** exist yet.
 
 ### **Phase 3 - Initialize database**
 
 - `set_thaum_state_dir()` and `lookup.db_bootstrap.init_lookup_db()` call
-  `emerald_utils.db.init_db()` with the resolved DB URL.
+  `gemstone_utils.db.init_db()` with the resolved DB URL.
 
 ### **Phase 4 - Instantiate lookup, bots, and alert plugins**
 
@@ -105,7 +105,7 @@ Plugins are first-class components in Thaum.
 
 Each plugin module must:
 
-- Define ORM models as subclasses of EmeraldDB.
+- Define ORM models as subclasses of GemstoneDB.
 
 - Expose ``get_config_model()`` (and the family-specific factory:
   ``create_instance_plugin`` / ``create_instance_bot`` / ``create_instance_lookup``).

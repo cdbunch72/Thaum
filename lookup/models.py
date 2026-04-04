@@ -11,16 +11,16 @@ from typing import Optional
 from sqlalchemy import Float, ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column
 
-from emerald_utils.db import EmeraldDB
+from gemstone_utils.db import GemstoneDB
 
-# Lookup ORM types subclass EmeraldDB so :func:`emerald_utils.db.init_db` creates their tables.
-# Additional plugins that own SQLAlchemy models should use the same EmeraldDB base.
+# Lookup ORM types subclass GemstoneDB so :func:`gemstone_utils.db.init_db` creates their tables.
+# Additional plugins that own SQLAlchemy models should use the same GemstoneDB base.
 
 # Table name prefix (SQLite has no real schemas; use a stable prefix instead).
 SCHEMA_PREFIX = "schema_"
 
 
-class SchemaPerson(EmeraldDB):
+class SchemaPerson(GemstoneDB):
     __tablename__ = f"{SCHEMA_PREFIX}people"
 
     email: Mapped[str] = mapped_column(String, primary_key=True)
@@ -29,7 +29,7 @@ class SchemaPerson(EmeraldDB):
     name_last_updated: Mapped[float] = mapped_column(Float, nullable=False)
 
 
-class SchemaPlatformId(EmeraldDB):
+class SchemaPlatformId(GemstoneDB):
     __tablename__ = f"{SCHEMA_PREFIX}platform_ids"
 
     platform_key: Mapped[str] = mapped_column(String, primary_key=True)
@@ -41,7 +41,7 @@ class SchemaPlatformId(EmeraldDB):
     )
 
 
-class SchemaTeam(EmeraldDB):
+class SchemaTeam(GemstoneDB):
     __tablename__ = f"{SCHEMA_PREFIX}teams"
 
     team_name: Mapped[str] = mapped_column(String, primary_key=True)
@@ -49,7 +49,7 @@ class SchemaTeam(EmeraldDB):
     ttl: Mapped[int] = mapped_column(Integer, nullable=False)
 
 
-class SchemaTeamMember(EmeraldDB):
+class SchemaTeamMember(GemstoneDB):
     __tablename__ = f"{SCHEMA_PREFIX}team_members"
 
     team_name: Mapped[str] = mapped_column(
@@ -64,7 +64,7 @@ class SchemaTeamMember(EmeraldDB):
     )
 
 
-class SchemaTeamPlatformId(EmeraldDB):
+class SchemaTeamPlatformId(GemstoneDB):
     __tablename__ = f"{SCHEMA_PREFIX}team_platform_ids"
 
     platform_key: Mapped[str] = mapped_column(String, primary_key=True)

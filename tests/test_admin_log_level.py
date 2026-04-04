@@ -110,7 +110,7 @@ class AdminLogEndpointTest(unittest.TestCase):
         self.assertEqual(rv.status_code, 200, rv.get_data(as_text=True))
         self.assertEqual(logging.getLogger().level, logging.DEBUG)
 
-        from emerald_utils.db import get_session
+        from gemstone_utils.db import get_session
 
         with get_session() as session:
             row = session.get(AdminLogLevelState, ADMIN_LOG_LEVEL_STATE_ID)
@@ -152,7 +152,7 @@ class AdminLogDbApplyTest(unittest.TestCase):
         configure_logging(LogConfig(level=LogLevel.INFO), None)
 
     def test_apply_from_db_row(self) -> None:
-        from emerald_utils.db import get_session
+        from gemstone_utils.db import get_session
 
         now = datetime.now(timezone.utc)
         with get_session() as session:

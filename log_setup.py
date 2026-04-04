@@ -83,7 +83,7 @@ def apply_runtime_log_level_from_db() -> None:
     """
     global _last_db_log_state
 
-    from emerald_utils.db import get_session
+    from gemstone_utils.db import get_session
 
     from thaum.admin_models import ADMIN_LOG_LEVEL_STATE_ID, AdminLogLevelState
 

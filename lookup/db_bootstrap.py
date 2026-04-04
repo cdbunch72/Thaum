@@ -9,7 +9,7 @@ from __future__ import annotations
 import logging
 from typing import Any, Dict
 
-from emerald_utils.db import init_db
+from gemstone_utils.db import init_db
 from thaum.types import ServerConfig
 
 from lookup.base import DEFAULT_LOOKUP_DB_URL
@@ -51,10 +51,10 @@ def engine_kwargs_for_sqlite_url(db_url: str) -> Dict[str, Any]:
 
 def init_lookup_db(db_url: str, *, echo: bool = False, **engine_kw: Any) -> None:
     """
-    Register lookup ORM models and call :func:`emerald_utils.db.init_db`.
+    Register lookup ORM models and call :func:`gemstone_utils.db.init_db`.
 
     Import this module (or ``lookup.models``) before :func:`init_db` so tables exist on
-    :class:`emerald_utils.db.EmeraldDB` metadata. Jira alert correlation rows live in
+    :class:`gemstone_utils.db.GemstoneDB` metadata. Jira alert correlation rows live in
     ``alerts.plugins.jira.models`` and are registered here so ``init_db`` creates the table.
     """
     import lookup.models  # noqa: F401 — register ORM tables
@@ -64,4 +64,4 @@ def init_lookup_db(db_url: str, *, echo: bool = False, **engine_kw: Any) -> None
 
     merged_kw: Dict[str, Any] = {**engine_kwargs_for_sqlite_url(db_url), **engine_kw}
     init_db(db_url, echo=echo, **merged_kw)
-    logger.debug("Lookup ORM tables ensured via emerald_utils.db.init_db")
+    logger.debug("Lookup ORM tables ensured via gemstone_utils.db.init_db")

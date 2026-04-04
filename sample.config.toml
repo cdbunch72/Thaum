@@ -51,7 +51,7 @@ site_url = "https://your-site.atlassian.net"
 cloud_id = "00000000-0000-0000-0000-000000000000"
 # Jira API user identity (API token is scoped to this account). Often called "username" in docs.
 user = "thaum-jira-bot@example.com"
-# API token via ResolvedSecret (emerald_utils resolve_secret): inline, env:VAR, file:/path, etc.
+# API token via ResolvedSecret (gemstone_utils resolve_secret): inline, env:VAR, file:/path, etc.
 api_token = "file:/run/secrets/jira_api_token"
 # Bearer for POST {base_url}/alerts/<bot_key>/status (canonical JSON pattern). Empty disables verification.
 status_webhook_bearer = ""

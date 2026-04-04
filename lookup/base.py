@@ -17,7 +17,7 @@ from filelock import FileLock
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import delete, select
 
-from emerald_utils.db import get_session
+from gemstone_utils.db import get_session
 
 from lookup.models import (
     SchemaPerson,
@@ -39,7 +39,7 @@ class BaseLookupPluginConfig(BaseModel):
     """
     Shared lookup cache configuration for all lookup plugins.
 
-    The process-global DB is opened via :func:`emerald_utils.db.init_db` (see
+    The process-global DB is opened via :func:`gemstone_utils.db.init_db` (see
     :func:`lookup.db_bootstrap.init_lookup_db` / server bootstrap), not per-plugin.
 
     Expected TOML:
@@ -68,7 +68,7 @@ class BaseLookupPlugin(ABC):
     """
     Base class for lookup/caching plugins.
 
-    Persistence uses ORM models on :class:`emerald_utils.db.EmeraldDB` (tables prefixed
+    Persistence uses ORM models on :class:`gemstone_utils.db.GemstoneDB` (tables prefixed
     with ``schema_`` for portability). Call :func:`lookup.db_bootstrap.init_lookup_db`
     before constructing plugins.
 

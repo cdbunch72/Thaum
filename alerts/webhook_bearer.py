@@ -18,7 +18,7 @@ from typing import Any, Mapping, Optional, Tuple, cast
 import hmac
 
 # At most one rotation-window warning per token per interval (avoid log spam on every webhook).
-# Primary: shared DB row (webhook_bearer_warn_state) when emerald_utils.db is initialized.
+# Primary: shared DB row (webhook_bearer_warn_state) when gemstone_utils.db is initialized.
 # Fallback: marker files under server.thaum_state_dir (default /run/thaum), mtime = last warning;
 # then in-process dict if the state directory is missing or not writable.
 _CLEANUP_EXPIRED_BEFORE = timedelta(days=1)
@@ -201,7 +201,7 @@ def _db_throttle_should_log(
         from sqlalchemy import delete
         from sqlalchemy.exc import IntegrityError
 
-        from emerald_utils.db import get_session
+        from gemstone_utils.db import get_session
 
         from thaum.webhook_bearer_warn import WebhookBearerWarnState
     except Exception:

@@ -14,7 +14,7 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest.mock import patch
 
-from emerald_utils.db import get_session
+from gemstone_utils.db import get_session
 
 from alerts.webhook_bearer import (
     canonical_alert_bearer_bytes,
@@ -125,7 +125,7 @@ class WebhookBearerWarnThrottleTest(unittest.TestCase):
             set_thaum_state_dir(Path(td))
             secret, auth = _make_warn_window_secret()
 
-            with patch("emerald_utils.db.get_session", side_effect=RuntimeError("no db")):
+            with patch("gemstone_utils.db.get_session", side_effect=RuntimeError("no db")):
                 self.assertTrue(
                     validate_webhook_bearer(
                         authorization_header_value=auth,
