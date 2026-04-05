@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
-# Generate Thaum admin log-level route/secret config artifacts.
 # SPDX-License-Identifier: MPL-2.0
+# Copyright 2026 Clinton Bunch
+# scripts/python/generate_admin_log_config.py
+"""Generate Thaum admin log-level route/secret config artifacts."""
 
 from __future__ import annotations
 

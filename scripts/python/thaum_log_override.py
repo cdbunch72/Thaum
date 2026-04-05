@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
-# Thaum signed log-level client (Python).
 # SPDX-License-Identifier: MPL-2.0
+# Copyright 2026 Clinton Bunch
+# scripts/python/thaum_log_override.py
+"""Thaum signed log-level client (Python)."""
 
 from __future__ import annotations
 
