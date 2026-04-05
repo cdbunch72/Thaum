@@ -7,15 +7,19 @@ from __future__ import annotations
 
 import logging
 import secrets
+from collections.abc import Callable
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any
 
-from sqlalchemy import DateTime, String, select
+from sqlalchemy import DateTime, String, select, text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm.attributes import flag_modified
 
 from gemstone_utils.db import GemstoneDB, get_session
+from gemstone_utils.encrypted_fields import decrypt_string, parse_encrypted_field
 from gemstone_utils.sqlalchemy.encrypted_type import EncryptedString
+from gemstone_utils.types import KeyContext
 
 if TYPE_CHECKING:
     pass
@@ -76,10 +80,6 @@ def ensure_bot_webhook_hmac_secret(bot_key: str, *, min_length: int = 16) -> str
         return _plaintext_from_secret_field(row.secret_enc)
 
 
-def iter_all_bot_webhook_hmac_rows(session):
-    return session.scalars(select(BotWebhookHmac)).all()
-
-
 def re_encrypt_bot_webhook_hmac_secrets(session, plaintext_by_bot_key: dict[str, str]) -> None:
     """Assign new plaintext secrets under the current EncryptedString write context."""
     now = datetime.now(timezone.utc)
@@ -91,4 +91,58 @@ def re_encrypt_bot_webhook_hmac_secrets(session, plaintext_by_bot_key: dict[str,
             )
         else:
             row.secret_enc = plain
+            flag_modified(row, "secret_enc")
             row.updated_at = now
+
+
+def re_encrypt_stale_bot_webhook_hmac_batch(
+    session,
+    *,
+    active_dek_key_id: int,
+    resolve_keyctx: Callable[[int], KeyContext],
+    batch_limit: int = 50,
+) -> int:
+    """
+    Re-assign plaintext for rows whose stored wire still names a non-active DEK key id,
+    so values are re-encrypted under :meth:`EncryptedString.set_current_keyctx`.
+
+    Reads ciphertext via raw SQL so the embedded key id can be inspected without ORM coercion.
+    """
+    if batch_limit <= 0:
+        return 0
+    conn = session.connection()
+    rows = conn.execute(
+        text("SELECT bot_key, secret_enc FROM bot_webhook_hmac LIMIT :lim"),
+        {"lim": batch_limit},
+    ).all()
+    pending: list[tuple[str, str]] = []
+    for bot_key, ciphertext in rows:
+        if not ciphertext or not isinstance(ciphertext, str):
+            continue
+        try:
+            _alg, keyid, _params, _blob = parse_encrypted_field(ciphertext)
+        except ValueError:
+            continue
+        if keyid == active_dek_key_id:
+            continue
+        plain = decrypt_string(ciphertext, resolve_keyctx(keyid))
+        if plain is None:
+            continue
+        pending.append((bot_key, plain))
+
+    if not pending:
+        return 0
+
+    updated = 0
+    now = datetime.now(timezone.utc)
+    for bot_key, plain in pending:
+        row = session.get(BotWebhookHmac, bot_key)
+        if row is None:
+            continue
+        row.secret_enc = plain
+        # EncryptedString loads as LazySecret; assigning str can look unchanged to the ORM.
+        flag_modified(row, "secret_enc")
+        row.updated_at = now
+        updated += 1
+    session.commit()
+    return updated

@@ -1,6 +1,7 @@
 # Install from a local checkout or git until published, e.g.:
 #   pip install -e ../gemstone_utils
 #   pip install "gemstone_utils @ git+https://github.com/cdbunch72/gemstone_utils.git@main"
+# Requires gemstone_utils with GemstoneKeyRecord.is_active, put_keyrecord, new_kdf_params (v0.3.x dev line).
 gemstone_utils
 tzdata; platform_system == "Windows"
 Flask
