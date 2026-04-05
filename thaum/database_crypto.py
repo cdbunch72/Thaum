@@ -6,13 +6,13 @@
 from __future__ import annotations
 
 import logging
-import os
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, Optional
 
 from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 
+from gemstone_utils.crypto import generate_key_by_alg, recommended_data_alg
 from gemstone_utils.db import get_session
 from gemstone_utils.key_mgmt import (
     init as key_mgmt_init,
@@ -44,7 +44,6 @@ THAUM_KEK_CHECK_PLAINTEXT = b"thaum-v1-kek-check"
 THAUM_VAULT_SECRET_NAME = "thaum-database-vault"
 
 _WRAP_KEY_ID = 1
-_DATA_ALG = "A256GCM"
 
 # Progressive catch-up: rows per leader tick
 _ENCRYPTED_FIELD_CATCHUP_BATCH = 50
@@ -97,25 +96,26 @@ def active_dek_row(session) -> Optional[GemstoneKeyRecord]:
 
 
 def _insert_initial_keys(session, passphrase: str) -> None:
+    da = recommended_data_alg()
     kdf_params = new_kdf_params()
     kek = derive_kek(passphrase, kdf_params)
     canary = make_kek_check_record(kek)
-    dek = os.urandom(32)
+    dek = generate_key_by_alg(da)
     w0 = keyrecord_to_wire(canary, _WRAP_KEY_ID)
-    w1 = wire_wrap(_WRAP_KEY_ID, kek, dek, alg=_DATA_ALG)
+    w1 = wire_wrap(_WRAP_KEY_ID, kek, dek, alg=da)
     set_kdf_params(session, _WRAP_KEY_ID, kdf_params)
     put_keyrecord(
         session,
         key_id=0,
         wrapped=w0,
-        data_alg=_DATA_ALG,
+        data_alg=da,
         is_active=False,
     )
     put_keyrecord(
         session,
         key_id=1,
         wrapped=w1,
-        data_alg=_DATA_ALG,
+        data_alg=da,
         is_active=True,
     )
 
@@ -228,14 +228,15 @@ def rotate_data_encryption_key_if_due(server_cfg: ServerConfig) -> None:
             select(func.max(GemstoneKeyRecord.key_id)).where(GemstoneKeyRecord.key_id >= 1)
         )
         new_id = int(mx or 1) + 1
-        new_dek = os.urandom(32)
-        w_new = wire_wrap(_WRAP_KEY_ID, kek, new_dek, alg=_DATA_ALG)
+        da = active.data_alg
+        new_dek = generate_key_by_alg(da)
+        w_new = wire_wrap(_WRAP_KEY_ID, kek, new_dek, alg=da)
 
         put_keyrecord(
             session,
             key_id=new_id,
             wrapped=w_new,
-            data_alg=_DATA_ALG,
+            data_alg=da,
             is_active=True,
         )
         session.commit()
