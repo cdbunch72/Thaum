@@ -46,7 +46,6 @@ logger = logging.getLogger("thaum.database_crypto")
 
 THAUM_KEK_CHECK_PLAINTEXT = b"thaum-v1-kek-check"
 THAUM_VAULT_SECRET_NAME = "thaum-database-vault"
-THAUM_VAULT_ENV_VAR = "THAUM_DATABASE_VAULT_PASSPHRASE"
 
 _WRAP_KEY_ID = 1
 _FIRST_DEK_ID = 1
@@ -99,7 +98,7 @@ def _insert_initial_keys(session, passphrase: str) -> None:
 
 def apply_database_crypto(server_cfg: ServerConfig) -> None:
     """
-    Configure key_mgmt env, bootstrap GemstoneKey* rows on first run, and wire
+    Configure key_mgmt, bootstrap GemstoneKey* rows on first run, and wire
     :class:`EncryptedString` for the process.
     """
     global _crypto_ready
@@ -108,12 +107,10 @@ def apply_database_crypto(server_cfg: ServerConfig) -> None:
         _crypto_ready = False
         return
 
-    os.environ[THAUM_VAULT_ENV_VAR] = passphrase
     key_mgmt_init(
         THAUM_VAULT_SECRET_NAME,
         THAUM_KEK_CHECK_PLAINTEXT,
-        env_allowed=True,
-        env_var_name=THAUM_VAULT_ENV_VAR,
+        env_allowed=False,
     )
 
     active_id = _FIRST_DEK_ID
@@ -167,9 +164,6 @@ def apply_database_crypto(server_cfg: ServerConfig) -> None:
         raise RuntimeError("database crypto bootstrap did not produce a KeyContext")
 
     def load_passphrase_fn() -> str:
-        v = os.environ.get(THAUM_VAULT_ENV_VAR)
-        if v:
-            return v
         return _resolved_vault_passphrase(server_cfg) or ""
 
     EncryptedString.set_keyctx_resolver(
