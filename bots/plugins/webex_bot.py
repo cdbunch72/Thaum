@@ -5,56 +5,213 @@
 # This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
 
 from __future__ import annotations
+
 import logging
-import secrets
-from typing import Dict, Any, Optional, List, TYPE_CHECKING
-from pydantic import Field, SecretStr, model_validator
-from thaum.types import LogLevel, ResolvedSecret, ThaumPerson
-from webexpythonsdk import WebexAPI
-from bots.base import BaseChatBot, MessageContext, BaseChatBotConfig
+import time
+from typing import TYPE_CHECKING, Any, Dict, List, Literal, Optional
+
+from pydantic import Field, model_validator
+
+from bots.base import BaseChatBot, BaseChatBotConfig, MessageContext
 from log_setup import log_debug_blob
+from thaum.types import LogLevel, ResolvedSecret, ServerConfig, ThaumPerson
+from webexpythonsdk import WebexAPI
 
 if TYPE_CHECKING:
     from flask import Request as FlaskRequest
 
 
-# Minimum HMAC secret length to avoid accidental weak configuration.
-# Webex accepts arbitrary secrets, but we enforce a lower bound for safety.
 MIN_HMAC_SECRET_CHARS: int = 16
+
+WebexHmacMode = Literal["shared_db", "pinned", "disabled"]
 
 
 class WebexChatBot(BaseChatBot):
     """Concrete driver for Webex."""
 
-    plugin_name: str = 'webex'
+    plugin_name: str = "webex"
 
-    def __init__(self, config: 'WebexChatBotConfig'):
+    def __init__(self, config: WebexChatBotConfig):
         super().__init__(config)
         self.logger = logging.getLogger(f"bot.{config.name}")
         self.log = self.logger
+        self._web_cfg = config
+        self.hmac_mode: WebexHmacMode = config.hmac_mode
         self.api = WebexAPI(access_token=config.token.get_secret_value())
         self.me = self.api.people.me()
-        self.hmac_secret = (
-            None
-            if config.hmac_secret is None
-            else config.hmac_secret.get_secret_value()
-        )
-        
-        # Internal state for bot behavior
+
+        if config.hmac_mode == "pinned":
+            self.hmac_secret = (
+                config.hmac_secret.get_secret_value() if config.hmac_secret else None
+            )
+        else:
+            self.hmac_secret = None
+
+        self._hmac_cache_plain: Optional[str] = None
+        self._hmac_cache_monotonic: float = 0.0
+        self._webhook_ids: Optional[tuple[str, str, str]] = None
+        self._last_probe_monotonic: float = 0.0
         self._hears_routes = []
-    # -- End Method __init__
+
+    def complete_runtime_init(self, server_cfg: ServerConfig) -> None:
+        """Load shared DB HMAC after ``bot_key`` is set (requires database crypto)."""
+        if self.hmac_mode != "shared_db":
+            return
+        from thaum.bot_webhook_state import ensure_bot_webhook_hmac_secret
+        from thaum.database_crypto import is_database_crypto_ready
+
+        if not is_database_crypto_ready():
+            raise RuntimeError(
+                "server.database_vault_passphrase / database crypto is required when "
+                "Webex hmac_secret is omitted (shared DB HMAC mode)."
+            )
+        bk = self.bot_key
+        if not bk:
+            raise RuntimeError("bot_key must be set before complete_runtime_init()")
+        secret = ensure_bot_webhook_hmac_secret(bk, min_length=MIN_HMAC_SECRET_CHARS)
+        self.hmac_secret = secret
+        self._hmac_cache_plain = secret
+        self._hmac_cache_monotonic = time.monotonic()
+
+    def _effective_hmac_secret(self) -> Optional[str]:
+        if self.hmac_mode == "disabled":
+            return None
+        if self.hmac_mode == "pinned":
+            return self.hmac_secret
+        now = time.monotonic()
+        refresh = float(self._web_cfg.webhook_hmac_cache_refresh_seconds)
+        bk = self.bot_key or ""
+        if self._hmac_cache_plain is None or (now - self._hmac_cache_monotonic) >= refresh:
+            from thaum.bot_webhook_state import ensure_bot_webhook_hmac_secret
+
+            self._hmac_cache_plain = ensure_bot_webhook_hmac_secret(
+                bk, min_length=MIN_HMAC_SECRET_CHARS
+            )
+            self._hmac_cache_monotonic = now
+        return self._hmac_cache_plain
+
+    def _normalize_target_url(self, url: str) -> str:
+        return url.rstrip("/")
+
+    def _webhook_secret_for_api(self) -> Optional[str]:
+        return self._effective_hmac_secret()
+
+    def _ensure_webhooks(self) -> None:
+        target = (self.endpoint or "").strip()
+        if not target:
+            self.logger.error("Cannot register Webex webhooks: bot endpoint is not configured.")
+            return
+
+        nt = self._normalize_target_url(target)
+        try:
+            for wh in list(self.api.webhooks.list()):
+                if wh.targetUrl and self._normalize_target_url(wh.targetUrl) == nt:
+                    self.api.webhooks.delete(wh.id)
+        except Exception as e:
+            self.logger.warning("While pruning old Webex webhooks: %s", e)
+
+        secret = self._webhook_secret_for_api()
+        name_prefix = f"Thaum {self.name}"
+        if self.bot_key:
+            name_prefix = f"{name_prefix} [{self.bot_key}]"
+
+        try:
+            w1 = self.api.webhooks.create(
+                name=f"{name_prefix} messages (direct)",
+                targetUrl=target,
+                resource="messages",
+                event="created",
+                filter="roomType=direct",
+                secret=secret,
+            )
+            w2 = self.api.webhooks.create(
+                name=f"{name_prefix} messages (mentioned)",
+                targetUrl=target,
+                resource="messages",
+                event="created",
+                filter="mentionedPeople=me",
+                secret=secret,
+            )
+            w3 = self.api.webhooks.create(
+                name=f"{name_prefix} attachmentActions",
+                targetUrl=target,
+                resource="attachmentActions",
+                event="created",
+                secret=secret,
+            )
+            self._webhook_ids = (w1.id, w2.id, w3.id)
+            self.logger.log(
+                LogLevel.VERBOSE,
+                "Ensured Webex webhooks for bot_key=%r -> %s",
+                self.bot_key,
+                target,
+            )
+        except Exception as e:
+            self.logger.error("Failed to register Webex webhooks: %s", e)
+            raise
+
+    def _fetch_webhook(self, wid: str) -> Any:
+        get_fn = getattr(self.api.webhooks, "get", None)
+        if callable(get_fn):
+            try:
+                return get_fn(wid)
+            except TypeError:
+                return get_fn(webhookId=wid)
+        for wh in self.api.webhooks.list():
+            if wh.id == wid:
+                return wh
+        return None
+
+    def _probe_webhook_status(self) -> None:
+        now = time.monotonic()
+        if (now - self._last_probe_monotonic) < float(
+            self._web_cfg.webhook_probe_interval_seconds
+        ):
+            return
+        self._last_probe_monotonic = now
+
+        target = (self.endpoint or "").strip()
+        if not target:
+            return
+
+        ids = self._webhook_ids
+        if not ids:
+            self._ensure_webhooks()
+            return
+
+        for wid in ids:
+            try:
+                wh = self._fetch_webhook(wid)
+                if wh is None:
+                    raise ValueError("missing webhook")
+                status = getattr(wh, "status", None)
+                if status is not None and str(status).lower() != "active":
+                    raise ValueError("inactive")
+            except Exception:
+                self.logger.info("Webex webhook probe failed for %s; reconciling.", wid)
+                self._webhook_ids = None
+                self._ensure_webhooks()
+                return
+
+    def _leader_maintenance_tick(self) -> None:
+        if not (self.endpoint or "").strip():
+            return
+        self._probe_webhook_status()
 
     def say(self, room_id: str, text: str, markdown: Optional[str] = None) -> None:
         self.api.messages.create(roomId=room_id, text=text, markdown=markdown)
     # -- End Method say
 
-    def send_card(self, room_id: str, card_content: dict, fallback_text: str = "Adaptive Card") -> None:
+    def send_card(
+        self, room_id: str, card_content: dict, fallback_text: str = "Adaptive Card"
+    ) -> None:
         attachment = {
             "contentType": "application/vnd.microsoft.card.adaptive",
-            "content": card_content
+            "content": card_content,
         }
-        self.api.messages.create(roomId=room_id, text=fallback_text, attachments=[attachment])
-    # -- End Method send_card
+        self.api.messages.create(
+            roomId=room_id, text=fallback_text, attachments=[attachment]
+        )
 
     def create_room(self, title: str) -> str:
         room = self.api.rooms.create(title=title)
@@ -68,7 +225,7 @@ class WebexChatBot(BaseChatBot):
                 key, v = "personId", pid
             else:
                 key, v = "personEmail", m.email
-            
+
             try:
                 self.api.memberships.create(roomId=room_id, **{key: v})
             except Exception as e:
@@ -76,71 +233,60 @@ class WebexChatBot(BaseChatBot):
     # -- End Method add_members
 
     def delete_room(self, room_id: str, person: Optional[ThaumPerson] = None) -> None:
-        """Implodes the room ONLY if bot is the creator."""
         display_name = person.for_display if person else "An unknown user"
-        
+
         try:
             room = self.api.rooms.get(room_id)
-            
+
             if room.creatorId != self.me.id:
-                self.logger.warning(f"Unauthorized attempt to delete room '{room.title}' by {display_name}")
-                self.say(room_id, f"Access Denied: {self.name} did not create room '{room.title}'")
-                return # Stop here, don't crash the server
-                
+                self.logger.warning(
+                    f"Unauthorized attempt to delete room '{room.title}' by {display_name}"
+                )
+                self.say(
+                    room_id,
+                    f"Access Denied: {self.name} did not create room '{room.title}'",
+                )
+                return
+
             self.api.rooms.delete(room_id)
             self.logger.verbose(f"Room {room_id} deleted by {display_name}.")
-            
+
         except Exception as e:
-            # Here is the only place you actually need an exception handler
             self.logger.error(f"Catastrophic failure deleting {room_id}: {e}")
             self.say(room_id, "Critical failure during room deletion.")
 
-    # -- End Method delete_room
-
-
     def _get_person_from_api(self, person_id: str) -> ThaumPerson:
-        """
-        Fetches a person from the Webex API and returns a ThaumPerson.
-        """
         try:
-            # 1. Fetch the person object
             person = self.api.people.get(person_id)
-            
-            # 2. Extract the canonical email (take the first one if multiple exist)
             email = person.emails[0] if person.emails else None
-            
-            # 3. Handle cases where API might not return an email (rare but possible)
             if not email:
-                self.logger.warning(f"Webex person {person_id} has no email. Using ID as fallback.")
+                self.logger.warning(
+                    f"Webex person {person_id} has no email. Using ID as fallback."
+                )
                 email = f"{person_id}@{self.plugin_name}"
-                
-            # 4. Map to ThaumPerson
+
             return ThaumPerson(
                 email=email,
                 display_name=person.displayName,
                 platform_ids={self.plugin_name: person_id},
-                source_plugin=self.plugin_name # e.g., 'webex_bot'
+                source_plugin=self.plugin_name,
             )
         except Exception as e:
             self.logger.error(f"Failed to fetch person {person_id} from Webex: {e}")
-            # Return a 'placeholder' person so the system doesn't crash
             return ThaumPerson(
                 email=f"{person_id}@{self.plugin_name}",
                 display_name="",
                 platform_ids={self.plugin_name: person_id},
                 source_plugin=self.plugin_name,
             )
-    # -- End Method get_person_from_api
 
-    def get_person(self,person_id) -> ThaumPerson:
+    def get_person(self, person_id) -> ThaumPerson:
         lookup = getattr(self, "lookup_plugin", None)
         if lookup is not None:
             cached = lookup.get_person_by_id(self.plugin_name, person_id)
             if cached is not None:
                 return cached
 
-        # Cache miss (or lookup plugin not attached): resolve via Webex API,
-        # then merge/cache the partial object by email.
         fragment = self._get_person_from_api(person_id)
         if lookup is not None:
             return lookup.merge_person(fragment)
@@ -165,31 +311,24 @@ class WebexChatBot(BaseChatBot):
             return (person_or_id.display_name or "").strip() or person_or_id.email
         s = str(person_or_id).strip()
         return f"<@personId:{s}>" if s else ""
-    # -- End Method format_mention
 
     def _validate_signature(self, payload_body: bytes, signature: Optional[str]) -> bool:
-        """Return True if the request signature is valid.
-
-        If ``hmac_secret`` is unset/disabled (empty in config), signatures are not verified.
-        """
-        if not self.hmac_secret:
+        secret = self._effective_hmac_secret()
+        if not secret:
             return True
         if not signature:
             return False
 
-        import hmac, hashlib
+        import hashlib
+        import hmac
 
-        hashed = hmac.new(self.hmac_secret.encode(), payload_body, hashlib.sha1)
+        hashed = hmac.new(secret.encode(), payload_body, hashlib.sha1)
         return hmac.compare_digest(hashed.hexdigest(), signature)
-    # -- End Method validate_signature
 
     def authenticate_request(self, request: "FlaskRequest") -> bool:
-        """Extract Webex webhook signature + raw body and verify it."""
         try:
-            # Flask's `request.get_data()` returns the raw body bytes (and caches them on the request object).
             raw_body = request.get_data(cache=True)  # type: ignore[attr-defined]
         except Exception:
-            # Fallback for non-Flask request objects.
             raw_body = getattr(request, "data", b"") or b""
 
         signature = None
@@ -199,181 +338,139 @@ class WebexChatBot(BaseChatBot):
             signature = None
 
         return self._validate_signature(raw_body, signature)
-    # -- End Method authenticate_request
 
     def _process_message(self, message_id: str) -> Optional[str]:
-        """
-        Fetches the message and returns the clean text ONLY if 
-        it's a DM or a mention. Otherwise returns None.
-        """
         message = self.api.messages.get(message_id)
-        
-        # 1. DM Check
         room = self.api.rooms.get(message.roomId)
-        is_direct = (room.type == "direct")
-        
-        # 2. Mention Check
+        is_direct = room.type == "direct"
         is_mentioned = message.mentionedPeople and self.me.id in message.mentionedPeople
-        
+
         if not (is_direct or is_mentioned):
-            return None # Ignore this message
-            
-        # 3. Clean the text (strip mention tag)
+            return None
+
         if message.text:
             mention_tag = f"<@personId:{self.me.id}>"
             clean_text = message.text.replace(mention_tag, "").strip()
             return clean_text
-            
+
         return None
 # -- End Method process_message
 
     def handle_event(self, event: Dict[str, Any]) -> None:
-        """
-        Dispatches incoming webhook events.
-        'event' is the raw JSON dictionary from the Webex API.
-        """
-        resource: Optional[str] = event.get('resource')
-        data: Dict[str, Any] = event.get('data', {})
+        resource: Optional[str] = event.get("resource")
+        data: Dict[str, Any] = event.get("data", {})
         self.logger.spam("handle_event:")
         log_debug_blob(self.logger, data, logging.SPAM)
 
-        if resource == 'messages':
-            # Ignore messages sent by the bot itself
-            if data.get('personId') == self.me.id: 
+        if resource == "messages":
+            if data.get("personId") == self.me.id:
                 return
 
-            # Fetch the clean text
-            clean_text = self._process_message(data['id'])
+            clean_text = self._process_message(data["id"])
             if clean_text is None:
                 self.logger.debug("Message ignored: Not a DM or Mention.")
                 return
 
-            person=self.get_person(data['personId'])
-            message=MessageContext(
-                room_id=data['roomId'],
+            person = self.get_person(data["personId"])
+            message = MessageContext(
+                room_id=data["roomId"],
                 person=person,
                 message=clean_text,
-                message_id=data['id'],
-                raw_event=event
+                message_id=data["id"],
+                raw_event=event,
             )
-            # Match routes (same tuple shape as BaseChatBot.hears: priority, pattern, handler)
             for _priority, pattern, handler in self._hears_routes:
                 match = pattern.search(clean_text)
                 if match:
                     handler(self, message, match)
                     break
-        # -- End Resource 'messages'
 
-        elif resource == 'attachmentActions':
-            action = self.api.attachment_actions.get(data['id'])
+        elif resource == "attachmentActions":
+            action = self.api.attachment_actions.get(data["id"])
             for callback in self._action_callbacks:
                 callback(self, action)
-        # -- End Resource 'attachmentActions'
-    # -- End Method handle_event
-
-    def register_bot_webhook(self) -> None:
-        """
-        Register Webex webhooks after the Thaum HTTP route for ``self.endpoint`` is live.
-
-        Uses two filtered ``messages`` / ``created`` hooks (both invoke ``handle_event``) to
-        cut traffic versus an unfiltered subscription: ``roomType=direct`` (DMs) and
-        ``mentionedPeople=me`` (group rooms where the bot is @-mentioned). Also registers
-        ``attachmentActions`` / ``created`` for Adaptive Card actions.
-
-        Prunes any existing hooks that use the same ``targetUrl`` (including legacy unfiltered
-        message hooks). A DM that also @-mentions the bot may match both filters and deliver
-        two events for the same message.
-        """
-        target = (self.endpoint or "").strip()
-        if not target:
-            self.logger.error("Cannot register Webex webhooks: bot endpoint is not configured.")
-            return
-
-        def _normalize_url(url: str) -> str:
-            return url.rstrip("/")
-
-        nt = _normalize_url(target)
-        try:
-            for wh in list(self.api.webhooks.list()):
-                if wh.targetUrl and _normalize_url(wh.targetUrl) == nt:
-                    self.api.webhooks.delete(wh.id)
-        except Exception as e:
-            self.logger.warning("While pruning old Webex webhooks: %s", e)
-
-        secret = self.hmac_secret
-        name_prefix = f"Thaum {self.name}"
-        if self.bot_key:
-            name_prefix = f"{name_prefix} [{self.bot_key}]"
-
-        try:
-            self.api.webhooks.create(
-                name=f"{name_prefix} messages (direct)",
-                targetUrl=target,
-                resource="messages",
-                event="created",
-                filter="roomType=direct",
-                secret=secret,
-            )
-            self.api.webhooks.create(
-                name=f"{name_prefix} messages (mentioned)",
-                targetUrl=target,
-                resource="messages",
-                event="created",
-                filter="mentionedPeople=me",
-                secret=secret,
-            )
-            self.api.webhooks.create(
-                name=f"{name_prefix} attachmentActions",
-                targetUrl=target,
-                resource="attachmentActions",
-                event="created",
-                secret=secret,
-            )
-            self.logger.log(
-                LogLevel.VERBOSE,
-                "Registered Webex webhooks for bot_key=%r -> %s",
-                self.bot_key,
-                target,
-            )
-        except Exception as e:
-            self.logger.error("Failed to register Webex webhooks: %s", e)
-            raise
-    # -- End Method register_bot_webhook
-# -- End Class WebexChatBot
 
 
 class WebexChatBotConfig(BaseChatBotConfig):
     token: ResolvedSecret
+    hmac_mode: WebexHmacMode = Field(
+        default="shared_db",
+        description="How webhook HMAC is sourced: shared_db (omit hmac_secret), pinned, or disabled.",
+    )
     hmac_secret: Optional[ResolvedSecret] = Field(
         default=None,
-        description=(
-            "Webex webhook signing secret (X-Spark-Signature). If the field is omitted, a "
-            "random value is generated at startup (single-process; re-register webhooks after "
-            "restart or pin a secret). Set to empty to disable verification. Any other value "
-            "is used as-is, but must be at least the minimum length."
-        ),
+        description="Pinned signing secret; leave unset with shared_db mode (DB-stored secret).",
+    )
+    webhook_hmac_cache_refresh_seconds: float = Field(
+        default=30.0,
+        ge=0.0,
+        description="How often workers reload the shared HMAC plaintext from the DB.",
+    )
+    webhook_probe_interval_seconds: float = Field(
+        default=3600.0,
+        ge=1.0,
+        description="Leader: minimum seconds between Webex webhook status probes.",
     )
 
+    @model_validator(mode="before")
+    @classmethod
+    def _classify_hmac(cls, data: Any) -> Any:
+        if not isinstance(data, dict):
+            return data
+        out = dict(data)
+        if "hmac_mode" in out:
+            return out
+        if "hmac_secret" not in out:
+            out["hmac_mode"] = "shared_db"
+            return out
+        raw = out.get("hmac_secret")
+        if raw is None:
+            out["hmac_mode"] = "disabled"
+            out["hmac_secret"] = None
+            return out
+        s = str(raw).strip()
+        if not s:
+            out["hmac_mode"] = "disabled"
+            out["hmac_secret"] = None
+            return out
+        out["hmac_mode"] = "pinned"
+        return out
+
     @model_validator(mode="after")
-    def normalize_hmac_secret(self) -> WebexChatBotConfig:
-        if self.hmac_secret is not None:
+    def _validate_hmac(self) -> WebexChatBotConfig:
+        if self.hmac_mode == "pinned":
+            if self.hmac_secret is None:
+                raise ValueError("hmac_mode=pinned requires a non-empty hmac_secret")
             s = self.hmac_secret.get_secret_value().strip()
-            if not s:
-                self.hmac_secret = None
-                return self
             if len(s) < MIN_HMAC_SECRET_CHARS:
                 raise ValueError(
-                    f"hmac_secret is too short; must be >= {MIN_HMAC_SECRET_CHARS} characters "
-                    f"(or set it to empty to disable verification)."
+                    f"hmac_secret is too short; must be >= {MIN_HMAC_SECRET_CHARS} characters"
                 )
-            # Keep the secret (non-empty, meets minimum length).
-            return self
-
-        # Field omitted => generate one for this process.
-        # (This is intentionally single-process only, unless you store/pin the generated value.)
-        self.hmac_secret = SecretStr(secrets.token_hex(32))
+        elif self.hmac_mode == "shared_db":
+            self.hmac_secret = None
+        else:
+            self.hmac_secret = None
         return self
-    # -- End normalize_hmac_secret
+
+
+def maintenance_tasks_register(registry: Any, *, server_cfg: ServerConfig, config: Dict[str, Any]) -> None:
+    if server_cfg.bot_type != "webex":
+        return
+    interval = 3600.0
+    for row in (config.get("bots") or {}).values():
+        if not isinstance(row, dict):
+            continue
+        vb = row.get("_validated_bot")
+        probe = getattr(vb, "webhook_probe_interval_seconds", None)
+        if probe is not None:
+            interval = min(interval, float(probe))
+
+    def _tick(ctx: Any, _task_data: Any) -> None:
+        for bot in ctx["bots"].values():
+            if getattr(bot, "plugin_name", None) == "webex":
+                bot._leader_maintenance_tick()
+
+    registry.register_task("webex_webhook_maintenance", max(60.0, interval), _tick)
 
 
 def get_config_model():
@@ -381,7 +478,4 @@ def get_config_model():
 
 
 def create_instance_bot(config: WebexChatBotConfig) -> WebexChatBot:
-    """Factory interface for the Webex driver."""
     return WebexChatBot(config)
-# -- End Function create_instance_bot
-

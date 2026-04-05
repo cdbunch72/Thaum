@@ -141,9 +141,9 @@ class BaseChatBot(ABC):
     def register_bot_webhook(self) -> None:
         """
         Register inbound webhooks with the chat platform after HTTP routes are live
-        (e.g. ``POST .../bot/<bot_key>``). Use ``self.endpoint`` and ``self.bot_key`` as needed.
+        (e.g. ``POST .../bot/<bot_key>``). Default no-op; Webex uses the leader maintenance loop.
         """
-        pass
+        return
     # -- End Method register_bot_webhook
 
     def hears(self, pattern: str, priority: int=50):

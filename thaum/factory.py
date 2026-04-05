@@ -87,6 +87,9 @@ def initialize_bots(bot_type: str, config: Dict[str, Any]) -> None:
             bot.alert_plugin = plugin
 
             bind_thaum_handlers(bot)
+            init_fn = getattr(bot, "complete_runtime_init", None)
+            if callable(init_fn):
+                init_fn(server_cfg)
             BOTS[bot_key] = bot
             boot_logger.log(LogLevel.VERBOSE, "Thaum bot '%s' initialized.", bot_name)
         except Exception as e:

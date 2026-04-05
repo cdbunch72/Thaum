@@ -12,13 +12,15 @@ from typing import Any, Dict
 from flask import Flask, jsonify, request
 
 from thaum.admin_log_level import admin_log_routes_enabled, handle_admin_log_level_post
-from thaum.factory import BOTS, register_all_bot_webhooks
+from thaum.database_crypto import apply_database_crypto
+from thaum.factory import BOTS
+from thaum.leader_service import start_leader_loop
 from thaum.types import ServerConfig
 
 logger = logging.getLogger("thaum.web")
 
 
-def create_app(config: Dict[str, Any]) -> Flask:
+def create_app(config: Dict[str, Any], *, run_leader_loop: bool = True) -> Flask:
     """Flask application factory; expects ``bootstrap()`` to have run first."""
     app = Flask(__name__)
     app.config["THAUM"] = config
@@ -46,6 +48,7 @@ def create_app(config: Dict[str, Any]) -> Flask:
         return "", 204
 
     server: ServerConfig = config["server"]
+    apply_database_crypto(server)
     if admin_log_routes_enabled(server):
         route_id = server.log_admin_route_id.strip()
 
@@ -77,6 +80,6 @@ def create_app(config: Dict[str, Any]) -> Flask:
             logger.exception("alert status webhook handler failed for bot %s: %s", bot_key, e)
         return "", 204
 
-    register_all_bot_webhooks()
+    start_leader_loop(server, config, run_leader_loop=run_leader_loop)
     return app
 # -- End Function create_app

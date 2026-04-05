@@ -60,7 +60,7 @@ EXPOSE 5165
 # this network namespace or uses a Unix socket. Do not publish this port to the public host;
 # expose only the proxy. Override for co-located proxy: -e GUNICORN_BIND=127.0.0.1:5165
 ENV GUNICORN_BIND=0.0.0.0:5165
-# Single worker until leader election coordinates Spark webhook registration / signature secrets
-# across processes. Override: -e GUNICORN_WORKERS=4
+# Leader election registers Webex webhooks once; multiple workers are supported. Override:
+# -e GUNICORN_WORKERS=4
 ENV GUNICORN_WORKERS=1
 ENTRYPOINT ["/bin/sh", "-c", "exec /venv/bin/gunicorn --bind \"$GUNICORN_BIND\" --workers \"${GUNICORN_WORKERS:-1}\" app:app"]

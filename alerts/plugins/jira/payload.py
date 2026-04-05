@@ -9,7 +9,7 @@ from __future__ import annotations
 import json
 import logging
 from collections.abc import Callable
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any, Optional
 
 import requests
@@ -114,7 +114,7 @@ def build_trigger_alert_body(
     alert: dict[str, Any] = {
         "message": summary,
         "source": bot_name,
-        "alias": f"THAUM-{datetime.now(datetime.timezone.utc).strftime('%Y%m%d')}-{short_id}",
+        "alias": f"THAUM-{datetime.now(timezone.utc).strftime('%Y%m%d')}-{short_id}",
         "priority": severity,
         "responders": responders_payload,
         "extraProperties": {

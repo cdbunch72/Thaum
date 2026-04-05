@@ -8,6 +8,7 @@ from __future__ import annotations
 import base64
 import json
 import logging
+import tempfile
 import unittest
 from datetime import datetime, timezone
 
@@ -35,6 +36,7 @@ def _make_server(**kwargs: object) -> ServerConfig:
         log_admin_hmac_secret_b64url=_zero_key_b64u(),
         log_admin_clock_skew_seconds=600,
         log_admin_state_poll_seconds=0.0,
+        thaum_state_dir=tempfile.mkdtemp(prefix="thaum_admin_test_"),
     )
     base.update(kwargs)
     return ServerConfig(**base)
@@ -61,7 +63,10 @@ class AdminLogEndpointTest(unittest.TestCase):
         self._server = _make_server()
         configure_logging(LogConfig(level=LogLevel.INFO), self._server)
         set_runtime_root_log_level(None)
-        self.app = create_app({"server": self._server, "log": LogConfig(level=LogLevel.INFO), "bots": {}})
+        self.app = create_app(
+            {"server": self._server, "log": LogConfig(level=LogLevel.INFO), "bots": {}},
+            run_leader_loop=False,
+        )
         self.client = self.app.test_client()
 
     def _sign(
@@ -156,12 +161,13 @@ class AdminLogDbApplyTest(unittest.TestCase):
 
         now = datetime.now(timezone.utc)
         with get_session() as session:
-            session.add(
-                AdminLogLevelState(
-                    id=ADMIN_LOG_LEVEL_STATE_ID,
-                    log_level="ERROR",
-                    updated_at=now,
+            with session.begin():
+                session.add(
+                    AdminLogLevelState(
+                        id=ADMIN_LOG_LEVEL_STATE_ID,
+                        log_level="ERROR",
+                        updated_at=now,
+                    )
                 )
-            )
         apply_runtime_log_level_from_db()
         self.assertEqual(logging.getLogger().level, logging.ERROR)

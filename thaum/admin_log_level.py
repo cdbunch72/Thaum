@@ -176,28 +176,31 @@ def handle_admin_log_level_post(request: Request, server: ServerConfig) -> Tuple
 
     try:
         with get_session() as session:
-            session.execute(
-                delete(AdminLogNonce).where(AdminLogNonce.expires_at < now_dt)
-            )
-            session.add(AdminLogNonce(nonce=nonce_header, expires_at=expires_at))
-            try:
-                session.flush()
-            except IntegrityError:
-                session.rollback()
-                logger.debug("admin log-level nonce replay rejected")
-                return jsonify({"error": "unauthorized"}), 401
-
-            st = session.get(AdminLogLevelState, ADMIN_LOG_LEVEL_STATE_ID)
-            if st is None:
-                st = AdminLogLevelState(
-                    id=ADMIN_LOG_LEVEL_STATE_ID,
-                    log_level=db_level,
-                    updated_at=now_dt,
+            with session.begin():
+                session.execute(
+                    delete(AdminLogNonce).where(AdminLogNonce.expires_at < now_dt)
                 )
-                session.add(st)
-            else:
-                st.log_level = db_level
-                st.updated_at = now_dt
+                try:
+                    with session.begin_nested():
+                        session.add(
+                            AdminLogNonce(nonce=nonce_header, expires_at=expires_at)
+                        )
+                        session.flush()
+                except IntegrityError:
+                    logger.debug("admin log-level nonce replay rejected")
+                    return jsonify({"error": "unauthorized"}), 401
+
+                st = session.get(AdminLogLevelState, ADMIN_LOG_LEVEL_STATE_ID)
+                if st is None:
+                    st = AdminLogLevelState(
+                        id=ADMIN_LOG_LEVEL_STATE_ID,
+                        log_level=db_level,
+                        updated_at=now_dt,
+                    )
+                    session.add(st)
+                else:
+                    st.log_level = db_level
+                    st.updated_at = now_dt
     except Exception as e:
         logger.warning("admin log-level DB error: %s", e)
         return jsonify({"error": "internal error"}), 500

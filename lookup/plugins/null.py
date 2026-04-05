@@ -6,10 +6,10 @@
 
 from __future__ import annotations
 
-from typing import List, Any
+from typing import Any, Dict, List
 
 from lookup.base import BaseLookupPlugin, BaseLookupPluginConfig
-from thaum.types import ThaumPerson, ThaumTeam
+from thaum.types import ServerConfig, ThaumPerson, ThaumTeam
 
 
 class NullLookupPlugin(BaseLookupPlugin):
@@ -47,4 +47,8 @@ class NullLookupPluginConfig(BaseLookupPluginConfig):
 
 def get_config_model():
     return NullLookupPluginConfig
+
+
+def maintenance_tasks_register(registry: Any, *, server_cfg: ServerConfig, config: Dict[str, Any]) -> None:
+    return
 

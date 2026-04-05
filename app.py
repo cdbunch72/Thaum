@@ -5,9 +5,10 @@
 # This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
 
 """
-WSGI entry: ``gunicorn --workers 1 app:app`` (use one worker until leader election exists for
-Spark webhook registration). Config: ``THAUM_CONFIG_FILE``, else ``/etc/thaum/thaum.conf`` or
-``thaum.toml`` in the working directory.
+WSGI entry: ``gunicorn app:app`` (multiple workers supported: leader election registers Webex
+webhooks once per deployment). Set ``server.database_vault_passphrase`` when using shared DB
+Webex HMAC (omit ``hmac_secret`` in bot config). Config: ``THAUM_CONFIG_FILE``, else
+``/etc/thaum/thaum.conf`` or ``thaum.toml`` in the working directory.
 """
 
 from __future__ import annotations

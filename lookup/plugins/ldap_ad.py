@@ -8,11 +8,11 @@ from __future__ import annotations
 
 import logging
 import ssl as pyssl
-from typing import List, Optional, Any, Literal
+from typing import Any, Dict, List, Literal, Optional
 from urllib.parse import urlparse
 
 from pydantic import BaseModel, Field
-from thaum.types import ThaumPerson, ThaumTeam, ResolvedSecret
+from thaum.types import ResolvedSecret, ServerConfig, ThaumPerson, ThaumTeam
 from lookup.base import BaseLookupPlugin, BaseLookupPluginConfig
 
 try:
@@ -350,4 +350,8 @@ def create_instance_lookup(config_raw: dict) -> LdapAdLookupPlugin:
 
 def get_config_model():
     return LdapAdLookupPluginConfig
+
+
+def maintenance_tasks_register(registry: Any, *, server_cfg: ServerConfig, config: Dict[str, Any]) -> None:
+    return
 

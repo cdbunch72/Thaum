@@ -212,46 +212,47 @@ def _db_throttle_should_log(
 
     try:
         with get_session() as session:
-            session.execute(
-                delete(WebhookBearerWarnState).where(
-                    WebhookBearerWarnState.expires_at.isnot(None),
-                    WebhookBearerWarnState.expires_at < cleanup_before,
+            with session.begin():
+                session.execute(
+                    delete(WebhookBearerWarnState).where(
+                        WebhookBearerWarnState.expires_at.isnot(None),
+                        WebhookBearerWarnState.expires_at < cleanup_before,
+                    )
                 )
-            )
-            row = session.get(WebhookBearerWarnState, token_fp)
-            if row is not None:
-                age_sec = (now_dt - row.last_warn_at).total_seconds()
-                if age_sec < _ROTATION_WARN_INTERVAL_SEC:
-                    return False
-                row.last_warn_at = now_dt
-                row.expires_at = expires_at_utc
-                if bot_key is not None:
-                    row.bot_key = bot_key
-                return True
-
-            new_row = WebhookBearerWarnState(
-                token_fp=token_fp,
-                last_warn_at=now_dt,
-                expires_at=expires_at_utc,
-                bot_key=bot_key,
-            )
-            session.add(new_row)
-            try:
-                session.flush()
-            except IntegrityError:
-                session.rollback()
-                row2 = session.get(WebhookBearerWarnState, token_fp)
-                if row2 is None:
+                row = session.get(WebhookBearerWarnState, token_fp)
+                if row is not None:
+                    age_sec = (now_dt - row.last_warn_at).total_seconds()
+                    if age_sec < _ROTATION_WARN_INTERVAL_SEC:
+                        return False
+                    row.last_warn_at = now_dt
+                    row.expires_at = expires_at_utc
+                    if bot_key is not None:
+                        row.bot_key = bot_key
                     return True
-                age2 = (now_dt - row2.last_warn_at).total_seconds()
-                if age2 < _ROTATION_WARN_INTERVAL_SEC:
-                    return False
-                row2.last_warn_at = now_dt
-                row2.expires_at = expires_at_utc
-                if bot_key is not None:
-                    row2.bot_key = bot_key
+
+                new_row = WebhookBearerWarnState(
+                    token_fp=token_fp,
+                    last_warn_at=now_dt,
+                    expires_at=expires_at_utc,
+                    bot_key=bot_key,
+                )
+                try:
+                    with session.begin_nested():
+                        session.add(new_row)
+                        session.flush()
+                except IntegrityError:
+                    row2 = session.get(WebhookBearerWarnState, token_fp)
+                    if row2 is None:
+                        return True
+                    age2 = (now_dt - row2.last_warn_at).total_seconds()
+                    if age2 < _ROTATION_WARN_INTERVAL_SEC:
+                        return False
+                    row2.last_warn_at = now_dt
+                    row2.expires_at = expires_at_utc
+                    if bot_key is not None:
+                        row2.bot_key = bot_key
+                    return True
                 return True
-            return True
     except Exception:
         return None
 # -- End Function _db_throttle_should_log

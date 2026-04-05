@@ -6,10 +6,10 @@
 
 from __future__ import annotations
 
-from typing import Optional, Tuple
+from typing import Any, Dict, Optional, Tuple
 
 from alerts.base import BaseAlertPlugin, BaseAlertPluginConfig
-from thaum.types import AlertPriority, ThaumPerson
+from thaum.types import AlertPriority, ServerConfig, ThaumPerson
 
 
 class NullAlertPluginConfig(BaseAlertPluginConfig):
@@ -41,3 +41,7 @@ def get_config_model():
 
 def create_instance_plugin(config: NullAlertPluginConfig) -> NullAlertPlugin:
     return NullAlertPlugin(config)
+
+
+def maintenance_tasks_register(registry: Any, *, server_cfg: ServerConfig, config: Dict[str, Any]) -> None:
+    return

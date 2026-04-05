@@ -61,6 +61,14 @@ def init_lookup_db(db_url: str, *, echo: bool = False, **engine_kw: Any) -> None
     import alerts.plugins.jira.models  # noqa: F401 — register Jira ORM tables
     import thaum.admin_models  # noqa: F401 — admin log-level nonce + state
     import thaum.webhook_bearer_warn  # noqa: F401 — webhook bearer warn throttle
+    import gemstone_utils.election  # noqa: F401 — election ORM tables
+    import gemstone_utils.sqlalchemy.key_storage  # noqa: F401 — GemstoneKeyKdf / GemstoneKeyRecord
+    import thaum.crypto_metadata  # noqa: F401 — thaum_crypto_metadata
+    import thaum.bot_webhook_state  # noqa: F401 — bot_webhook_hmac
+    import gemstone_utils.election  # noqa: F401 — election ORM tables
+    import gemstone_utils.sqlalchemy.key_storage  # noqa: F401 — GemstoneKeyKdf / GemstoneKeyRecord
+    import thaum.crypto_metadata  # noqa: F401 — thaum_crypto_metadata
+    import thaum.bot_webhook_state  # noqa: F401 — bot_webhook_hmac
 
     merged_kw: Dict[str, Any] = {**engine_kwargs_for_sqlite_url(db_url), **engine_kw}
     init_db(db_url, echo=echo, **merged_kw)

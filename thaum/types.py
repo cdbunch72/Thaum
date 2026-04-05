@@ -168,10 +168,19 @@ class ServerConfig(BaseModel):
     log_admin_state_poll_seconds: float = 0.0
     # Shared runtime state (webhook bearer warn markers, etc.); must be absolute.
     thaum_state_dir: str = "/run/thaum"
+    # Leader election (gemstone_utils.election); all workers participate.
+    leader_election_ns: str = "thaum"
+    leader_lease_seconds: int = 60
+    leader_tick_seconds: float = 15.0
+    # Database field encryption vault (env THAUM_DATABASE_VAULT_PASSPHRASE when using env:).
+    database_vault_passphrase: OptionalResolvedSecret = None
+    # Automatic DEK rotation cadence in whole days; 0 disables scheduled rotation.
+    data_key_rotate_days: int = 60
     model_config = ConfigDict(
         extra='forbid',          # Reject extra keys in TOML (Prevents typos)
         #frozen=True,             # Make the config immutable after load (Safety!)
-        validate_assignment=True # Validate if someone changes a value after boot
+        # resolve_url assigns base_url; validate_assignment=True can recurse on Pydantic v2.
+        validate_assignment=False,
     )
     @model_validator(mode='after')
     def resolve_url(self) -> 'ServerConfig':

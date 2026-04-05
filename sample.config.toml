@@ -19,6 +19,13 @@ lookup_plugin = "null"
 # Must be absolute. Linux example below; on Windows use e.g. "C:/ProgramData/thaum/state".
 thaum_state_dir = "/run/thaum"
 # bot_url_prefix = "/bot"          # default; webhook path = {base_url}/bot/{bot_key}
+# --- Leader election (all workers); Webex webhooks are registered by the leader only ---
+# leader_election_ns = "thaum"
+# leader_lease_seconds = 60
+# leader_tick_seconds = 15
+# --- Database field encryption: required if Webex omits hmac_secret (shared secret in DB) ---
+# database_vault_passphrase = "env:THAUM_DATABASE_VAULT_PASSPHRASE"
+# data_key_rotate_days = 60       # 0 = disable automatic DEK rotation
 # --- Signed log-level admin (see docs/admin-log-level.md) ---
 # log_admin_route_id = ""          # e.g. random segment; empty disables the route
 # log_admin_hmac_secret_b64url = "env:THAUM_LOG_ADMIN_HMAC_SECRET_B64U"   # 32 bytes as base64url
@@ -82,7 +89,7 @@ responders = ["team:DBA"]
 emergency_warning_message = ""
 # Webex bot token (ResolvedSecret).
 token = "file:/run/secrets/webex_token_database"
-# Omit to auto-generate per process, or set a pinned secret (min length enforced by driver).
+# Omit hmac_secret for shared DB mode (set server.database_vault_passphrase). Or pin a secret:
 # hmac_secret = "file:/run/secrets/webex_hmac_database"
 
 [bots.database.alert]

@@ -2,6 +2,7 @@
 #   pip install -e ../gemstone_utils
 #   pip install "gemstone_utils @ git+https://github.com/cdbunch72/gemstone_utils.git@main"
 gemstone_utils
+tzdata; platform_system == "Windows"
 Flask
 webexpythonsdk
 SQLAlchemy
