@@ -10,7 +10,6 @@ import logging
 import sys
 import threading
 import time
-import verboselogs
 from datetime import datetime, timezone
 from typing import Any, Optional, Tuple
 
@@ -34,7 +33,7 @@ _admin_state_poller_started: bool = False
 
 def should_log_exception_trace() -> bool:
     """True when root log level enables SPAM (stack traces allowed)."""
-    return logging.getLogger().isEnabledFor(verboselogs.SPAM)
+    return logging.getLogger().isEnabledFor(LogLevel.SPAM)
 
 
 def parse_level_name(name: str) -> Optional[int]:
@@ -48,10 +47,6 @@ def parse_level_name(name: str) -> Optional[int]:
         return int(LogLevel[key])
     if hasattr(logging, key) and isinstance(getattr(logging, key), int):
         return int(getattr(logging, key))
-    if hasattr(verboselogs, key):
-        v = getattr(verboselogs, key)
-        if isinstance(v, int):
-            return int(v)
     return None
 
 
@@ -198,6 +193,14 @@ class ISO8601TimezoneFormatter(logging.Formatter):
         return dt.isoformat(timespec=spec)
 # -- End ISO8601TimezoneFormatter
 
+
+def _register_custom_log_level_names() -> None:
+    """So %(levelname)s shows SPAM / VERBOSE / NOTICE instead of Level N."""
+    logging.addLevelName(int(LogLevel.SPAM), "SPAM")
+    logging.addLevelName(int(LogLevel.VERBOSE), "VERBOSE")
+    logging.addLevelName(int(LogLevel.NOTICE), "NOTICE")
+
+
 def log_debug_blob(logger: logging.Logger, blob_title: str, data: Any, level: int = logging.DEBUG):
     if logger.isEnabledFor(level):
         delimiter = "-" * 20
@@ -220,6 +223,8 @@ def configure_logging(logging_config: LogConfig, server_config: Optional[ServerC
 
     NO_TIMESTAMP = logging_config.no_timestamp
     _configured_root_level = int(logging_config.level)
+
+    _register_custom_log_level_names()
 
     # Configure the formatter
     log_format = "%(asctime)s [%(levelname)s] %(name)s: %(message)s"

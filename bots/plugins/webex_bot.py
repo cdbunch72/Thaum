@@ -249,7 +249,12 @@ class WebexChatBot(BaseChatBot):
                 return
 
             self.api.rooms.delete(room_id)
-            self.logger.verbose(f"Room {room_id} deleted by {display_name}.")
+            self.logger.log(
+                LogLevel.VERBOSE,
+                "Room %s deleted by %s.",
+                room_id,
+                display_name,
+            )
 
         except Exception as e:
             self.logger.error(f"Catastrophic failure deleting {room_id}: {e}")
@@ -359,8 +364,8 @@ class WebexChatBot(BaseChatBot):
     def handle_event(self, event: Dict[str, Any]) -> None:
         resource: Optional[str] = event.get("resource")
         data: Dict[str, Any] = event.get("data", {})
-        self.logger.spam("handle_event:")
-        log_debug_blob(self.logger, data, logging.SPAM)
+        self.logger.log(LogLevel.SPAM, "handle_event:")
+        log_debug_blob(self.logger, "handle_event", data, LogLevel.SPAM)
 
         if resource == "messages":
             if data.get("personId") == self.me.id:

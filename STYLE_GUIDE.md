@@ -152,12 +152,12 @@ Exceptions must be used sparingly and intentionally.
   try:\
   \...\
   except KnownError as e:\
-  log.notice(\"Known error occurred\", error=str(e))\
+  logger.log(LogLevel.NOTICE, \"Known error occurred: %s\", e)\
   return\
   except Exception as e:\
-  log.error(\"Unexpected exception\", error=str(e))\
-  if log.level == SPAM:\
-  log.spam(blob(e))\
+  logger.error(\"Unexpected exception: %s\", e)\
+  if logger.isEnabledFor(LogLevel.SPAM):\
+  logger.log(LogLevel.SPAM, \"%s\", blob(e))\
   return\
   \# end try
   -----------------------------------------------------------------------

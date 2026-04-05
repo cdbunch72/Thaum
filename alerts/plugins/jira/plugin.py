@@ -21,7 +21,7 @@ from alerts.plugins.jira.payload import (
 from alerts.plugins.jira.status_webhook import handle_jira_status_webhook
 from alerts.plugins.jira.teams import canonical_team_ref, refresh_team_cache
 from alerts.plugins.jira.users import resolve_email_to_account_id as resolve_email_to_account_id_impl
-from thaum.types import AlertPriority, RespondersList, ThaumPerson
+from thaum.types import AlertPriority, LogLevel, RespondersList, ThaumPerson
 
 
 class JiraPlugin(BaseAlertPlugin):
@@ -168,7 +168,8 @@ class JiraPlugin(BaseAlertPlugin):
         alias = str(alert.get("alias") or "")
         upsert_pending_row(short_id, room_id, bk, alias, self.logger)
 
-        self.logger.verbose(
+        self.logger.log(
+            LogLevel.VERBOSE,
             "Jira alert accepted: severity=%s alias=%s responders=%d",
             alert["priority"],
             alias,

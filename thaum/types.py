@@ -12,7 +12,6 @@ from typing import Optional, Annotated, Dict, List, TYPE_CHECKING
 from enum import StrEnum,IntEnum,auto
 from gemstone_utils.experimental.secrets_resolver import resolve_secret
 import logging
-import verboselogs
 from dataclasses import dataclass, field
 
 if TYPE_CHECKING:
@@ -64,13 +63,14 @@ def _resolve_base_url(config_base_url: Optional[str]) -> tuple[str, BaseUrlSourc
     raise ValueError("System cannot determine public Base URL. Configure base_url or THAUM_BASE_URL.")
 
 class LogLevel(IntEnum):
-    SPAM     = verboselogs.SPAM
-    DEBUG    = logging.DEBUG
-    VERBOSE  = verboselogs.VERBOSE
-    INFO     = logging.INFO
-    NOTICE   = verboselogs.NOTICE
-    WARNING  = logging.WARNING
-    ERROR    = logging.ERROR
+    # Custom levels match former verboselogs ordering (between DEBUG/INFO/WARNING).
+    SPAM = 5
+    DEBUG = logging.DEBUG
+    VERBOSE = 15
+    INFO = logging.INFO
+    NOTICE = 25
+    WARNING = logging.WARNING
+    ERROR = logging.ERROR
     CRITICAL = logging.CRITICAL
 class AlertPriority(StrEnum):
     NORMAL = auto()

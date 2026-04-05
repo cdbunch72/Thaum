@@ -5,7 +5,7 @@
 import logging
 import datetime
 from typing import Optional,List, TYPE_CHECKING
-from thaum.types import ThaumPerson,AlertPriority
+from thaum.types import AlertPriority, LogLevel, ThaumPerson
 from jinja2 import Environment, StrictUndefined
 
 if TYPE_CHECKING:
@@ -36,7 +36,8 @@ def create_incident_room(bot: 'BaseChatBot', summary: str, speaker: ThaumPerson,
         bot.say(room_id, f"**Summary:** {summary}")
         short_id, alert_id = bot.alert_plugin.trigger_alert(summary, room_id, speaker, priority)
         if alert_id:
-            bot.logger.verbose(
+            bot.logger.log(
+                LogLevel.VERBOSE,
                 "Room %s (%s) initialized for alert %s (%s).",
                 room_title,
                 room_id,
@@ -44,7 +45,8 @@ def create_incident_room(bot: 'BaseChatBot', summary: str, speaker: ThaumPerson,
                 alert_id,
             )
         else:
-            bot.logger.verbose(
+            bot.logger.log(
+                LogLevel.VERBOSE,
                 "Room %s (%s) initialized for alert %s.",
                 room_title,
                 room_id,
