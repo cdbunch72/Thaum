@@ -154,7 +154,7 @@ class ServerDatabaseConfig(BaseModel):
     """``[server.database]``: app DB URL, field-encryption vault, DEK rotation."""
 
     # SQLAlchemy URL; empty/unset -> in-memory SQLite (see thaum.db_bootstrap.DEFAULT_APP_DB_URL).
-    db_spec: Optional[str] = None
+    db_url: Optional[str] = None
     database_vault_passphrase: OptionalResolvedSecret = None
     data_key_rotate_days: int = 60
 

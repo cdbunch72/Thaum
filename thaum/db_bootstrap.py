@@ -16,8 +16,8 @@ DEFAULT_APP_DB_URL = "sqlite:///:memory:"
 
 
 def resolve_app_db_url(server_cfg: ServerConfig) -> str:
-    """Resolve SQLAlchemy URL from ``[server.database].db_spec`` (default: in-memory SQLite)."""
-    raw = server_cfg.database.db_spec
+    """Resolve SQLAlchemy URL from ``[server.database].db_url`` (default: in-memory SQLite)."""
+    raw = server_cfg.database.db_url
     if raw is None or (isinstance(raw, str) and not raw.strip()):
         return DEFAULT_APP_DB_URL
     return str(raw).strip()

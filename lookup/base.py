@@ -37,7 +37,7 @@ class BaseLookupPluginConfig(BaseModel):
 
     The process-global DB is opened via :func:`gemstone_utils.db.init_db` (see
     :func:`thaum.db_bootstrap.init_app_db` / server bootstrap). Configure the URL under
-    ``[server.database].db_spec``, not here.
+    ``[server.database].db_url``, not here.
 
     Expected TOML:
       [lookup]

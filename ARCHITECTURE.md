@@ -42,7 +42,7 @@ Flask app is created.
 ### **Phase 3 - Initialize database**
 
 - `set_thaum_state_dir()` and `thaum.db_bootstrap.init_app_db()` call
-  `gemstone_utils.db.init_db()` with the URL from `[server.database].db_spec` (via `thaum.db_bootstrap.resolve_app_db_url`).
+  `gemstone_utils.db.init_db()` with the URL from `[server.database].db_url` (via `thaum.db_bootstrap.resolve_app_db_url`).
 
 ### **Phase 4 - Instantiate lookup, bots, and alert plugins**
 
@@ -64,7 +64,7 @@ Thaum uses a layered configuration model.
 
 - Core deployment fields under `[server]` (base URL, bot driver, lookup plugin name, state dir)
 
-- Nested `[server.database]` (SQLAlchemy `db_spec`, vault passphrase, DEK rotation)
+- Nested `[server.database]` (SQLAlchemy `db_url`, vault passphrase, DEK rotation)
 
 - Nested `[server.election]` (namespace, lease, heartbeat interval)
 

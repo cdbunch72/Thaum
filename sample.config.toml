@@ -23,7 +23,7 @@ thaum_state_dir = "/run/thaum"
 [server.database]
 # Shared app DB (lookup cache, election, crypto metadata, admin state). SQLAlchemy URL.
 # Empty/unset -> in-memory SQLite (not durable across restarts).
-# db_spec = "sqlite:////var/lib/thaum/thaum.db"
+# db_url = "sqlite:////var/lib/thaum/thaum.db"
 # database_vault_passphrase = "env:THAUM_DATABASE_VAULT_PASSPHRASE"   # required if Webex omits hmac_secret (shared DB HMAC)
 # data_key_rotate_days = 60       # 0 = disable automatic DEK rotation
 
@@ -49,7 +49,7 @@ thaum_state_dir = "/run/thaum"
 
 [lookup]
 # Merged with [lookup.<lookup_plugin>] (same section name as server.lookup_plugin).
-# Configure the DB URL under [server.database].db_spec (not here).
+# Configure the DB URL under [server.database].db_url (not here).
 # cache_lock_path = "/run/thaum/lookup_cache.lock"
 # default_team_ttl_seconds = 14400
 
