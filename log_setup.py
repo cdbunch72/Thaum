@@ -125,7 +125,7 @@ def start_log_admin_state_poller(server_config: Optional[ServerConfig] = None) -
     if server_config is None:
         return
 
-    _admin_state_poll_seconds = float(server_config.log_admin_state_poll_seconds)
+    _admin_state_poll_seconds = float(server_config.admin.log_state_poll_seconds)
     if _admin_state_poll_seconds <= 0:
         return
 

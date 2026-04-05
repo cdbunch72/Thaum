@@ -10,7 +10,7 @@
 
 .DESCRIPTION
     Creates a random route id and 32-byte HMAC key (base64url no padding), and
-    outputs ready-to-paste `thaum.toml` lines plus an INI profile compatible with
+    outputs ready-to-paste `config.toml` `[server.admin]` lines plus an INI profile compatible with
     Set-ThaumLogLevel.ps1. Optionally writes the key to a secret file and writes
     the profile to disk.
 
@@ -96,11 +96,12 @@ if ($ProfileIni) {
     }
 }
 
-Write-Output "# --- server [server] snippet (thaum.toml) ---"
-Write-Output "log_admin_route_id = `"$RouteId`""
-Write-Output "log_admin_hmac_secret_b64url = `"$secretRef`""
-Write-Output "log_admin_clock_skew_seconds = 300"
-Write-Output "log_admin_state_poll_seconds = 2.0"
+Write-Output "# --- server [server.admin] snippet (config.toml) ---"
+Write-Output "[server.admin]"
+Write-Output "route_id = `"$RouteId`""
+Write-Output "hmac_secret_b64url = `"$secretRef`""
+Write-Output "clock_skew_seconds = 300"
+Write-Output "log_state_poll_seconds = 2.0"
 Write-Output ""
 Write-Output "# --- client profile (INI) ---"
 if ($UsePostUrl) {

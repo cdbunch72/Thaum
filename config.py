@@ -14,7 +14,8 @@ logger = logging.getLogger("thaum.config")
 
 def load_and_validate(path: str) -> Dict[str, Any]:
     """
-    Load config.toml: parse TOML, validate ``[server]`` and ``[logging]``.
+    Load config.toml: parse TOML, validate ``[server]`` (including nested
+    ``[server.database]``, ``[server.admin]``, ``[server.election]``) and ``[logging]``.
 
     Each ``[bots.<id>]`` may include ``alert_type`` and a nested ``[bots.<id>.alert]``
     table (exposed as key ``alert``); no normalization — bootstrap merges defaults later.

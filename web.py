@@ -50,7 +50,7 @@ def create_app(config: Dict[str, Any], *, run_leader_loop: bool = True) -> Flask
     server: ServerConfig = config["server"]
     apply_database_crypto(server)
     if admin_log_routes_enabled(server):
-        route_id = server.log_admin_route_id.strip()
+        route_id = server.admin.route_id.strip()
 
         @app.post(f"/{route_id}/log-level", endpoint="thaum_admin_log_level")
         def admin_log_level():

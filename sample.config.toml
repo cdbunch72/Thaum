@@ -19,18 +19,26 @@ lookup_plugin = "null"
 # Must be absolute. Linux example below; on Windows use e.g. "C:/ProgramData/thaum/state".
 thaum_state_dir = "/run/thaum"
 # bot_url_prefix = "/bot"          # default; webhook path = {base_url}/bot/{bot_key}
-# --- Leader election (all workers); Webex webhooks are registered by the leader only ---
-# leader_election_ns = "thaum"
-# leader_lease_seconds = 60
-# leader_tick_seconds = 15
-# --- Database field encryption: required if Webex omits hmac_secret (shared secret in DB) ---
-# database_vault_passphrase = "env:THAUM_DATABASE_VAULT_PASSPHRASE"
+
+[server.database]
+# Shared app DB (lookup cache, election, crypto metadata, admin state). SQLAlchemy URL.
+# Empty/unset -> in-memory SQLite (not durable across restarts).
+# db_spec = "sqlite:////var/lib/thaum/thaum.db"
+# database_vault_passphrase = "env:THAUM_DATABASE_VAULT_PASSPHRASE"   # required if Webex omits hmac_secret (shared DB HMAC)
 # data_key_rotate_days = 60       # 0 = disable automatic DEK rotation
-# --- Signed log-level admin (see docs/admin-log-level.md) ---
-# log_admin_route_id = ""          # e.g. random segment; empty disables the route
-# log_admin_hmac_secret_b64url = "env:THAUM_LOG_ADMIN_HMAC_SECRET_B64U"   # 32 bytes as base64url
-# log_admin_clock_skew_seconds = 300
-# log_admin_state_poll_seconds = 2.0   # 0 = no poll; >0 syncs workers from DB
+
+[server.election]
+# All workers participate; Webex webhooks are registered by the leader only.
+# namespace = "thaum"
+# lease_seconds = 60
+# heartbeat_seconds = 15.0
+
+[server.admin]
+# Signed log-level admin (see docs/admin-log-level.md).
+# route_id = ""                    # e.g. random segment; empty disables POST /{route_id}/log-level
+# hmac_secret_b64url = "env:THAUM_LOG_ADMIN_HMAC_SECRET_B64U"   # 32 bytes as base64url
+# clock_skew_seconds = 300
+# log_state_poll_seconds = 2.0   # 0 = no poll; >0 syncs workers from DB
 
 [logging]
 # All keys optional; see thaum.types.LogConfig (extra keys forbidden).
@@ -41,8 +49,7 @@ thaum_state_dir = "/run/thaum"
 
 [lookup]
 # Merged with [lookup.<lookup_plugin>] (same section name as server.lookup_plugin).
-# db_url defaults to in-memory SQLite if unset (not durable across restarts).
-# db_url = "sqlite:////var/lib/thaum/lookup.db"
+# Configure the DB URL under [server.database].db_spec (not here).
 # cache_lock_path = "/run/thaum/lookup_cache.lock"
 # default_team_ttl_seconds = 14400
 
@@ -89,7 +96,7 @@ responders = ["team:DBA"]
 emergency_warning_message = ""
 # Webex bot token (ResolvedSecret).
 token = "file:/run/secrets/webex_token_database"
-# Omit hmac_secret for shared DB mode (set server.database_vault_passphrase). Or pin a secret:
+# Omit hmac_secret for shared DB mode (set server.database.database_vault_passphrase). Or pin a secret:
 # hmac_secret = "file:/run/secrets/webex_hmac_database"
 
 [bots.database.alert]

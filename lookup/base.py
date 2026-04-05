@@ -40,11 +40,11 @@ class BaseLookupPluginConfig(BaseModel):
     Shared lookup cache configuration for all lookup plugins.
 
     The process-global DB is opened via :func:`gemstone_utils.db.init_db` (see
-    :func:`lookup.db_bootstrap.init_lookup_db` / server bootstrap), not per-plugin.
+    :func:`lookup.db_bootstrap.init_lookup_db` / server bootstrap). Configure the URL under
+    ``[server.database].db_spec``, not here.
 
     Expected TOML:
       [lookup]
-      db_url = "..."
       cache_lock_path = "/path/to/lock"
       default_team_ttl_seconds = 14400
 
@@ -52,7 +52,6 @@ class BaseLookupPluginConfig(BaseModel):
       [lookup.<plugin_name>]
     """
 
-    db_url: str = DEFAULT_LOOKUP_DB_URL
     cache_lock_path: Optional[str] = None
     default_team_ttl_seconds: int = 14400
 

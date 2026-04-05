@@ -20,7 +20,7 @@ from thaum.admin_log_level import (
     verify_signature,
 )
 from thaum.admin_models import ADMIN_LOG_LEVEL_STATE_ID, AdminLogLevelState
-from thaum.types import LogConfig, LogLevel, ServerConfig
+from thaum.types import LogConfig, LogLevel, ServerAdminConfig, ServerConfig
 from web import create_app
 
 
@@ -29,14 +29,17 @@ def _zero_key_b64u() -> str:
 
 
 def _make_server(**kwargs: object) -> ServerConfig:
-    base = dict(
+    admin = ServerAdminConfig(
+        route_id="testrouteid001",
+        hmac_secret_b64url=_zero_key_b64u(),
+        clock_skew_seconds=600,
+        log_state_poll_seconds=0.0,
+    )
+    base: dict[str, object] = dict(
         base_url="https://test.example.com",
         bot_type="webex",
-        log_admin_route_id="testrouteid001",
-        log_admin_hmac_secret_b64url=_zero_key_b64u(),
-        log_admin_clock_skew_seconds=600,
-        log_admin_state_poll_seconds=0.0,
         thaum_state_dir=tempfile.mkdtemp(prefix="thaum_admin_test_"),
+        admin=admin,
     )
     base.update(kwargs)
     return ServerConfig(**base)

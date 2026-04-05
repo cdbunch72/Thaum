@@ -15,7 +15,7 @@ from alerts.webhook_bearer import set_thaum_state_dir
 from bots.factory import validate_bot_config
 from config import load_and_validate
 from log_setup import apply_runtime_log_level_from_db, configure_logging, start_log_admin_state_poller
-from lookup.db_bootstrap import init_lookup_db, merged_lookup_plugin_config, resolve_lookup_db_url
+from lookup.db_bootstrap import init_lookup_db, merged_lookup_plugin_config, resolve_app_db_url
 from lookup.instance import initialize_lookup_plugin
 from plugin_loader import ensure_plugin_loaded, get_plugin_config_model
 from thaum.database_crypto import apply_database_crypto, requires_database_vault_passphrase
@@ -87,16 +87,16 @@ def bootstrap(config_path: str) -> Dict[str, Any]:
         bot_row["_validated_alert"] = validated_alert
 
     if requires_database_vault_passphrase(config):
-        vp = server.database_vault_passphrase
+        vp = server.database.database_vault_passphrase
         if vp is None or not str(vp).strip():
             raise ValueError(
-                "server.database_vault_passphrase is required when a Webex bot omits "
+                "server.database.database_vault_passphrase is required when a Webex bot omits "
                 "hmac_secret (shared DB HMAC mode)."
             )
 
     set_thaum_state_dir(server.thaum_state_dir)
 
-    db_url = resolve_lookup_db_url(server, lookup_raw)
+    db_url = resolve_app_db_url(server)
     init_lookup_db(db_url)
     apply_database_crypto(server)
     register_all_maintenance_tasks(server, config)

@@ -58,7 +58,7 @@ def is_database_crypto_ready() -> bool:
 
 
 def _resolved_vault_passphrase(server_cfg: ServerConfig) -> Optional[str]:
-    p = getattr(server_cfg, "database_vault_passphrase", None)
+    p = server_cfg.database.database_vault_passphrase
     if p is None:
         return None
     s = str(p).strip()
@@ -176,10 +176,10 @@ def apply_database_crypto(server_cfg: ServerConfig) -> None:
 
 def rotate_data_encryption_key_if_due(server_cfg: ServerConfig) -> None:
     """
-    Leader-only: if ``data_key_rotate_days > 0`` and interval elapsed, create a new DEK row
+    Leader-only: if ``server.database.data_key_rotate_days > 0`` and interval elapsed, create a new DEK row
     and re-encrypt :class:`BotWebhookHmac` rows.
     """
-    if server_cfg.data_key_rotate_days <= 0:
+    if server_cfg.database.data_key_rotate_days <= 0:
         return
     passphrase = _resolved_vault_passphrase(server_cfg)
     if not passphrase:
@@ -189,7 +189,7 @@ def rotate_data_encryption_key_if_due(server_cfg: ServerConfig) -> None:
         if not _crypto_ready:
             return
 
-    days = int(server_cfg.data_key_rotate_days)
+    days = int(server_cfg.database.data_key_rotate_days)
     now = datetime.now(timezone.utc)
     new_id: int
     plaintext_by_key: dict[str, str]

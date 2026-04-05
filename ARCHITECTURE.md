@@ -42,7 +42,7 @@ Flask app is created.
 ### **Phase 3 - Initialize database**
 
 - `set_thaum_state_dir()` and `lookup.db_bootstrap.init_lookup_db()` call
-  `gemstone_utils.db.init_db()` with the resolved DB URL.
+  `gemstone_utils.db.init_db()` with the URL from `[server.database].db_spec` (via `resolve_app_db_url`).
 
 ### **Phase 4 - Instantiate lookup, bots, and alert plugins**
 
@@ -62,13 +62,17 @@ Thaum uses a layered configuration model.
 
 ### **ServerConfig**
 
-- Logging configuration
+- Core deployment fields under `[server]` (base URL, bot driver, lookup plugin name, state dir)
 
-- Lookup plugin configuration
+- Nested `[server.database]` (SQLAlchemy `db_spec`, vault passphrase, DEK rotation)
 
-- Global defaults
+- Nested `[server.election]` (namespace, lease, heartbeat interval)
 
-- Database URL
+- Nested `[server.admin]` (signed HTTP admin for runtime log level)
+
+- Separate `[logging]` table → `LogConfig`
+
+- `[lookup]` merged with `[lookup.<plugin>]` for cache paths and plugin-specific options (not the DB URL)
 
 ### **BotConfig**
 
@@ -217,8 +221,8 @@ Stack traces are only emitted at SPAM level.
 ### Runtime log level (admin API)
 
 Changing the process root log level at runtime is **not** done via a local file. When
-`[server].log_admin_route_id` and a valid HMAC secret are configured, Thaum exposes
-`POST /{log_admin_route_id}/log-level` with an **HS256** request signature over a
+`[server.admin].route_id` and a valid HMAC secret are configured, Thaum exposes
+`POST /{route_id}/log-level` with an **HS256** request signature over a
 documented canonical string. State is stored in the shared DB (`admin_log_level_state`
 and `admin_log_nonce`); optional polling keeps multiple workers aligned. Operators
 typically use `scripts/powershell/Set-ThaumLogLevel.ps1` or

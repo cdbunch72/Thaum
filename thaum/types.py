@@ -7,7 +7,7 @@
 import time
 import os
 from pathlib import Path
-from pydantic import ConfigDict, model_validator, BaseModel, SecretStr, BeforeValidator
+from pydantic import ConfigDict, Field, model_validator, BaseModel, SecretStr, BeforeValidator
 from typing import Optional, Annotated, Dict, List, TYPE_CHECKING
 from enum import StrEnum,IntEnum,auto
 from gemstone_utils.experimental.secrets_resolver import resolve_secret
@@ -153,29 +153,48 @@ class RespondersList:
 # -- End RespondersList
 
 # -- Pydantic config classes
+class ServerDatabaseConfig(BaseModel):
+    """``[server.database]``: app DB URL, field-encryption vault, DEK rotation."""
+
+    # SQLAlchemy URL; empty/unset -> in-memory SQLite (see lookup.base.DEFAULT_LOOKUP_DB_URL).
+    db_spec: Optional[str] = None
+    database_vault_passphrase: OptionalResolvedSecret = None
+    data_key_rotate_days: int = 60
+
+    model_config = ConfigDict(extra="forbid", validate_assignment=False)
+
+
+class ServerAdminConfig(BaseModel):
+    """``[server.admin]``: signed HTTP admin (e.g. POST /{route_id}/log-level)."""
+
+    route_id: str = ""
+    hmac_secret_b64url: OptionalResolvedSecret = None
+    clock_skew_seconds: int = 300
+    log_state_poll_seconds: float = 0.0
+
+    model_config = ConfigDict(extra="forbid", validate_assignment=False)
+
+
+class ServerElectionConfig(BaseModel):
+    """``[server.election]``: leader election (gemstone_utils.election)."""
+
+    namespace: str = "thaum"
+    lease_seconds: int = 60
+    heartbeat_seconds: float = 15.0
+
+    model_config = ConfigDict(extra="forbid", validate_assignment=False)
+
+
 class ServerConfig(BaseModel):
     base_url: str
     url_source: Optional[BaseUrlSource] = None
     bot_url_prefix: Optional[str] = '/bot'
     bot_type: str
     lookup_plugin: str = "null"
-    # Signed HTTP admin: POST /{log_admin_route_id}/log-level (empty = disabled).
-    log_admin_route_id: str = ""
-    # 32-byte key as base64url (no padding). Env THAUM_LOG_ADMIN_HMAC_SECRET_B64U overrides when set.
-    log_admin_hmac_secret_b64url: OptionalResolvedSecret = None
-    log_admin_clock_skew_seconds: int = 300
-    # If > 0, poll DB admin_log_level_state.updated_at so all workers stay in sync.
-    log_admin_state_poll_seconds: float = 0.0
-    # Shared runtime state (webhook bearer warn markers, etc.); must be absolute.
     thaum_state_dir: str = "/run/thaum"
-    # Leader election (gemstone_utils.election); all workers participate.
-    leader_election_ns: str = "thaum"
-    leader_lease_seconds: int = 60
-    leader_tick_seconds: float = 15.0
-    # Database field encryption vault (env THAUM_DATABASE_VAULT_PASSPHRASE when using env:).
-    database_vault_passphrase: OptionalResolvedSecret = None
-    # Automatic DEK rotation cadence in whole days; 0 disables scheduled rotation.
-    data_key_rotate_days: int = 60
+    database: ServerDatabaseConfig = Field(default_factory=ServerDatabaseConfig)
+    admin: ServerAdminConfig = Field(default_factory=ServerAdminConfig)
+    election: ServerElectionConfig = Field(default_factory=ServerElectionConfig)
     model_config = ConfigDict(
         extra='forbid',          # Reject extra keys in TOML (Prevents typos)
         #frozen=True,             # Make the config immutable after load (Safety!)

@@ -58,11 +58,12 @@ def main() -> int:
             )
         ini_path.write_text(content, encoding="utf-8")
 
-    print("# --- server [server] snippet (thaum.toml) ---")
-    print(f'log_admin_route_id = "{route_id}"')
-    print(f'log_admin_hmac_secret_b64url = "{secret_ref}"')
-    print("log_admin_clock_skew_seconds = 300")
-    print("log_admin_state_poll_seconds = 2.0")
+    print("# --- server [server.admin] snippet (config.toml) ---")
+    print("[server.admin]")
+    print(f'route_id = "{route_id}"')
+    print(f'hmac_secret_b64url = "{secret_ref}"')
+    print("clock_skew_seconds = 300")
+    print("log_state_poll_seconds = 2.0")
     print()
     print("# --- client profile (INI) ---")
     if args.profile_post_url:

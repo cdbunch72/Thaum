@@ -75,8 +75,8 @@ def _run_due_tasks(
 
 
 def _leader_loop_body(server_cfg: ServerConfig, config: Dict[str, Any], cid: UUID) -> None:
-    ns = server_cfg.leader_election_ns
-    tick = float(server_cfg.leader_tick_seconds)
+    ns = server_cfg.election.namespace
+    tick = float(server_cfg.election.heartbeat_seconds)
     last_run: Dict[str, float] = {}
     while not _shutdown.is_set():
         try:
@@ -105,15 +105,15 @@ def start_leader_loop(
     if _loop_thread is not None and _loop_thread.is_alive():
         return
 
-    election.set_expire(int(server_cfg.leader_lease_seconds))
+    election.set_expire(int(server_cfg.election.lease_seconds))
     cid = uuid4()
     _candidate_id = cid
-    election.register_candidate(cid, server_cfg.leader_election_ns)
+    election.register_candidate(cid, server_cfg.election.namespace)
 
     def _unregister() -> None:
         try:
             if _candidate_id is not None:
-                election.unregister_candidate(_candidate_id, server_cfg.leader_election_ns)
+                election.unregister_candidate(_candidate_id, server_cfg.election.namespace)
         except Exception:
             logger.debug("unregister_candidate failed during shutdown", exc_info=True)
 
@@ -128,7 +128,7 @@ def start_leader_loop(
         daemon=True,
     )
     _loop_thread.start()
-    logger.info("Leader election loop started (namespace=%r)", server_cfg.leader_election_ns)
+    logger.info("Leader election loop started (namespace=%r)", server_cfg.election.namespace)
 
 
 def reset_for_tests() -> None:

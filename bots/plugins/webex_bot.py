@@ -62,7 +62,7 @@ class WebexChatBot(BaseChatBot):
 
         if not is_database_crypto_ready():
             raise RuntimeError(
-                "server.database_vault_passphrase / database crypto is required when "
+                "server.database.database_vault_passphrase / database crypto is required when "
                 "Webex hmac_secret is omitted (shared DB HMAC mode)."
             )
         bk = self.bot_key

@@ -12,7 +12,7 @@ from gemstone_utils.sqlalchemy.key_storage import GemstoneKeyRecord
 
 from lookup.db_bootstrap import init_lookup_db
 from thaum.database_crypto import apply_database_crypto, is_database_crypto_ready
-from thaum.types import ServerConfig
+from thaum.types import ServerConfig, ServerDatabaseConfig
 
 
 def _server_with_vault(passphrase: str) -> ServerConfig:
@@ -20,7 +20,7 @@ def _server_with_vault(passphrase: str) -> ServerConfig:
         base_url="https://test.example.com",
         bot_type="webex",
         thaum_state_dir=tempfile.mkdtemp(prefix="thaum_crypto_test_"),
-        database_vault_passphrase=passphrase,
+        database=ServerDatabaseConfig(database_vault_passphrase=passphrase),
     )
 
 

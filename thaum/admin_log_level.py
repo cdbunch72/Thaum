@@ -39,8 +39,8 @@ _NONCE_RE = re.compile(r"^[0-9a-f]{32}$")
 
 def admin_hmac_secret_bytes(server: ServerConfig) -> Optional[bytes]:
     raw = os.environ.get("THAUM_LOG_ADMIN_HMAC_SECRET_B64U", "").strip()
-    if not raw and server.log_admin_hmac_secret_b64url:
-        raw = str(server.log_admin_hmac_secret_b64url).strip()
+    if not raw and server.admin.hmac_secret_b64url:
+        raw = str(server.admin.hmac_secret_b64url).strip()
     if not raw:
         return None
     pad = "=" * (-len(raw) % 4)
@@ -54,7 +54,7 @@ def admin_hmac_secret_bytes(server: ServerConfig) -> Optional[bytes]:
 
 
 def admin_log_routes_enabled(server: ServerConfig) -> bool:
-    rid = (server.log_admin_route_id or "").strip()
+    rid = (server.admin.route_id or "").strip()
     return bool(rid and _ROUTE_ID_RE.match(rid) and admin_hmac_secret_bytes(server))
 
 
@@ -120,7 +120,7 @@ def _allowed_loglevel_name(name: str) -> bool:
 
 def handle_admin_log_level_post(request: Request, server: ServerConfig) -> Tuple[Any, int]:
     key = admin_hmac_secret_bytes(server)
-    route_id = (server.log_admin_route_id or "").strip()
+    route_id = (server.admin.route_id or "").strip()
     if not key or not route_id:
         return jsonify({"error": "not found"}), 404
 
@@ -140,7 +140,7 @@ def handle_admin_log_level_post(request: Request, server: ServerConfig) -> Tuple
         return jsonify({"error": "unauthorized"}), 401
 
     now = int(datetime.now(timezone.utc).timestamp())
-    skew = int(server.log_admin_clock_skew_seconds)
+    skew = int(server.admin.clock_skew_seconds)
     if abs(now - req_epoch) > skew:
         return jsonify({"error": "unauthorized"}), 401
 

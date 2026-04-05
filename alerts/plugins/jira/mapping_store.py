@@ -15,6 +15,15 @@ from sqlalchemy import select
 
 from alerts.plugins.jira.models import JiraAlertMap
 
+
+def _verbose(logger: logging.Logger, msg: str, *args: object) -> None:
+    fn = getattr(logger, "verbose", None)
+    if callable(fn):
+        fn(msg, *args)
+    else:
+        logger.debug(msg, *args)
+
+
 # Matches ``build_trigger_alert_body`` alias suffix (same charset as BaseAlertPlugin._ALPHABET).
 _SHORT_ID_TAIL_RE = re.compile(r"^THAUM-\d{8}-(?P<sid>[A-Z2-9]{4})$")
 
@@ -50,22 +59,23 @@ def upsert_pending_row(
     logger: logging.Logger,
 ) -> None:
     with get_session() as session:
-        row = session.get(JiraAlertMap, short_id)
-        if row is None:
-            session.add(
-                JiraAlertMap(
-                    short_id=short_id,
-                    room_id=room_id,
-                    bot_key=bot_key,
-                    alias=alias or None,
-                    jira_alert_id=None,
+        with session.begin():
+            row = session.get(JiraAlertMap, short_id)
+            if row is None:
+                session.add(
+                    JiraAlertMap(
+                        short_id=short_id,
+                        room_id=room_id,
+                        bot_key=bot_key,
+                        alias=alias or None,
+                        jira_alert_id=None,
+                    )
                 )
-            )
-        else:
-            row.room_id = room_id
-            row.bot_key = bot_key
-            row.alias = alias or None
-    logger.verbose("Jira alert map pending short_id=%s bot_key=%s", short_id, bot_key)
+            else:
+                row.room_id = room_id
+                row.bot_key = bot_key
+                row.alias = alias or None
+    _verbose(logger, "Jira alert map pending short_id=%s bot_key=%s", short_id, bot_key)
 # -- End Function upsert_pending_row
 
 
@@ -100,27 +110,32 @@ def apply_create_webhook(
         logger.warning("Jira Create webhook: missing alertId or short_id")
         return
     with get_session() as session:
-        row = session.get(JiraAlertMap, sid)
-        if row is None:
-            rf = (room_id_fallback or "").strip()
-            if not rf:
-                logger.warning("Jira Create webhook: no existing row and no room_id for short_id=%s", sid)
-                return
-            session.add(
-                JiraAlertMap(
-                    short_id=sid,
-                    room_id=rf,
-                    bot_key=bot_key,
-                    alias=alias_fallback,
-                    jira_alert_id=jid,
+        with session.begin():
+            row = session.get(JiraAlertMap, sid)
+            if row is None:
+                rf = (room_id_fallback or "").strip()
+                if not rf:
+                    logger.warning(
+                        "Jira Create webhook: no existing row and no room_id for short_id=%s", sid
+                    )
+                    return
+                session.add(
+                    JiraAlertMap(
+                        short_id=sid,
+                        room_id=rf,
+                        bot_key=bot_key,
+                        alias=alias_fallback,
+                        jira_alert_id=jid,
+                    )
                 )
-            )
-        else:
-            if row.bot_key != bot_key:
-                logger.warning("Jira Create webhook: short_id %s belongs to another bot_key", sid)
-                return
-            row.jira_alert_id = jid
-            if alias_fallback and not row.alias:
-                row.alias = alias_fallback
-    logger.verbose("Jira alert map linked short_id=%s jira_alert_id=%s", sid, jid)
+            else:
+                if row.bot_key != bot_key:
+                    logger.warning(
+                        "Jira Create webhook: short_id %s belongs to another bot_key", sid
+                    )
+                    return
+                row.jira_alert_id = jid
+                if alias_fallback and not row.alias:
+                    row.alias = alias_fallback
+    _verbose(logger, "Jira alert map linked short_id=%s jira_alert_id=%s", sid, jid)
 # -- End Function apply_create_webhook

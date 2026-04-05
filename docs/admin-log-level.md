@@ -2,20 +2,20 @@
 
 Runtime root log level is changed with a **signed `POST`** to a **secret path** configured on the server. There is **no** file-based override.
 
-Server settings (`[server]` in `thaum.toml`):
+Server settings (`[server.admin]` in `config.toml`):
 
 | Key | Meaning |
 |-----|--------|
-| `log_admin_route_id` | Non-empty segment; route is `POST /{id}/log-level`. Empty disables the endpoint. |
-| `log_admin_hmac_secret_b64url` | 32-byte key, base64url (no padding). Supports `env:VAR`, `file:…`, etc. via `resolve_secret`. |
-| `log_admin_clock_skew_seconds` | Max \(\|\text{now} - \text{request time}\|\) in seconds (default 300). |
-| `log_admin_state_poll_seconds` | If &gt; 0, each worker polls `admin_log_level_state.updated_at` to stay in sync. |
+| `route_id` | Non-empty segment; route is `POST /{route_id}/log-level`. Empty disables the endpoint. |
+| `hmac_secret_b64url` | 32-byte key, base64url (no padding). Supports `env:VAR`, `file:…`, etc. via `resolve_secret`. |
+| `clock_skew_seconds` | Max \(\|\text{now} - \text{request time}\|\) in seconds (default 300). |
+| `log_state_poll_seconds` | If &gt; 0, each worker polls `admin_log_level_state.updated_at` to stay in sync. |
 
 Environment override: **`THAUM_LOG_ADMIN_HMAC_SECRET_B64U`** replaces the config secret when set.
 
 ## Request
 
-**Path:** `POST /{log_admin_route_id}/log-level`
+**Path:** `POST /{route_id}/log-level`
 
 **Headers**
 
@@ -40,7 +40,7 @@ Sign this exact layout (newline = `\n`, final line empty):
 ```text
 thaum-log-level-v1
 POST
-/{log_admin_route_id}/log-level
+/{route_id}/log-level
 {epoch_seconds}
 {nonce_hex}
 loglevel={NORMALIZED}

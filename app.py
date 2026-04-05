@@ -6,7 +6,7 @@
 
 """
 WSGI entry: ``gunicorn app:app`` (multiple workers supported: leader election registers Webex
-webhooks once per deployment). Set ``server.database_vault_passphrase`` when using shared DB
+webhooks once per deployment). Set ``server.database.database_vault_passphrase`` when using shared DB
 Webex HMAC (omit ``hmac_secret`` in bot config). Config: ``THAUM_CONFIG_FILE``, else
 ``/etc/thaum/thaum.conf`` or ``thaum.toml`` in the working directory.
 """

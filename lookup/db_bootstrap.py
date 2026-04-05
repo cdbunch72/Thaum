@@ -26,12 +26,12 @@ def merged_lookup_plugin_config(lookup_type: str, lookup_raw: Dict[str, Any]) ->
     return merged
 
 
-def resolve_lookup_db_url(server_cfg: ServerConfig, lookup_raw: Dict[str, Any]) -> str:
-    merged = merged_lookup_plugin_config(server_cfg.lookup_plugin, lookup_raw)
-    url = merged.get("db_url")
-    if url is None or (isinstance(url, str) and not url.strip()):
+def resolve_app_db_url(server_cfg: ServerConfig) -> str:
+    """Resolve SQLAlchemy URL from ``[server.database].db_spec`` (default: in-memory SQLite)."""
+    raw = server_cfg.database.db_spec
+    if raw is None or (isinstance(raw, str) and not raw.strip()):
         return DEFAULT_LOOKUP_DB_URL
-    return str(url).strip()
+    return str(raw).strip()
 
 
 def engine_kwargs_for_sqlite_url(db_url: str) -> Dict[str, Any]:
