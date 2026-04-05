@@ -10,7 +10,7 @@ import tempfile
 import unittest
 from datetime import datetime, timezone
 
-from lookup.db_bootstrap import init_lookup_db
+from thaum.db_bootstrap import init_app_db
 from log_setup import apply_runtime_log_level_from_db, configure_logging, set_runtime_root_log_level
 from thaum.admin_log_level import (
     admin_hmac_secret_bytes,
@@ -60,7 +60,7 @@ class AdminLogGoldenVectorTest(unittest.TestCase):
 
 class AdminLogEndpointTest(unittest.TestCase):
     def setUp(self) -> None:
-        init_lookup_db("sqlite:///:memory:")
+        init_app_db("sqlite:///:memory:")
         self._server = _make_server()
         configure_logging(LogConfig(level=LogLevel.INFO), self._server)
         set_runtime_root_log_level(None)
@@ -154,7 +154,7 @@ class AdminLogEndpointTest(unittest.TestCase):
 
 class AdminLogDbApplyTest(unittest.TestCase):
     def setUp(self) -> None:
-        init_lookup_db("sqlite:///:memory:")
+        init_app_db("sqlite:///:memory:")
         configure_logging(LogConfig(level=LogLevel.INFO), None)
 
     def test_apply_from_db_row(self) -> None:

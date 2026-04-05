@@ -5,12 +5,21 @@ from __future__ import annotations
 
 import logging
 import os
-from typing import Any
+from typing import Any, Dict
 
 from lookup.base import BaseLookupPlugin
 from plugin_loader import ensure_plugin_loaded
 
 logger = logging.getLogger("lookup.factory")
+
+
+def merged_lookup_plugin_config(lookup_type: str, lookup_raw: Dict[str, Any]) -> Dict[str, Any]:
+    """Merge ``[lookup]`` with ``[lookup.<type>]`` the same way bootstrap validates plugins."""
+    plugin_cfg = lookup_raw.get(lookup_type, {}) if isinstance(lookup_raw, dict) else {}
+    merged: Dict[str, Any] = dict(lookup_raw or {})
+    if isinstance(plugin_cfg, dict):
+        merged.update(plugin_cfg)
+    return merged
 
 
 def create_lookup(lookup_type: str, config_raw: dict[str, Any]) -> BaseLookupPlugin:

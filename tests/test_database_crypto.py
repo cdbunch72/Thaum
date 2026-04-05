@@ -12,7 +12,7 @@ from gemstone_utils.encrypted_fields import parse_encrypted_field
 from gemstone_utils.sqlalchemy.key_storage import GemstoneKeyRecord
 from sqlalchemy import text
 
-from lookup.db_bootstrap import init_lookup_db
+from thaum.db_bootstrap import init_app_db
 from thaum.bot_webhook_state import ensure_bot_webhook_hmac_secret
 from thaum.database_crypto import (
     apply_database_crypto,
@@ -34,7 +34,7 @@ def _server_with_vault(passphrase: str) -> ServerConfig:
 
 class DatabaseCryptoBootstrapTest(unittest.TestCase):
     def test_apply_database_crypto_creates_key_rows(self) -> None:
-        init_lookup_db("sqlite:///:memory:")
+        init_app_db("sqlite:///:memory:")
         srv = _server_with_vault("unit-test-db-vault-passphrase")
         apply_database_crypto(srv)
         self.assertTrue(is_database_crypto_ready())
@@ -51,7 +51,7 @@ class DatabaseCryptoBootstrapTest(unittest.TestCase):
         self.assertTrue(is_database_crypto_ready())
 
     def test_dek_rotation_then_progressive_catchup(self) -> None:
-        init_lookup_db("sqlite:///:memory:")
+        init_app_db("sqlite:///:memory:")
         srv = _server_with_vault("unit-test-db-vault-passphrase")
         srv.database.data_key_rotate_days = 1
         apply_database_crypto(srv)

@@ -29,7 +29,6 @@ logger = logging.getLogger("thaum.lookup")
 
 ONE_WEEK = 604800
 DEFAULT_CACHE_LOCK_PATH = os.path.join(tempfile.gettempdir(), "thaum_cache.lock")
-DEFAULT_LOOKUP_DB_URL = "sqlite:///:memory:"
 
 
 class BaseLookupPluginConfig(BaseModel):
@@ -37,7 +36,7 @@ class BaseLookupPluginConfig(BaseModel):
     Shared lookup cache configuration for all lookup plugins.
 
     The process-global DB is opened via :func:`gemstone_utils.db.init_db` (see
-    :func:`lookup.db_bootstrap.init_lookup_db` / server bootstrap). Configure the URL under
+    :func:`thaum.db_bootstrap.init_app_db` / server bootstrap). Configure the URL under
     ``[server.database].db_spec``, not here.
 
     Expected TOML:
@@ -65,7 +64,7 @@ class BaseLookupPlugin(ABC):
     Base class for lookup/caching plugins.
 
     Persistence uses ORM models on :class:`gemstone_utils.db.GemstoneDB` (tables prefixed
-    with ``schema_`` for portability). Call :func:`lookup.db_bootstrap.init_lookup_db`
+    with ``schema_`` for portability). Call :func:`thaum.db_bootstrap.init_app_db`
     before constructing plugins.
 
     Identity cache rules:

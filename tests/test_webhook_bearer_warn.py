@@ -21,7 +21,7 @@ from alerts.webhook_bearer import (
     validate_webhook_bearer,
     _warn_cache_key,
 )
-from lookup.db_bootstrap import init_lookup_db
+from thaum.db_bootstrap import init_app_db
 from thaum.webhook_bearer_warn import WebhookBearerWarnState
 
 
@@ -52,7 +52,7 @@ class _ListHandler(logging.Handler):
 
 class WebhookBearerWarnThrottleTest(unittest.TestCase):
     def setUp(self) -> None:
-        init_lookup_db("sqlite:///:memory:")
+        init_app_db("sqlite:///:memory:")
         self._log = logging.getLogger("test.webhook_bearer_warn")
         self._log.setLevel(logging.WARNING)
         self._handler = _ListHandler()

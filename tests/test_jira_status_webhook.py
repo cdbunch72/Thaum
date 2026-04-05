@@ -9,7 +9,7 @@ from unittest.mock import MagicMock
 
 from pydantic import SecretStr
 
-from lookup.db_bootstrap import init_lookup_db
+from thaum.db_bootstrap import init_app_db
 from alerts.plugins.jira.mapping_store import (
     apply_create_webhook,
     parse_short_id_from_alias,
@@ -38,7 +38,7 @@ class JiraMappingParseTest(unittest.TestCase):
 
 class JiraMappingDbTest(unittest.TestCase):
     def setUp(self) -> None:
-        init_lookup_db("sqlite:///:memory:")
+        init_app_db("sqlite:///:memory:")
     # -- End Method setUp
 
     def test_pending_then_create_links_jira_id(self) -> None:
@@ -117,7 +117,7 @@ class JiraPayloadTest(unittest.TestCase):
 
 class JiraStatusWebhookSayTest(unittest.TestCase):
     def setUp(self) -> None:
-        init_lookup_db("sqlite:///:memory:")
+        init_app_db("sqlite:///:memory:")
         log = logging.getLogger("test.jira3")
         upsert_pending_row("QWER", "space-9", "bk1", "THAUM-20260328-QWER", log)
         apply_create_webhook(

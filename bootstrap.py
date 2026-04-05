@@ -12,8 +12,9 @@ from alerts.webhook_bearer import set_thaum_state_dir
 from bots.factory import validate_bot_config
 from config import load_and_validate
 from log_setup import apply_runtime_log_level_from_db, configure_logging, start_log_admin_state_poller
-from lookup.db_bootstrap import init_lookup_db, merged_lookup_plugin_config, resolve_app_db_url
+from lookup.factory import merged_lookup_plugin_config
 from lookup.instance import initialize_lookup_plugin
+from thaum.db_bootstrap import init_app_db, resolve_app_db_url
 from plugin_loader import ensure_plugin_loaded, get_plugin_config_model
 from thaum.database_crypto import apply_database_crypto, requires_database_vault_passphrase
 from thaum.factory import initialize_bots
@@ -94,7 +95,7 @@ def bootstrap(config_path: str) -> Dict[str, Any]:
     set_thaum_state_dir(server.thaum_state_dir)
 
     db_url = resolve_app_db_url(server)
-    init_lookup_db(db_url)
+    init_app_db(db_url)
     apply_database_crypto(server)
     register_all_maintenance_tasks(server, config)
 
