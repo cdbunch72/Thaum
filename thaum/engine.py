@@ -1,7 +1,6 @@
-# thaum/engine.py
-# Copyright 2026 Clinton Bunch. All rights reserved.
 # SPDX-License-Identifier: MPL-2.0
-
+# Copyright 2026 Clinton Bunch
+# thaum/engine.py
 import logging
 import datetime
 from typing import Optional,List, TYPE_CHECKING

@@ -1,9 +1,6 @@
-# bootstrap.py
-# Thaum Engine v1.0.0
-# Copyright 2026 Clinton Bunch
 # SPDX-License-Identifier: MPL-2.0
-# This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
-
+# Copyright 2026 Clinton Bunch
+# bootstrap.py
 from __future__ import annotations
 
 import logging

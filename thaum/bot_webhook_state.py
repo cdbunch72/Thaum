@@ -1,8 +1,6 @@
-# thaum/bot_webhook_state.py
-# Thaum Engine v1.0.0
-# Copyright 2026 Clinton Bunch
 # SPDX-License-Identifier: MPL-2.0
-
+# Copyright 2026 Clinton Bunch
+# thaum/bot_webhook_state.py
 from __future__ import annotations
 
 import logging

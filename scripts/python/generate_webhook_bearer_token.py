@@ -1,9 +1,7 @@
 #!/usr/bin/env python3
-# generate_webhook_bearer_token.py
-# Copyright 2026 Clinton Bunch. All rights reserved.
 # SPDX-License-Identifier: MPL-2.0
-# This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
-
+# Copyright 2026 Clinton Bunch
+# scripts/python/generate_webhook_bearer_token.py
 """
 Generate a canonical JSON webhook bearer record for Thaum alert status webhooks.
 """

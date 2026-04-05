@@ -1,9 +1,6 @@
-# alerts/base.py
-# Thaum Engine v1.0.0
-# Copyright 2026 Clinton Bunch
 # SPDX-License-Identifier: MPL-2.0
-# This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
-
+# Copyright 2026 Clinton Bunch
+# alerts/base.py
 import logging
 from typing import Any, Callable, Dict, Optional, Tuple, TYPE_CHECKING, Final
 

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: MPL-2.0
+# Copyright 2026 Clinton Bunch
+# tests/test_plugin_entrypoints.py
 import pkgutil
 import ast
 import unittest

@@ -1,8 +1,6 @@
-# thaum/database_crypto.py
-# Thaum Engine v1.0.0
-# Copyright 2026 Clinton Bunch
 # SPDX-License-Identifier: MPL-2.0
-
+# Copyright 2026 Clinton Bunch
+# thaum/database_crypto.py
 from __future__ import annotations
 
 import logging

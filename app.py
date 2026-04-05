@@ -1,9 +1,6 @@
-# app.py
-# Thaum Engine v1.0.0
-# Copyright 2026 Clinton Bunch
 # SPDX-License-Identifier: MPL-2.0
-# This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
-
+# Copyright 2026 Clinton Bunch
+# app.py
 """
 WSGI entry: ``gunicorn app:app`` (multiple workers supported: leader election registers Webex
 webhooks once per deployment). Set ``server.database.database_vault_passphrase`` when using shared DB

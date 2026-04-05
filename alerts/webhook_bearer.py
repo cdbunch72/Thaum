@@ -1,8 +1,6 @@
-# alerts/webhook_bearer.py
-# Copyright 2026 Clinton Bunch. All rights reserved.
 # SPDX-License-Identifier: MPL-2.0
-# This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
-
+# Copyright 2026 Clinton Bunch
+# alerts/webhook_bearer.py
 from __future__ import annotations
 
 import base64

@@ -1,8 +1,6 @@
-# tests/test_webhook_bearer_warn.py
-# Thaum Engine v1.0.0
-# Copyright 2026 Clinton Bunch
 # SPDX-License-Identifier: MPL-2.0
-
+# Copyright 2026 Clinton Bunch
+# tests/test_webhook_bearer_warn.py
 from __future__ import annotations
 
 import base64

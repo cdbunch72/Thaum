@@ -1,8 +1,6 @@
-# Thaum v1.0.0
-# Copyright 2026 Clinton Bunch. All rights reserved.
 # SPDX-License-Identifier: MPL-2.0
-# This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
-
+# Copyright 2026 Clinton Bunch
+# config.py
 import logging
 import tomllib
 from typing import Any, Dict

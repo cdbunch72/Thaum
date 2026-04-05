@@ -1,8 +1,6 @@
-# thaum/handlers.py
-# Copyright 2026 Clinton Bunch. All rights reserved.
 # SPDX-License-Identifier: MPL-2.0
-# This source file licensed under the Mozilla Public License 2.0
-
+# Copyright 2026 Clinton Bunch
+# thaum/handlers.py
 from jinja2 import Template
 from thaum.engine import create_incident_room, acknowledge_incident
 from typing import TYPE_CHECKING, Any, Dict, List

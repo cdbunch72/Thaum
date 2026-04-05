@@ -1,8 +1,6 @@
-# tests/test_admin_log_level.py
-# Thaum Engine v1.0.0
-# Copyright 2026 Clinton Bunch
 # SPDX-License-Identifier: MPL-2.0
-
+# Copyright 2026 Clinton Bunch
+# tests/test_admin_log_level.py
 from __future__ import annotations
 
 import base64

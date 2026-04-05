@@ -1,9 +1,6 @@
-# thaum/types.py
-# Thaum
-# Copyright 2026, Clinton Bunch. All Rights Reserved
 # SPDX-License-Identifier: MPL-2.0
-# This file source licensed under the Mozilla Public License 2.0
-
+# Copyright 2026 Clinton Bunch
+# thaum/types.py
 import time
 import os
 from pathlib import Path

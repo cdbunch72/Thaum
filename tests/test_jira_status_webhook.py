@@ -1,8 +1,6 @@
-# tests/test_jira_status_webhook.py
-# Thaum Engine v1.0.0
-# Copyright 2026 Clinton Bunch
 # SPDX-License-Identifier: MPL-2.0
-
+# Copyright 2026 Clinton Bunch
+# tests/test_jira_status_webhook.py
 from __future__ import annotations
 
 import logging
