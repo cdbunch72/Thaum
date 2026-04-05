@@ -4,13 +4,10 @@
 from __future__ import annotations
 
 import logging
-import os
-import tempfile
 import time
 from abc import ABC, abstractmethod
 from typing import Any, Callable, Dict, List, Optional
 
-from filelock import FileLock
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import delete, select
 
@@ -28,7 +25,6 @@ from thaum.types import RespondersList, ThaumPerson, ThaumTeam
 logger = logging.getLogger("thaum.lookup")
 
 ONE_WEEK = 604800
-DEFAULT_CACHE_LOCK_PATH = os.path.join(tempfile.gettempdir(), "thaum_cache.lock")
 
 
 class BaseLookupPluginConfig(BaseModel):
@@ -41,14 +37,12 @@ class BaseLookupPluginConfig(BaseModel):
 
     Expected TOML:
       [lookup]
-      cache_lock_path = "/path/to/lock"
       default_team_ttl_seconds = 14400
 
     Plugin-specific overrides go under:
       [lookup.<plugin_name>]
     """
 
-    cache_lock_path: Optional[str] = None
     default_team_ttl_seconds: int = 14400
 
     model_config = ConfigDict(
@@ -85,11 +79,9 @@ class BaseLookupPlugin(ABC):
     def __init__(
         self,
         *,
-        cache_lock_path: Optional[str] = None,
         default_team_ttl_seconds: int = 14400,
     ):
         self.logger = logging.getLogger(f"lookup.{self.plugin_name}")
-        self._cache_lock_path = cache_lock_path or DEFAULT_CACHE_LOCK_PATH
         self._default_team_ttl_seconds = default_team_ttl_seconds
 
     # --- People ---------------------------------------------------------------
@@ -148,8 +140,8 @@ class BaseLookupPlugin(ABC):
         """
         now = time.time()
 
-        with FileLock(self._cache_lock_path):
-            with get_session() as session:
+        with get_session() as session:
+            with session.begin():
                 existing = session.get(SchemaPerson, fragment.email)
 
                 if existing:
@@ -306,8 +298,8 @@ class BaseLookupPlugin(ABC):
         If `bot_plugin_name` and `team_id` are provided, also store a lookup
         mapping so callers can do `get_team_by_id(...)` by (plugin,id).
         """
-        with FileLock(self._cache_lock_path):
-            with get_session() as session:
+        with get_session() as session:
+            with session.begin():
                 last_cached = getattr(team, "last_cached", None) or time.time()
                 ttl = getattr(team, "ttl", None) or self._default_team_ttl_seconds
 

@@ -6,7 +6,6 @@ from __future__ import annotations
 import base64
 import json
 import logging
-import tempfile
 import unittest
 from datetime import datetime, timezone
 
@@ -36,7 +35,6 @@ def _make_server(**kwargs: object) -> ServerConfig:
     base: dict[str, object] = dict(
         base_url="https://test.example.com",
         bot_type="webex",
-        thaum_state_dir=tempfile.mkdtemp(prefix="thaum_admin_test_"),
         admin=admin,
     )
     base.update(kwargs)

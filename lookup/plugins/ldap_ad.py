@@ -74,7 +74,6 @@ class LdapAdLookupPlugin(BaseLookupPlugin):
     def __init__(self, **config: Any):
         cfg = LdapAdLookupPluginConfig(**config)
         super().__init__(
-            cache_lock_path=cfg.cache_lock_path,
             default_team_ttl_seconds=cfg.default_team_ttl_seconds,
         )
         self.cfg = cfg

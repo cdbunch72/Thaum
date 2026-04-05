@@ -7,44 +7,37 @@ import base64
 import hashlib
 import json
 import logging
-import os
 import time
 from datetime import datetime, timedelta, timezone
-from pathlib import Path
+from enum import Enum, auto
 from typing import Any, Mapping, Optional, Tuple, cast
 
 import hmac
 
 # At most one rotation-window warning per token per interval (avoid log spam on every webhook).
-# Primary: shared DB row (webhook_bearer_warn_state) when gemstone_utils.db is initialized.
-# Fallback: marker files under server.thaum_state_dir (default /run/thaum), mtime = last warning;
-# then in-process dict if the state directory is missing or not writable.
+# Throttle state lives only in ``webhook_bearer_warn_state`` (requires initialized DB).
 _CLEANUP_EXPIRED_BEFORE = timedelta(days=1)
 _ROTATION_WARN_INTERVAL_SEC: float = 86400.0
-_WARN_CACHE_PRUNE_AGE_SEC: float = 7 * 86400.0
-_last_rotation_warn_at: dict[str, float] = {}
 
-_DEFAULT_STATE_ROOT = Path("/run/thaum")
-_state_root_override: Optional[Path] = None
-_WARN_SUBDIR = "webhook_bearer_warn"
+
+def _as_utc_aware(dt: datetime) -> datetime:
+    if dt.tzinfo is None:
+        return dt.replace(tzinfo=timezone.utc)
+    return dt.astimezone(timezone.utc)
+
 
 __all__ = [
     "canonical_alert_bearer_bytes",
     "parse_incoming_bearer_payload",
     "normalize_expected_secret_to_canonical_bytes",
-    "set_thaum_state_dir",
     "validate_webhook_bearer",
 ]
 
 
-def set_thaum_state_dir(path: str | Path) -> None:
-    """Set the root for shared runtime state (call once from bootstrap from ``[server].thaum_state_dir``)."""
-    global _state_root_override
-    p = Path(path)
-    if not p.is_absolute():
-        raise ValueError(f"thaum_state_dir must be absolute: {path!r}")
-    _state_root_override = p
-# -- End Function set_thaum_state_dir
+class _RotationThrottleResult(Enum):
+    EMIT = auto()
+    SUPPRESS = auto()
+    STORAGE_FAILED = auto()
 
 
 def canonical_alert_bearer_bytes(d: Mapping[str, Any]) -> bytes:
@@ -146,54 +139,17 @@ def _warn_cache_key(canonical_bytes: bytes) -> str:
 # -- End Function _warn_cache_key
 
 
-def _state_root() -> Path:
-    return _state_root_override if _state_root_override is not None else _DEFAULT_STATE_ROOT
-
-
-def _rotation_warn_marker_path(cache_key: str) -> Path:
-    return _state_root() / _WARN_SUBDIR / f"{cache_key}.warn"
-
-
-def _file_throttle_should_log(cache_key: str) -> Optional[bool]:
-    """
-    Return True if a warning may be logged (and update marker mtime).
-    Return False if suppressed by mtime within the interval.
-    Return None if the file backend is unavailable (use in-memory fallback).
-    """
-    now = time.time()
-    path = _rotation_warn_marker_path(cache_key)
-    try:
-        path.parent.mkdir(parents=True, exist_ok=True)
-        if path.is_file():
-            age = now - path.stat().st_mtime
-            if age < _ROTATION_WARN_INTERVAL_SEC:
-                return False
-        path.touch(exist_ok=True)
-        os.utime(path, (now, now))
-        return True
-    except OSError:
-        return None
-# -- End Function _file_throttle_should_log
-
-
-def _prune_rotation_warn_cache(now: float) -> None:
-    cutoff = now - _WARN_CACHE_PRUNE_AGE_SEC
-    stale = [k for k, t in _last_rotation_warn_at.items() if t < cutoff]
-    for k in stale:
-        del _last_rotation_warn_at[k]
-# -- End Function _prune_rotation_warn_cache
-
-
 def _db_throttle_should_log(
+    logger: logging.Logger,
     token_fp: str,
     *,
     expires_at_utc: datetime,
     bot_key: Optional[str],
-) -> Optional[bool]:
+) -> _RotationThrottleResult:
     """
-    Return True if a warning may be logged (and record throttle in DB).
-    Return False if suppressed within the interval.
-    Return None if the DB path is unavailable (use file / in-memory fallback).
+    Return EMIT if a rotation warning may be logged (and record throttle in DB).
+    Return SUPPRESS if within the interval.
+    Return STORAGE_FAILED if the DB path failed (caller should not emit rotation warning).
     """
     try:
         from sqlalchemy import delete
@@ -202,8 +158,18 @@ def _db_throttle_should_log(
         from gemstone_utils.db import get_session
 
         from thaum.webhook_bearer_warn import WebhookBearerWarnState
-    except Exception:
-        return None
+    except Exception as e:
+        from log_setup import should_log_exception_trace
+
+        logger.warning(
+            "Webhook bearer rotation throttle skipped: could not load DB layer (transient)."
+        )
+        logger.error(
+            "Webhook bearer rotation throttle: import or setup failed: %s",
+            e,
+            exc_info=should_log_exception_trace(),
+        )
+        return _RotationThrottleResult.STORAGE_FAILED
 
     now_dt = datetime.now(timezone.utc)
     cleanup_before = now_dt - _CLEANUP_EXPIRED_BEFORE
@@ -219,14 +185,14 @@ def _db_throttle_should_log(
                 )
                 row = session.get(WebhookBearerWarnState, token_fp)
                 if row is not None:
-                    age_sec = (now_dt - row.last_warn_at).total_seconds()
+                    age_sec = (now_dt - _as_utc_aware(row.last_warn_at)).total_seconds()
                     if age_sec < _ROTATION_WARN_INTERVAL_SEC:
-                        return False
+                        return _RotationThrottleResult.SUPPRESS
                     row.last_warn_at = now_dt
                     row.expires_at = expires_at_utc
                     if bot_key is not None:
                         row.bot_key = bot_key
-                    return True
+                    return _RotationThrottleResult.EMIT
 
                 new_row = WebhookBearerWarnState(
                     token_fp=token_fp,
@@ -241,18 +207,28 @@ def _db_throttle_should_log(
                 except IntegrityError:
                     row2 = session.get(WebhookBearerWarnState, token_fp)
                     if row2 is None:
-                        return True
-                    age2 = (now_dt - row2.last_warn_at).total_seconds()
+                        return _RotationThrottleResult.EMIT
+                    age2 = (now_dt - _as_utc_aware(row2.last_warn_at)).total_seconds()
                     if age2 < _ROTATION_WARN_INTERVAL_SEC:
-                        return False
+                        return _RotationThrottleResult.SUPPRESS
                     row2.last_warn_at = now_dt
                     row2.expires_at = expires_at_utc
                     if bot_key is not None:
                         row2.bot_key = bot_key
-                    return True
-                return True
-    except Exception:
-        return None
+                    return _RotationThrottleResult.EMIT
+                return _RotationThrottleResult.EMIT
+    except Exception as e:
+        from log_setup import should_log_exception_trace
+
+        logger.warning(
+            "Webhook bearer rotation throttle skipped: database error (transient)."
+        )
+        logger.error(
+            "Webhook bearer rotation throttle failed: %s",
+            e,
+            exc_info=should_log_exception_trace(),
+        )
+        return _RotationThrottleResult.STORAGE_FAILED
 # -- End Function _db_throttle_should_log
 
 
@@ -268,39 +244,21 @@ def _maybe_log_rotation_warning(
     expires_at_utc = datetime.fromtimestamp(exp_t, tz=timezone.utc)
 
     db_res = _db_throttle_should_log(
+        logger,
         cache_key,
         expires_at_utc=expires_at_utc,
         bot_key=bot_key,
     )
-    if db_res is False:
+    if db_res is _RotationThrottleResult.SUPPRESS:
         return
-    if db_res is True:
-        logger.warning(
-            "Webhook bearer token is inside the %d-day pre-expiry window (expires at %d); "
-            "rotate soon. (At most once per day per token; throttle in DB table "
-            "webhook_bearer_warn_state.)",
-            warn_days,
-            int(exp_t),
-        )
+    if db_res is _RotationThrottleResult.STORAGE_FAILED:
         return
-
-    file_res = _file_throttle_should_log(cache_key)
-    if file_res is False:
-        return
-    if file_res is None:
-        now = time.time()
-        _prune_rotation_warn_cache(now)
-        last = _last_rotation_warn_at.get(cache_key, 0.0)
-        if now - last < _ROTATION_WARN_INTERVAL_SEC:
-            return
-        _last_rotation_warn_at[cache_key] = now
     logger.warning(
         "Webhook bearer token is inside the %d-day pre-expiry window (expires at %d); "
-        "rotate soon. (At most once per day per token; shared throttle under "
-        "%s/webhook_bearer_warn when that tree is writable.)",
+        "rotate soon. (At most once per day per token; throttle in DB table "
+        "webhook_bearer_warn_state.)",
         warn_days,
         int(exp_t),
-        _state_root(),
     )
 # -- End Function _maybe_log_rotation_warning
 
@@ -314,11 +272,11 @@ def validate_webhook_bearer(
 ) -> bool:
     """
     Constant-time compare of canonical JSON bytes after parsing incoming Bearer value.
-    Enforces exp (null = never). When within `warn` days of exp, logs a warning at most
-    once per 24 hours per token: primary throttle in DB table ``webhook_bearer_warn_state``;
-    if the DB is unavailable, marker files under ``{thaum_state_dir}/webhook_bearer_warn``
-    (``[server].thaum_state_dir``, default ``/run/thaum``), then in-process fallback if
-    that directory is not usable.
+    Enforces exp (null = never). When within ``warn`` days of exp, logs a warning at most
+    once per 24 hours per token; throttle state is stored only in the
+    ``webhook_bearer_warn_state`` table. If the database cannot be used, logs WARNING and
+    ERROR (stack traces only when root log level enables SPAM) and does not emit the
+    pre-expiry advisory.
 
     ``bot_key`` is optional metadata stored with the throttle row (not used for auth).
     """
@@ -363,4 +321,3 @@ def validate_webhook_bearer(
 
     return True
 # -- End Function validate_webhook_bearer
-

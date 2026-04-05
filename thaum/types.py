@@ -3,7 +3,6 @@
 # thaum/types.py
 import time
 import os
-from pathlib import Path
 from pydantic import ConfigDict, Field, model_validator, BaseModel, SecretStr, BeforeValidator
 from typing import Optional, Annotated, Dict, List, TYPE_CHECKING
 from enum import StrEnum,IntEnum,auto
@@ -188,7 +187,6 @@ class ServerConfig(BaseModel):
     bot_url_prefix: Optional[str] = '/bot'
     bot_type: str
     lookup_plugin: str = "null"
-    thaum_state_dir: str = "/run/thaum"
     database: ServerDatabaseConfig = Field(default_factory=ServerDatabaseConfig)
     admin: ServerAdminConfig = Field(default_factory=ServerAdminConfig)
     election: ServerElectionConfig = Field(default_factory=ServerElectionConfig)
@@ -204,15 +202,6 @@ class ServerConfig(BaseModel):
         (self.base_url,self.url_source) = _resolve_base_url(self.base_url)
         return self
     # -- End resolve_url
-
-    @model_validator(mode='after')
-    def resolve_thaum_state_dir(self) -> 'ServerConfig':
-        p = Path(self.thaum_state_dir)
-        if not p.is_absolute():
-            raise ValueError("server.thaum_state_dir must be an absolute path")
-        self.thaum_state_dir = str(p)
-        return self
-    # -- End resolve_thaum_state_dir
 # -- End ServerConfig
 
 class LogConfig(BaseModel):

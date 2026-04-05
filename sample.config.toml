@@ -16,8 +16,6 @@ base_url = "https://thaum.example.com"
 bot_type = "webex"
 # Lookup plugin under lookup.plugins (null = no external directory).
 lookup_plugin = "null"
-# Must be absolute. Linux example below; on Windows use e.g. "C:/ProgramData/thaum/state".
-thaum_state_dir = "/run/thaum"
 # bot_url_prefix = "/bot"          # default; webhook path = {base_url}/bot/{bot_key}
 
 [server.database]
@@ -50,7 +48,6 @@ thaum_state_dir = "/run/thaum"
 [lookup]
 # Merged with [lookup.<lookup_plugin>] (same section name as server.lookup_plugin).
 # Configure the DB URL under [server.database].db_url (not here).
-# cache_lock_path = "/run/thaum/lookup_cache.lock"
 # default_team_ttl_seconds = 14400
 
 # -----------------------------------------------------------------------------

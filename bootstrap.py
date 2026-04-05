@@ -8,7 +8,6 @@ from typing import Any, Dict
 
 from pydantic import BaseModel
 
-from alerts.webhook_bearer import set_thaum_state_dir
 from bots.factory import validate_bot_config
 from config import load_and_validate
 from log_setup import apply_runtime_log_level_from_db, configure_logging, start_log_admin_state_poller
@@ -91,8 +90,6 @@ def bootstrap(config_path: str) -> Dict[str, Any]:
                 "server.database.database_vault_passphrase is required when a Webex bot omits "
                 "hmac_secret (shared DB HMAC mode)."
             )
-
-    set_thaum_state_dir(server.thaum_state_dir)
 
     db_url = resolve_app_db_url(server)
     init_app_db(db_url)

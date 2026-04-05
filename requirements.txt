@@ -7,5 +7,4 @@ tzdata; platform_system == "Windows"
 Flask
 webexpythonsdk
 SQLAlchemy
-filelock
 ldap3

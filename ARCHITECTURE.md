@@ -41,8 +41,7 @@ Flask app is created.
 
 ### **Phase 3 - Initialize database**
 
-- `set_thaum_state_dir()` and `thaum.db_bootstrap.init_app_db()` call
-  `gemstone_utils.db.init_db()` with the URL from `[server.database].db_url` (via `thaum.db_bootstrap.resolve_app_db_url`).
+- `thaum.db_bootstrap.init_app_db()` calls `gemstone_utils.db.init_db()` with the URL from `[server.database].db_url` (via `thaum.db_bootstrap.resolve_app_db_url`).
 
 ### **Phase 4 - Instantiate lookup, bots, and alert plugins**
 

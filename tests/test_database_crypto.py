@@ -3,7 +3,6 @@
 # tests/test_database_crypto.py
 from __future__ import annotations
 
-import tempfile
 import unittest
 from datetime import datetime, timedelta, timezone
 
@@ -27,7 +26,6 @@ def _server_with_vault(passphrase: str) -> ServerConfig:
     return ServerConfig(
         base_url="https://test.example.com",
         bot_type="webex",
-        thaum_state_dir=tempfile.mkdtemp(prefix="thaum_crypto_test_"),
         database=ServerDatabaseConfig(database_vault_passphrase=passphrase),
     )
 

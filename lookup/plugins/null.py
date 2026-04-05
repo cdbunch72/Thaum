@@ -20,7 +20,6 @@ class NullLookupPlugin(BaseLookupPlugin):
     def __init__(self, **config: Any):
         cfg = NullLookupPluginConfig(**config)
         super().__init__(
-            cache_lock_path=cfg.cache_lock_path,
             default_team_ttl_seconds=cfg.default_team_ttl_seconds,
         )
 

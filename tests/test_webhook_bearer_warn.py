@@ -8,8 +8,6 @@ import logging
 import time
 import unittest
 from datetime import timedelta
-from pathlib import Path
-from tempfile import TemporaryDirectory
 from unittest.mock import patch
 
 from gemstone_utils.db import get_session
@@ -17,7 +15,6 @@ from gemstone_utils.db import get_session
 from alerts.webhook_bearer import (
     canonical_alert_bearer_bytes,
     normalize_expected_secret_to_canonical_bytes,
-    set_thaum_state_dir,
     validate_webhook_bearer,
     _warn_cache_key,
 )
@@ -44,9 +41,12 @@ class _ListHandler(logging.Handler):
     def __init__(self) -> None:
         super().__init__()
         self.warning_messages: list[str] = []
+        self.error_messages: list[str] = []
 
     def emit(self, record: logging.LogRecord) -> None:
-        if record.levelno >= logging.WARNING:
+        if record.levelno >= logging.ERROR:
+            self.error_messages.append(record.getMessage())
+        elif record.levelno >= logging.WARNING:
             self.warning_messages.append(record.getMessage())
 
 
@@ -105,9 +105,10 @@ class WebhookBearerWarnThrottleTest(unittest.TestCase):
         self.assertEqual(self._warn_count(), 1)
 
         with get_session() as session:
-            row = session.get(WebhookBearerWarnState, fp)
-            self.assertIsNotNone(row)
-            row.last_warn_at = row.last_warn_at - timedelta(hours=25)
+            with session.begin():
+                row = session.get(WebhookBearerWarnState, fp)
+                self.assertIsNotNone(row)
+                row.last_warn_at = row.last_warn_at - timedelta(hours=25)
 
         self.assertTrue(
             validate_webhook_bearer(
@@ -118,28 +119,25 @@ class WebhookBearerWarnThrottleTest(unittest.TestCase):
         )
         self.assertEqual(self._warn_count(), 2)
 
-    def test_fallback_when_db_unavailable_uses_file_throttle(self) -> None:
-        with TemporaryDirectory() as td:
-            set_thaum_state_dir(Path(td))
-            secret, auth = _make_warn_window_secret()
-
-            with patch("gemstone_utils.db.get_session", side_effect=RuntimeError("no db")):
-                self.assertTrue(
-                    validate_webhook_bearer(
-                        authorization_header_value=auth,
-                        expected_secret_text=secret,
-                        logger=self._log,
-                    )
+    def test_db_unavailable_logs_warning_error_and_skips_rotation_advisory(self) -> None:
+        secret, auth = _make_warn_window_secret()
+        with patch("gemstone_utils.db.get_session", side_effect=RuntimeError("no db")):
+            self.assertTrue(
+                validate_webhook_bearer(
+                    authorization_header_value=auth,
+                    expected_secret_text=secret,
+                    logger=self._log,
                 )
-                self.assertEqual(self._warn_count(), 1)
-                self.assertTrue(
-                    validate_webhook_bearer(
-                        authorization_header_value=auth,
-                        expected_secret_text=secret,
-                        logger=self._log,
-                    )
-                )
-                self.assertEqual(self._warn_count(), 1)
+            )
+        self.assertEqual(self._warn_count(), 0)
+        self.assertTrue(
+            any("rotation throttle skipped" in m for m in self._handler.warning_messages),
+            msg=f"expected throttle skip warning, got {self._handler.warning_messages!r}",
+        )
+        self.assertTrue(
+            any("rotation throttle failed" in m for m in self._handler.error_messages),
+            msg=f"expected throttle error, got {self._handler.error_messages!r}",
+        )
 
 
 if __name__ == "__main__":
