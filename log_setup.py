@@ -5,17 +5,19 @@ from __future__ import annotations
 
 import json
 import logging
+import logging.handlers
+import os
 import sys
 import threading
 import time
 from datetime import datetime, timezone
-from typing import Any, Optional, Tuple
+from pathlib import Path
+from typing import TYPE_CHECKING, Any, Optional, Tuple
 
 from zoneinfo import ZoneInfo
 
-from thaum.types import LogConfig, LogLevel, ServerConfig
-
-NO_TIMESTAMP = False
+if TYPE_CHECKING:
+    from thaum.types import LogConfig, ServerConfig
 
 _configured_root_level: int = logging.INFO
 _logger_wrappers_installed: bool = False
@@ -31,6 +33,8 @@ _admin_state_poller_started: bool = False
 
 def should_log_exception_trace() -> bool:
     """True when root log level enables SPAM (stack traces allowed)."""
+    from thaum.types import LogLevel
+
     return logging.getLogger().isEnabledFor(LogLevel.SPAM)
 
 
@@ -38,6 +42,8 @@ def parse_level_name(name: str) -> Optional[int]:
     """
     Resolve a level string to a numeric logging level, or None for invalid / DEFAULT.
     """
+    from thaum.types import LogLevel
+
     key = name.strip().upper()
     if not key or key == "DEFAULT":
         return None
@@ -109,7 +115,7 @@ def apply_runtime_log_level_from_db() -> None:
         set_runtime_root_log_level(parsed)
 
 
-def start_log_admin_state_poller(server_config: Optional[ServerConfig] = None) -> None:
+def start_log_admin_state_poller(server_config: Optional["ServerConfig"] = None) -> None:
     """Background poll of admin_log_level_state (call after init_db)."""
     global _admin_state_poller_started, _admin_state_poll_seconds
 
@@ -166,11 +172,19 @@ def _install_logger_wrappers() -> None:
 
 
 class ISO8601TimezoneFormatter(logging.Formatter):
-    def __init__(self, fmt, tz_string="UTC", fractional_seconds=False):
+    def __init__(
+        self,
+        fmt: str,
+        tz_string: str = "UTC",
+        fractional_seconds: bool = False,
+        *,
+        no_timestamp: bool = False,
+    ):
         super().__init__(fmt)
         self.tz_string = tz_string.strip()
         self.fractional_seconds = fractional_seconds
-        
+        self.no_timestamp = no_timestamp
+
         # Determine Timezone
         if self.tz_string.lower() == "local":
             self.tz = None
@@ -182,9 +196,8 @@ class ISO8601TimezoneFormatter(logging.Formatter):
             except Exception:
                 self.tz = ZoneInfo("UTC")
 
-    def formatTime(self, record, datefmt=None):
-        global NO_TIMESTAMP
-        if NO_TIMESTAMP:
+    def formatTime(self, record: logging.LogRecord, datefmt: Optional[str] = None) -> str:
+        if self.no_timestamp:
             return ""
         dt = datetime.fromtimestamp(record.created, tz=self.tz)
         spec = "auto" if self.fractional_seconds else "seconds"
@@ -192,8 +205,30 @@ class ISO8601TimezoneFormatter(logging.Formatter):
 # -- End ISO8601TimezoneFormatter
 
 
+class SecureTimedRotatingFileHandler(logging.handlers.TimedRotatingFileHandler):
+    """Timed rotation with best-effort chmod 0o600 on the active log file (Unix)."""
+
+    def _chmod_active(self) -> None:
+        try:
+            if os.path.exists(self.baseFilename):
+                os.chmod(self.baseFilename, 0o600)
+        except OSError:
+            pass
+
+    def _open(self) -> Any:
+        stream = super()._open()
+        self._chmod_active()
+        return stream
+
+    def doRollover(self) -> None:
+        super().doRollover()
+        self._chmod_active()
+
+
 def _register_custom_log_level_names() -> None:
     """So %(levelname)s shows SPAM / VERBOSE / NOTICE instead of Level N."""
+    from thaum.types import LogLevel
+
     logging.addLevelName(int(LogLevel.SPAM), "SPAM")
     logging.addLevelName(int(LogLevel.VERBOSE), "VERBOSE")
     logging.addLevelName(int(LogLevel.NOTICE), "NOTICE")
@@ -209,44 +244,87 @@ def log_debug_blob(logger: logging.Logger, blob_title: str, data: Any, level: in
         logger.log(level, f"END {blob_title} {delimiter}")
 # -- End Function log_debug_blob
 
-def configure_logging(logging_config: LogConfig, server_config: Optional[ServerConfig] = None):
+
+def configure_logging(
+    logging_config: "LogConfig",
+    server_config: Optional["ServerConfig"] = None,
+):
     """
     Sets up a global, single-line, timezone-aware logging system.
     Replaces existing root handlers and installs SPAM-gated exception traces.
     """
-    global NO_TIMESTAMP, _configured_root_level
+    global _configured_root_level
 
     tz_str = logging_config.timezone
     use_fractions = logging_config.fractional_seconds
 
-    NO_TIMESTAMP = logging_config.no_timestamp
     _configured_root_level = int(logging_config.level)
 
     _register_custom_log_level_names()
 
-    # Configure the formatter
     log_format = "%(asctime)s [%(levelname)s] %(name)s: %(message)s"
-    formatter = ISO8601TimezoneFormatter(
-        log_format, tz_string=tz_str, fractional_seconds=use_fractions
+    console_formatter = ISO8601TimezoneFormatter(
+        log_format,
+        tz_string=tz_str,
+        fractional_seconds=use_fractions,
+        no_timestamp=logging_config.no_timestamp,
+    )
+    file_formatter = ISO8601TimezoneFormatter(
+        log_format,
+        tz_string=tz_str,
+        fractional_seconds=use_fractions,
+        no_timestamp=False,
     )
 
     root_logger = logging.getLogger()
     root_logger.setLevel(_configured_root_level)
 
-    # Remove default handlers to prevent duplicated logs/stack traces
     if root_logger.hasHandlers():
         root_logger.handlers.clear()
 
-    # Add our single-line console handler
     console_handler = logging.StreamHandler(sys.stdout)
-    console_handler.setFormatter(formatter)
+    console_handler.setFormatter(console_formatter)
     root_logger.addHandler(console_handler)
+
+    log_path = logging_config.file
+    if log_path:
+        p = Path(log_path).expanduser()
+        try:
+            parent = p.resolve().parent
+        except (OSError, RuntimeError):
+            print(
+                f"Thaum: cannot resolve log file path {log_path!r}; file logging disabled.",
+                file=sys.stderr,
+            )
+            parent = None
+        if parent is not None:
+            if not parent.is_dir():
+                print(
+                    f"Thaum: log file directory does not exist ({parent}); file logging disabled.",
+                    file=sys.stderr,
+                )
+            else:
+                try:
+                    file_handler = SecureTimedRotatingFileHandler(
+                        str(p),
+                        when="midnight",
+                        interval=1,
+                        backupCount=max(0, int(logging_config.file_backup_count)),
+                        encoding="utf-8",
+                        delay=True,
+                    )
+                    file_handler.setFormatter(file_formatter)
+                    root_logger.addHandler(file_handler)
+                except OSError as e:
+                    print(
+                        f"Thaum: cannot open log file {log_path!r}: {e}; file logging disabled.",
+                        file=sys.stderr,
+                    )
 
     _install_logger_wrappers()
 
     werkzeug_logger = logging.getLogger("werkzeug")
-    werkzeug_logger.handlers = [console_handler]
+    werkzeug_logger.handlers = list(root_logger.handlers)
     werkzeug_logger.propagate = False
 
 # -- End Function configure_logging
-

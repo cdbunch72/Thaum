@@ -217,6 +217,8 @@ Multi-line output uses the blob helper for readability.
 
 Stack traces are only emitted at SPAM level.
 
+Optional **file logging** under `[logging]` is opt-in via `file`: boolean `true`, integer `1`, or strings `yes` / `true` / `1` select the default path `/var/log/thaum/thaum.log`; any other non-empty string is a custom path. The log file’s parent directory must already exist (otherwise a message is written to stderr and only stdout logging is used). The file sink uses a timed-rotating handler; timestamps on file lines are controlled per formatter instance (file output always includes timestamps by default, independent of `no_timestamp` on the console formatter).
+
 ### Runtime log level (admin API)
 
 Changing the process root log level at runtime is **not** done via a local file. When

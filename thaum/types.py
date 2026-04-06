@@ -204,11 +204,44 @@ class ServerConfig(BaseModel):
     # -- End resolve_url
 # -- End ServerConfig
 
+DEFAULT_LOG_FILE_PATH = "/var/log/thaum/thaum.log"
+
+
+def _normalize_log_file_value(v: object) -> Optional[str]:
+    """
+    Opt-in file logging: None/false/0/no → off; true/1/yes → default path; else path string.
+    """
+    if v is None:
+        return None
+    if isinstance(v, bool):
+        return DEFAULT_LOG_FILE_PATH if v else None
+    if isinstance(v, int):
+        if v == 0:
+            return None
+        if v == 1:
+            return DEFAULT_LOG_FILE_PATH
+        raise ValueError(f"logging.file: invalid integer {v!r}; use 0 or 1, or a path string.")
+    s = str(v).strip()
+    if not s:
+        return None
+    low = s.lower()
+    if low in ("no", "false", "0"):
+        return None
+    if low in ("yes", "true", "1"):
+        return DEFAULT_LOG_FILE_PATH
+    return s
+
+
+LogFileSetting = Annotated[Optional[str], BeforeValidator(_normalize_log_file_value)]
+
+
 class LogConfig(BaseModel):
     level: LogLevel =  LogLevel.INFO
     timezone: str = "UTC"
     no_timestamp: bool = False
     fractional_seconds: bool = False
+    file: LogFileSetting = None
+    file_backup_count: int = 5
     model_config = ConfigDict(
         extra='forbid',          # Reject extra keys in TOML (Prevents typos)
         frozen=True,             # Make the config immutable after load (Safety!)

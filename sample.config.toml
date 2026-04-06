@@ -44,6 +44,11 @@ lookup_plugin = "null"
 # timezone = "UTC"
 # no_timestamp = false
 # fractional_seconds = false
+# Opt-in file logging: true / 1 / "yes" / "true" / "1" → default path /var/log/thaum/thaum.log
+# (parent dir must exist). Any other non-empty string → that path. file_backup_count = 5
+# file = true
+# file = "/var/lib/thaum/thaum.log"
+# file_backup_count = 5
 
 [lookup]
 # Merged with [lookup.<lookup_plugin>] (same section name as server.lookup_plugin).
