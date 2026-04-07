@@ -49,6 +49,8 @@ def ensure_bot_webhook_hmac_secret(bot_key: str, *, min_length: int = 16) -> str
 
     Uses insert-or-race so multiple workers can converge on one row.
     """
+    if not str(bot_key).strip():
+        raise ValueError("bot_key must be non-empty so HMAC secrets are not shared across bots")
     for attempt in range(3):
         with get_session() as session:
             row = session.get(BotWebhookHmac, bot_key)
