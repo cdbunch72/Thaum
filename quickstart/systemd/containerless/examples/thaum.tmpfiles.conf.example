@@ -1,0 +1,3 @@
+# Install to /etc/tmpfiles.d/thaum.conf
+# Creates the runtime directory for the Unix socket before gunicorn starts.
+d /run/thaum 0750 thaum thaum -

@@ -1,0 +1,31 @@
+# Install to /etc/systemd/system/thaum.service (adjust paths).
+#
+# Replace:
+#   /srv/thaum/app     — git clone / deployment root (contains app.py)
+#   /srv/thaum/venv    — Python venv with gunicorn + Thaum dependencies
+#
+# Socket path must match nginx proxy_pass (see nginx-thaum.conf.example).
+
+[Unit]
+Description=Thaum (gunicorn, Unix socket)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=thaum
+Group=thaum
+WorkingDirectory=/srv/thaum/app
+Environment=THAUM_CONFIG_FILE=/etc/thaum/thaum.conf
+Environment=PYTHONUNBUFFERED=1
+# UDS: no TCP listener; only processes that can access the socket inode (mode/group) can connect.
+ExecStart=/srv/thaum/venv/bin/gunicorn --bind unix:/run/thaum/thaum.sock --workers 1 app:app
+Restart=always
+RestartSec=5
+
+# Optional: systemd encrypted credentials (same IDs as quadlet).
+# Copy quickstart/systemd/quadlet/thaum.service.credentials.conf.example to:
+#   /etc/systemd/system/thaum.service.d/credentials.conf
+
+[Install]
+WantedBy=multi-user.target
