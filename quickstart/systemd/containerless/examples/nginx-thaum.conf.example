@@ -1,0 +1,20 @@
+# Snippet for nginx: TLS termination + upstream to Thaum over Unix socket.
+# Adjust server_name, certificate paths, and socket path to match thaum-gunicorn.service.example.
+#
+# proxy_pass uses the form http://unix:/path/to.sock: — note the trailing colon.
+
+server {
+    listen 443 ssl http2;
+    server_name thaum.example.com;
+
+    ssl_certificate     /etc/ssl/certs/thaum.example.com.crt;
+    ssl_certificate_key /etc/ssl/private/thaum.example.com.key;
+
+    location / {
+        proxy_pass http://unix:/run/thaum/thaum.sock:;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+        proxy_read_timeout 60s;
+    }
+}
