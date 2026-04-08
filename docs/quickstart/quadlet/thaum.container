@@ -1,0 +1,20 @@
+[Unit]
+Description=Thaum bot service
+After=network-online.target
+Wants=network-online.target
+
+[Container]
+Image=localhost/thaum:latest
+ContainerName=thaum
+PublishPort=5165:5165
+Environment=THAUM_CONFIG_FILE=/etc/thaum/thaum.conf
+Volume=/etc/thaum:/etc/thaum:ro
+Volume=thaum-data.volume:/var/lib/thaum
+Volume=thaum-log.volume:/var/log/thaum
+
+[Service]
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
