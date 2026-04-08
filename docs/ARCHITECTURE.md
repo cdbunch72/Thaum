@@ -63,7 +63,7 @@ Thaum uses a layered configuration model.
 
 - Core deployment fields under `[server]` (base URL, bot driver, lookup plugin name, state dir)
 
-- Nested `[server.database]` (SQLAlchemy `db_url`, vault passphrase, DEK rotation)
+- Nested `[server.database]` (SQLAlchemy `db_url` via secret resolver, vault passphrase, DEK rotation)
 
 - Nested `[server.election]` (namespace, lease, heartbeat interval)
 

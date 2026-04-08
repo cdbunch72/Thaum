@@ -10,6 +10,7 @@ I have over 30 years of experience in IT operations and I know the pain of on-ca
 ## Documentation
 
 - [Architecture](docs/ARCHITECTURE.md) — bootstrap, config model, logging, plugins.
+- [Podman/systemd quickstart](docs/quickstart/README.md) — Quadlet deployment with encrypted credentials.
 - [Style guide](docs/STYLE_GUIDE.md) — code and test conventions.
 - [Admin log level API](docs/admin-log-level.md) — signed runtime log level changes.
 - [Release notes](RELEASE_NOTES.md)

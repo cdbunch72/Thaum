@@ -20,6 +20,7 @@ lookup_plugin = "null"
 
 [server.database]
 # Shared app DB (lookup cache, election, crypto metadata, admin state). SQLAlchemy URL.
+# Supports ResolvedSecret forms via resolve_secret (inline, env:VAR, file:/path, secret:name).
 # Empty/unset -> in-memory SQLite (not durable across restarts).
 # db_url = "sqlite:////var/lib/thaum/thaum.db"
 # database_vault_passphrase = "env:THAUM_DATABASE_VAULT_PASSPHRASE"   # required if Webex omits hmac_secret (shared DB HMAC)
