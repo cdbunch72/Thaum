@@ -1,0 +1,87 @@
+# Thaum Podman Quadlet quickstart
+
+This path deploys Thaum with Podman Quadlet, systemd encrypted credentials, and **localhost-only** exposure on the host.
+
+- Config mounted at `/etc/thaum`
+- Logs persisted at `/var/log/thaum`
+- Database persisted at `/var/lib/thaum`
+- Secrets loaded with systemd encrypted credentials and referenced as `secret:name` in config
+- Gunicorn binds **`127.0.0.1:5165`** inside the container; the host publishes **`127.0.0.1:5165:5165`** only (not `0.0.0.0`)
+
+A reverse proxy on the **same host** can forward to `http://127.0.0.1:5165`. For nginx talking to Thaum over a **Unix domain socket** (stronger isolation on multi-service hosts), use [containerless](../containerless/README.md) instead.
+
+## 1) Prerequisites
+
+- Podman with Quadlet support
+- systemd with `systemd-creds`
+- A built/published Thaum image (the sample uses `localhost/thaum:latest`)
+
+## 2) Create local config
+
+Copy the example config and edit non-secret values:
+
+- [`../thaum.conf.example`](../thaum.conf.example)
+
+Install it as `/etc/thaum/thaum.conf` (or another directory you mount to `/etc/thaum`).
+
+Secret-backed keys in this example:
+
+- `[server.database].db_url = "secret:thaum_db_url"`
+- `[server.database].database_vault_passphrase = "secret:thaum_database_vault_passphrase"`
+- `[defaults.alert.jira].api_token = "secret:thaum_jira_api_token"`
+- `[bots.database].token = "secret:thaum_webex_token_database"`
+
+## 3) Create encrypted credentials
+
+Run:
+
+```bash
+sudo ./quickstart/systemd/scripts/setup-systemd-credentials.sh
+```
+
+The script prompts for each value and writes encrypted credentials to:
+
+- `/etc/credstore.encrypted/thaum_db_url`
+- `/etc/credstore.encrypted/thaum_database_vault_passphrase`
+- `/etc/credstore.encrypted/thaum_jira_api_token`
+- `/etc/credstore.encrypted/thaum_webex_token_database`
+
+## 4) Install Quadlet files
+
+Copy these files to `/etc/containers/systemd/`:
+
+- `quickstart/systemd/quadlet/thaum.container`
+- `quickstart/systemd/quadlet/thaum-data.volume`
+- `quickstart/systemd/quadlet/thaum-log.volume`
+
+Then ensure `/etc/thaum/thaum.conf` exists and reload systemd:
+
+```bash
+sudo systemctl daemon-reload
+```
+
+## 5) Load encrypted credentials into the service
+
+Install the drop-in from:
+
+- `quickstart/systemd/quadlet/thaum.service.credentials.conf.example`
+
+to:
+
+- `/etc/systemd/system/thaum.service.d/credentials.conf`
+
+Then reload:
+
+```bash
+sudo systemctl daemon-reload
+```
+
+## 6) Start and verify
+
+```bash
+sudo systemctl enable --now thaum.service
+sudo systemctl status thaum.service
+sudo journalctl -u thaum.service -n 100 --no-pager
+```
+
+If you enable file logging (`[logging] file = true`), logs are written to `/var/log/thaum/thaum.log`.
