@@ -1,8 +1,0 @@
-[Unit]
-Description=Persistent volume for Thaum database
-
-[Volume]
-VolumeName=thaum-data
-
-[Install]
-WantedBy=default.target
