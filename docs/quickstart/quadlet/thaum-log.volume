@@ -1,0 +1,8 @@
+[Unit]
+Description=Persistent volume for Thaum logs
+
+[Volume]
+VolumeName=thaum-log
+
+[Install]
+WantedBy=default.target
