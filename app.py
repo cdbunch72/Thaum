@@ -11,29 +11,12 @@ Webex HMAC (omit ``hmac_secret`` in bot config). Config: ``THAUM_CONFIG_FILE``, 
 from __future__ import annotations
 
 import os
-from pathlib import Path
 
 from bootstrap import bootstrap
+from thaum.paths import resolve_config_path
 from web import create_app
 
-def _resolve_config_path() -> str:
-    env_path = os.environ.get("THAUM_CONFIG_FILE")
-    if env_path:
-        return env_path
-
-    candidates = (
-        Path("/etc/thaum/thaum.conf"),
-        Path("./thaum.toml"),
-    )
-    for candidate in candidates:
-        if candidate.exists():
-            return str(candidate)
-
-    # Fall back to default in the current directory if no known file exists.
-    return "thaum.toml"
-
-
-_config = bootstrap(_resolve_config_path())
+_config = bootstrap(resolve_config_path())
 app = create_app(_config)
 
 if __name__ == "__main__":

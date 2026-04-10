@@ -7,6 +7,8 @@ from __future__ import annotations
 import logging
 from typing import Any, Dict
 
+from sqlalchemy import create_engine, text
+
 from gemstone_utils.db import init_db
 from thaum.types import ServerConfig
 
@@ -36,6 +38,20 @@ def engine_kwargs_for_sqlite_url(db_url: str) -> Dict[str, Any]:
         "connect_args": {"check_same_thread": False},
         "poolclass": StaticPool,
     }
+
+
+def test_app_db_connection(db_url: str, **engine_kw: Any) -> None:
+    """
+    Open a connection and run ``SELECT 1`` to verify URL, driver, auth, and network.
+    Does not create application tables (see :func:`init_app_db`).
+    """
+    merged_kw: Dict[str, Any] = {**engine_kwargs_for_sqlite_url(db_url), **engine_kw}
+    engine = create_engine(db_url, **merged_kw)
+    try:
+        with engine.connect() as conn:
+            conn.execute(text("SELECT 1"))
+    finally:
+        engine.dispose()
 
 
 def init_app_db(db_url: str, *, echo: bool = False, **engine_kw: Any) -> None:

@@ -3,8 +3,10 @@
 # thaum/types.py
 import time
 import os
+from contextlib import contextmanager
+from contextvars import ContextVar
 from pydantic import ConfigDict, Field, model_validator, BaseModel, SecretStr, BeforeValidator
-from typing import Optional, Annotated, Dict, List, TYPE_CHECKING
+from typing import Any, Iterator, Optional, Annotated, Dict, List, TYPE_CHECKING
 from enum import StrEnum,IntEnum,auto
 from gemstone_utils.experimental.secrets_resolver import resolve_secret
 import logging
@@ -13,7 +15,24 @@ from dataclasses import dataclass, field
 if TYPE_CHECKING:
     from bots.base import BaseChatBot
 
-ResolvedSecret = Annotated[SecretStr, BeforeValidator(resolve_secret)]
+# When True, ResolvedSecret / OptionalResolvedSecret keep raw reference strings (no env/file/azexp I/O).
+config_schema_only: ContextVar[bool] = ContextVar("config_schema_only", default=False)
+
+
+@contextmanager
+def schema_only_validation() -> Iterator[None]:
+    """Enable schema-only config validation (no secret resolution) for this block."""
+    token = config_schema_only.set(True)
+    try:
+        yield
+    finally:
+        config_schema_only.reset(token)
+
+
+def _resolved_secret_before(v: object) -> Any:
+    if config_schema_only.get():
+        return SecretStr(str(v))
+    return resolve_secret(str(v))
 
 
 def _optional_resolved_secret(v: object) -> Optional[str]:
@@ -22,9 +41,12 @@ def _optional_resolved_secret(v: object) -> Optional[str]:
     s = str(v).strip()
     if not s:
         return None
+    if config_schema_only.get():
+        return s
     return str(resolve_secret(s))
 
 
+ResolvedSecret = Annotated[SecretStr, BeforeValidator(_resolved_secret_before)]
 OptionalResolvedSecret = Annotated[Optional[str], BeforeValidator(_optional_resolved_secret)]
 
 logger = logging.getLogger("thaum.types")

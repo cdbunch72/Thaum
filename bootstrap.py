@@ -34,15 +34,14 @@ def _merge_alert_defaults(defaults_root: Any, alert_type: str, instance: Any) ->
     return merged
 
 
-def bootstrap(config_path: str) -> Dict[str, Any]:
+def validate_config_after_load(config: Dict[str, Any]) -> BaseModel:
     """
-    Load config, logging, import plugins, validate all Pydantic configs, init DB,
-    instantiate lookup + bots + alert plugins.
-    """
-    config = load_and_validate(config_path)
-    server: ServerConfig = config["server"]
+    Import plugins and validate lookup, bot, and alert plugin Pydantic models.
 
-    configure_logging(config["log"], server)
+    Mutates each ``[bots.<id>]`` row with ``_validated_bot`` and ``_validated_alert``.
+    Returns the validated lookup plugin config instance.
+    """
+    server: ServerConfig = config["server"]
 
     bot_type = server.bot_type
     lookup_type = server.lookup_plugin
@@ -90,6 +89,23 @@ def bootstrap(config_path: str) -> Dict[str, Any]:
                 "server.database.database_vault_passphrase is required when a Webex bot omits "
                 "hmac_secret (shared DB HMAC mode)."
             )
+
+    return validated_lookup
+
+
+def bootstrap(config_path: str) -> Dict[str, Any]:
+    """
+    Load config, logging, import plugins, validate all Pydantic configs, init DB,
+    instantiate lookup + bots + alert plugins.
+    """
+    config = load_and_validate(config_path)
+    server: ServerConfig = config["server"]
+
+    configure_logging(config["log"], server)
+
+    validated_lookup = validate_config_after_load(config)
+    lookup_type = server.lookup_plugin
+    bot_type = server.bot_type
 
     db_url = resolve_app_db_url(server)
     init_app_db(db_url)
