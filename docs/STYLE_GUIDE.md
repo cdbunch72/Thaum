@@ -291,7 +291,66 @@ This structure keeps concerns isolated and predictable.
 
 ------------------------------------------------------------------------
 
-## 11. Operational Safety Rules
+## 11. Docstring Conventions
+
+Thaum docstrings exist to improve maintainability and onboarding, not to
+generate exhaustive API documentation.
+
+### Scope
+
+- Require a module docstring for non-trivial modules.
+
+- Require docstrings for public classes, public functions, and public
+  methods.
+
+- Allow private helper docstrings (\_name) to be optional unless behavior
+  is non-obvious or surprising.
+
+- Keep test docstrings optional; prefer descriptive test names first.
+
+### Content
+
+- Start with a short summary sentence describing intent.
+
+- Add brief details only when needed (side effects, failure behavior,
+  important lifecycle assumptions).
+
+- Avoid repeating information already expressed clearly in type hints.
+
+### Recommended Shapes
+
+Module docstring:
+
+  -----------------------------------------------------------------------
+  \"\"\"Leader election and maintenance orchestration.
+
+  Runs heartbeat/election logic and executes registered maintenance tasks
+  when this node is leader.
+  \"\"\"
+  -----------------------------------------------------------------------
+
+Function/method docstring:
+
+  -----------------------------------------------------------------------
+  \"\"\"Resolve a Jira account ID for an email address.
+
+  Notes:
+  - Side effects: may query remote API and update lookup cache.
+  - Returns: account ID when resolved, otherwise None.
+  - Raises: only for invalid caller input; operational failures are
+    logged and handled by caller policy.
+  \"\"\"
+  -----------------------------------------------------------------------
+
+### When to Omit
+
+Docstrings may be omitted for one-line, self-explanatory private helpers
+where intent is obvious from naming, signature, and immediate context.
+If behavior is subtle, include a docstring even for private code.
+
+------------------------------------------------------------------------
+
+## 12. Operational Safety Rules
 
 - Logging must never leak secrets.
 
@@ -305,7 +364,7 @@ This structure keeps concerns isolated and predictable.
 
 ------------------------------------------------------------------------
 
-## 12. Summary
+## 13. Summary
 
 Thaum's style guide enforces:
 
