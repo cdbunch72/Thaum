@@ -3,10 +3,12 @@
 # alerts/plugins/jira/plugin.py
 from __future__ import annotations
 
+import traceback
 from typing import Any, Callable, Dict, Optional
 
 from requests.auth import HTTPBasicAuth
 
+from log_setup import log_debug_blob
 from alerts.base import BaseAlertPlugin
 from alerts.plugins.jira.config import JiraAlertPluginConfig
 from alerts.plugins.jira.mapping_store import upsert_pending_row
@@ -44,6 +46,13 @@ class JiraPlugin(BaseAlertPlugin):
             self._refresh_team_cache()
         except Exception as e:
             self.logger.warning("Could not prewarm Jira team cache: %s", e)
+            if self.logger.isEnabledFor(LogLevel.SPAM):
+                log_debug_blob(
+                    self.logger,
+                    "attach_bot prewarm traceback",
+                    traceback.format_exc(),
+                    LogLevel.SPAM,
+                )
     # -- End Method attach_bot
 
     def validate_status_webhook_authorization(self, authorization_header_value: Optional[str]) -> bool:
@@ -128,6 +137,13 @@ class JiraPlugin(BaseAlertPlugin):
             return True
         except Exception as e:
             self.logger.error("Jira connection/resolve validation failed: %s", e)
+            if self.logger.isEnabledFor(LogLevel.SPAM):
+                log_debug_blob(
+                    self.logger,
+                    "validate_connection traceback",
+                    traceback.format_exc(),
+                    LogLevel.SPAM,
+                )
             return False
     # -- End Method validate_connection
 

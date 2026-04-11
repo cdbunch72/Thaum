@@ -22,6 +22,7 @@ def create_instance_plugin(config: JiraAlertPluginConfig) -> JiraPlugin:
 
 def maintenance_tasks_register(registry: Any, *, server_cfg: ServerConfig, config: Dict[str, Any]) -> None:
     return
+# -- End Function maintenance_tasks_register
 
 
 __all__ = [

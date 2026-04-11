@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import base64
+import binascii
 import hashlib
 import json
 import logging
@@ -91,7 +92,7 @@ def _try_decode_bearer_blob(blob: str) -> Tuple[dict[str, Any], bytes]:
         raw = _b64url_decode_padded(blob)
         text = raw.decode("utf-8")
         obj = json.loads(text)
-    except Exception:
+    except (binascii.Error, UnicodeDecodeError, json.JSONDecodeError, TypeError, ValueError):
         text = blob
         obj = json.loads(text)
 

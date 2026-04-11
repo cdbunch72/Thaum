@@ -75,7 +75,7 @@ def parse_created_alert_id(response: requests.Response) -> str:
     try:
         resp_json = response.json()
         jira_alert_id = str(resp_json.get("alertId") or resp_json.get("id") or "")
-    except Exception:
+    except (json.JSONDecodeError, AttributeError, TypeError, ValueError):
         jira_alert_id = ""
     return jira_alert_id
 # -- End Function parse_created_alert_id

@@ -3,11 +3,16 @@
 # alerts/plugins/jira/users.py
 from __future__ import annotations
 
+import logging
+import traceback
 from typing import Any, Optional
 
 import requests
 
-from thaum.types import ThaumPerson
+from log_setup import log_debug_blob
+from thaum.types import LogLevel, ThaumPerson
+
+logger = logging.getLogger("alerts.jira.users")
 
 
 def resolve_email_to_account_id(
@@ -24,7 +29,15 @@ def resolve_email_to_account_id(
     if lookup is not None:
         try:
             cached = lookup.get_person_by_email(key)
-        except Exception:
+        except Exception as e:
+            logger.debug("Jira lookup get_person_by_email failed for %s: %s", key, e)
+            if logger.isEnabledFor(LogLevel.SPAM):
+                log_debug_blob(
+                    logger,
+                    "get_person_by_email traceback",
+                    traceback.format_exc(),
+                    LogLevel.SPAM,
+                )
             cached = None
         if cached is not None:
             cached_id = cached.platform_ids.get("jira")
@@ -60,8 +73,20 @@ def resolve_email_to_account_id(
                         fragment.display_name = display_name
                         fragment.source_plugin = "jira"
                     lookup.merge_person(fragment)
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.warning(
+                        "Jira merge_person cache update failed for %s (accountId=%s): %s",
+                        key,
+                        account_id,
+                        e,
+                    )
+                    if logger.isEnabledFor(LogLevel.SPAM):
+                        log_debug_blob(
+                            logger,
+                            "merge_person traceback",
+                            traceback.format_exc(),
+                            LogLevel.SPAM,
+                        )
             return account_id
 
     for u in users:
@@ -78,8 +103,20 @@ def resolve_email_to_account_id(
                         fragment.display_name = display_name
                         fragment.source_plugin = "jira"
                     lookup.merge_person(fragment)
-                except Exception:
-                    pass
+                except Exception as e:
+                    logger.warning(
+                        "Jira merge_person cache update failed for %s (accountId=%s): %s",
+                        key,
+                        account_id,
+                        e,
+                    )
+                    if logger.isEnabledFor(LogLevel.SPAM):
+                        log_debug_blob(
+                            logger,
+                            "merge_person traceback",
+                            traceback.format_exc(),
+                            LogLevel.SPAM,
+                        )
             return account_id
 
     return None
