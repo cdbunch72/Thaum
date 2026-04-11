@@ -43,13 +43,13 @@ def run_test_config(config_path: str) -> None:
     _enable_azexp_backend()
     from bootstrap import validate_config_after_load
     from config import load_and_validate
-    from thaum.db_bootstrap import resolve_app_db_url, test_app_db_connection
+    from thaum.db_bootstrap import resolve_app_db_url, verify_app_db_connection
 
     config = load_and_validate(config_path)
     validate_config_after_load(config)
     server = config["server"]
     db_url = resolve_app_db_url(server)
-    test_app_db_connection(db_url)
+    verify_app_db_connection(db_url)
 
 
 def main() -> None:

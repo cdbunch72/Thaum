@@ -8,8 +8,8 @@ from datetime import datetime, timedelta, timezone
 
 from gemstone_utils.db import get_session
 from gemstone_utils.encrypted_fields import parse_encrypted_field
-from gemstone_utils.sqlalchemy.key_storage import GemstoneKeyRecord
-from sqlalchemy import text
+from gemstone_utils.sqlalchemy.key_storage import GemstoneKeyKdf, GemstoneKeyRecord
+from sqlalchemy import func, select, text
 
 from thaum.db_bootstrap import init_app_db
 from thaum.bot_webhook_state import ensure_bot_webhook_hmac_secret
@@ -38,12 +38,18 @@ class DatabaseCryptoBootstrapTest(unittest.TestCase):
         self.assertTrue(is_database_crypto_ready())
 
         with get_session() as session:
-            r0 = session.get(GemstoneKeyRecord, 0)
-            r1 = session.get(GemstoneKeyRecord, 1)
-            self.assertIsNotNone(r0)
-            self.assertIsNotNone(r1)
-            self.assertFalse(r0.is_active)
-            self.assertTrue(r1.is_active)
+            n_kdf = session.scalar(select(func.count()).select_from(GemstoneKeyKdf))
+            n_dek = session.scalar(
+                select(func.count()).select_from(GemstoneKeyRecord).where(
+                    GemstoneKeyRecord.is_active.is_(True)
+                )
+            )
+            self.assertEqual(n_kdf, 1)
+            self.assertEqual(n_dek, 1)
+            kdf = session.scalars(select(GemstoneKeyKdf)).first()
+            self.assertIsNotNone(kdf)
+            assert kdf is not None
+            self.assertIsNotNone(kdf.canary_wrapped)
 
         apply_database_crypto(srv)
         self.assertTrue(is_database_crypto_ready())
@@ -57,10 +63,15 @@ class DatabaseCryptoBootstrapTest(unittest.TestCase):
 
         ensure_bot_webhook_hmac_secret("b1")
 
+        kid_before: str
         with get_session() as session:
-            r1 = session.get(GemstoneKeyRecord, 1)
-            self.assertIsNotNone(r1)
-            r1.created_at = datetime.now(timezone.utc) - timedelta(days=2)
+            r = session.scalars(
+                select(GemstoneKeyRecord).where(GemstoneKeyRecord.is_active.is_(True))
+            ).first()
+            self.assertIsNotNone(r)
+            assert r is not None
+            kid_before = r.key_id
+            r.created_at = datetime.now(timezone.utc) - timedelta(days=2)
             session.commit()
 
         rotate_data_encryption_key_if_due(srv)
@@ -70,8 +81,8 @@ class DatabaseCryptoBootstrapTest(unittest.TestCase):
                 text("SELECT secret_enc FROM bot_webhook_hmac WHERE bot_key = :k"),
                 {"k": "b1"},
             ).scalar_one()
-            _, kid_before, _, _ = parse_encrypted_field(raw)
-            self.assertEqual(kid_before, 1)
+            _, kid_wire_before, _, _ = parse_encrypted_field(raw)
+            self.assertEqual(kid_wire_before, kid_before)
 
         progressive_reencrypt_encrypted_strings_if_needed(srv)
 
@@ -81,4 +92,10 @@ class DatabaseCryptoBootstrapTest(unittest.TestCase):
                 {"k": "b1"},
             ).scalar_one()
             _, kid_after, _, _ = parse_encrypted_field(raw)
-            self.assertEqual(kid_after, 2)
+            r_active = session.scalars(
+                select(GemstoneKeyRecord).where(GemstoneKeyRecord.is_active.is_(True))
+            ).first()
+            self.assertIsNotNone(r_active)
+            assert r_active is not None
+            self.assertEqual(kid_after, r_active.key_id)
+            self.assertNotEqual(kid_after, kid_before)

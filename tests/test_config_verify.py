@@ -14,7 +14,7 @@ import thaum.db_bootstrap  # noqa: F401 — load thaum package before bootstrap 
 
 from bootstrap import validate_config_after_load
 from config import load_and_validate
-from thaum.db_bootstrap import DEFAULT_APP_DB_URL, test_app_db_connection
+from thaum.db_bootstrap import DEFAULT_APP_DB_URL, verify_app_db_connection
 from thaum.types import schema_only_validation
 
 
@@ -107,7 +107,7 @@ class TestConfigCliTest(unittest.TestCase):
 
         try:
             mod = _load_thaum_config_check_module()
-            with patch("thaum.db_bootstrap.test_app_db_connection") as mock_ping:
+            with patch("thaum.db_bootstrap.verify_app_db_connection") as mock_ping:
                 mod.run_test_config(path)
             mock_ping.assert_called_once()
             url = mock_ping.call_args[0][0]
@@ -118,4 +118,4 @@ class TestConfigCliTest(unittest.TestCase):
 
 class TestAppDbConnectionTest(unittest.TestCase):
     def test_select_one_sqlite_memory(self) -> None:
-        test_app_db_connection(DEFAULT_APP_DB_URL)
+        verify_app_db_connection(DEFAULT_APP_DB_URL)

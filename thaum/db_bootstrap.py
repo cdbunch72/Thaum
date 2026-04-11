@@ -40,7 +40,7 @@ def engine_kwargs_for_sqlite_url(db_url: str) -> Dict[str, Any]:
     }
 
 
-def test_app_db_connection(db_url: str, **engine_kw: Any) -> None:
+def verify_app_db_connection(db_url: str, **engine_kw: Any) -> None:
     """
     Open a connection and run ``SELECT 1`` to verify URL, driver, auth, and network.
     Does not create application tables (see :func:`init_app_db`).

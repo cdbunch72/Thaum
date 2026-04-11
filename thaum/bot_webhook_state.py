@@ -98,12 +98,13 @@ def re_encrypt_bot_webhook_hmac_secrets(session, plaintext_by_bot_key: dict[str,
 def re_encrypt_stale_bot_webhook_hmac_batch(
     session,
     *,
-    active_dek_key_id: int,
-    resolve_keyctx: Callable[[int], KeyContext],
+    active_dek_key_id: str,
+    resolve_keyctx: Callable[[str], KeyContext],
     batch_limit: int = 50,
 ) -> int:
     """
-    Re-assign plaintext for rows whose stored wire still names a non-active DEK key id,
+    Re-assign plaintext for rows whose stored wire still names a non-active DEK key id
+    (UUID string segment in the encrypted-field wire format),
     so values are re-encrypted under :meth:`EncryptedString.set_current_keyctx`.
 
     Reads ciphertext via raw SQL so the embedded key id can be inspected without ORM coercion.

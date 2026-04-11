@@ -7,11 +7,12 @@ import logging
 from datetime import datetime, timedelta, timezone
 from typing import Any, Dict, Optional
 
-from sqlalchemy import func, select
+from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 
 from gemstone_utils.crypto import generate_key_by_alg, recommended_data_alg
 from gemstone_utils.db import get_session
+from gemstone_utils.key_id import new_key_id
 from gemstone_utils.key_mgmt import (
     init as key_mgmt_init,
     derive_and_verify_kek,
@@ -24,11 +25,13 @@ from gemstone_utils.sqlalchemy.key_storage import (
     GemstoneKeyKdf,
     GemstoneKeyRecord,
     get_kdf_params,
+    iter_kek_slots,
     keyrecord_to_wire,
     make_keyctx_resolver,
     new_kdf_params,
     put_keyrecord,
     set_kdf_params,
+    set_kek_canary,
     wire_to_keyrecord,
     wire_wrap,
 )
@@ -40,8 +43,6 @@ logger = logging.getLogger("thaum.database_crypto")
 
 THAUM_KEK_CHECK_PLAINTEXT = b"thaum-v1-kek-check"
 THAUM_VAULT_SECRET_NAME = "thaum-database-vault"
-
-_WRAP_KEY_ID = 1
 
 # Progressive catch-up: rows per leader tick
 _ENCRYPTED_FIELD_CATCHUP_BATCH = 50
@@ -79,13 +80,19 @@ def requires_database_vault_passphrase(config: Dict[str, Any]) -> bool:
     return False
 
 
+def _single_kek_slot(session) -> GemstoneKeyKdf:
+    rows = list(iter_kek_slots(session))
+    if len(rows) == 0:
+        raise RuntimeError("no gemstone_key_kdf row (KEK slot)")
+    if len(rows) > 1:
+        raise RuntimeError("multiple KEK slots in gemstone_key_kdf; Thaum expects exactly one")
+    return rows[0]
+
+
 def active_dek_row(session) -> Optional[GemstoneKeyRecord]:
     rows = list(
         session.scalars(
-            select(GemstoneKeyRecord).where(
-                GemstoneKeyRecord.key_id >= 1,
-                GemstoneKeyRecord.is_active.is_(True),
-            )
+            select(GemstoneKeyRecord).where(GemstoneKeyRecord.is_active.is_(True))
         ).all()
     )
     if len(rows) > 1:
@@ -98,21 +105,17 @@ def _insert_initial_keys(session, passphrase: str) -> None:
     kdf_params = new_kdf_params()
     kek = derive_kek(passphrase, kdf_params)
     canary = make_kek_check_record(kek)
+    wrap_key_id = new_key_id()
+    set_kdf_params(session, wrap_key_id, kdf_params)
+    w_canary = keyrecord_to_wire(canary, wrap_key_id)
+    set_kek_canary(session, wrap_key_id, w_canary)
     dek = generate_key_by_alg(da)
-    w0 = keyrecord_to_wire(canary, _WRAP_KEY_ID)
-    w1 = wire_wrap(_WRAP_KEY_ID, kek, dek, alg=da)
-    set_kdf_params(session, _WRAP_KEY_ID, kdf_params)
+    w_dek = wire_wrap(wrap_key_id, kek, dek, alg=da)
+    dek_key_id = new_key_id()
     put_keyrecord(
         session,
-        key_id=0,
-        wrapped=w0,
-        data_alg=da,
-        is_active=False,
-    )
-    put_keyrecord(
-        session,
-        key_id=1,
-        wrapped=w1,
+        key_id=dek_key_id,
+        wrapped=w_dek,
         data_alg=da,
         is_active=True,
     )
@@ -135,24 +138,26 @@ def apply_database_crypto(server_cfg: ServerConfig) -> None:
         env_allowed=False,
     )
 
-    active_id: int
+    active_id: str
     ctx = None
     for attempt in range(4):
         session = get_session()
         try:
-            if session.get(GemstoneKeyKdf, _WRAP_KEY_ID) is None:
+            if not list(iter_kek_slots(session)):
                 _insert_initial_keys(session, passphrase)
             session.commit()
 
-            kdf_params = get_kdf_params(session, _WRAP_KEY_ID)
+            kdf_row = _single_kek_slot(session)
+            wrap_key_id = kdf_row.key_id
+            kdf_params = get_kdf_params(session, wrap_key_id)
             kek = derive_kek(passphrase, kdf_params)
-            row0 = session.get(GemstoneKeyRecord, 0)
-            if row0 is None:
-                raise RuntimeError("gemstone_key_record row 0 (KEK canary) is missing")
+            if kdf_row.canary_wrapped is None:
+                raise RuntimeError("gemstone_key_kdf row has no KEK canary (canary_wrapped)")
             derive_and_verify_kek(
                 passphrase,
                 kdf_params,
-                wire_to_keyrecord(0, row0.wrapped),
+                wire_to_keyrecord(None, kdf_row.canary_wrapped),
+                last_updated=kdf_row.updated_at,
             )
 
             row_active = active_dek_row(session)
@@ -211,24 +216,23 @@ def rotate_data_encryption_key_if_due(server_cfg: ServerConfig) -> None:
         if (now - _as_utc(active.created_at)) < timedelta(days=days):
             return
 
-        kdf_params = get_kdf_params(session, _WRAP_KEY_ID)
+        kdf_row = _single_kek_slot(session)
+        wrap_key_id = kdf_row.key_id
+        kdf_params = get_kdf_params(session, wrap_key_id)
         kek = derive_kek(passphrase, kdf_params)
-        row0 = session.get(GemstoneKeyRecord, 0)
-        if row0 is None:
+        if kdf_row.canary_wrapped is None:
             return
         derive_and_verify_kek(
             passphrase,
             kdf_params,
-            wire_to_keyrecord(0, row0.wrapped),
+            wire_to_keyrecord(None, kdf_row.canary_wrapped),
+            last_updated=kdf_row.updated_at,
         )
 
-        mx = session.scalar(
-            select(func.max(GemstoneKeyRecord.key_id)).where(GemstoneKeyRecord.key_id >= 1)
-        )
-        new_id = int(mx or 1) + 1
         da = active.data_alg
         new_dek = generate_key_by_alg(da)
-        w_new = wire_wrap(_WRAP_KEY_ID, kek, new_dek, alg=da)
+        w_new = wire_wrap(wrap_key_id, kek, new_dek, alg=da)
+        new_id = new_key_id()
 
         put_keyrecord(
             session,
@@ -247,7 +251,7 @@ def rotate_data_encryption_key_if_due(server_cfg: ServerConfig) -> None:
 def progressive_reencrypt_encrypted_strings_if_needed(server_cfg: ServerConfig) -> None:
     """
     Leader-only: re-encrypt a batch of :class:`BotWebhookHmac` rows that still
-    reference an older DEK key id in the stored wire string.
+    reference an older DEK key id (UUID string) in the stored wire string.
     """
     if not _crypto_ready:
         apply_database_crypto(server_cfg)

@@ -9,7 +9,7 @@ ARG PYTHON_VERSION=3.13
 # --- build stage: venv, deps from git + requirements, then strip pip ---
 FROM python:${PYTHON_VERSION}-slim AS builder
 
-ARG GEMSTONE_UTILS_REF=main
+ARG GEMSTONE_UTILS_REF=v0.3.0a1
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
@@ -27,12 +27,12 @@ COPY requirements.txt .
 RUN python -m venv /venv
 ENV PATH="/venv/bin:$PATH"
 
-# Install gemstone_utils from GitHub first; omit the PyPI `gemstone_utils` line from requirements.
+# Install gemstone_utils from GitHub first; omit any gemstone_utils requirement line from requirements.txt.
 RUN pip install --no-cache-dir --upgrade pip setuptools wheel \
     && pip install --no-cache-dir \
         "gemstone_utils[azure] @ git+https://github.com/cdbunch72/gemstone_utils.git@${GEMSTONE_UTILS_REF}" \
     && pip install --no-cache-dir gunicorn \
-    && grep -v '^gemstone_utils[[:space:]]*$' requirements.txt > /tmp/requirements.nopypi-eu.txt \
+    && grep -v '^gemstone_utils' requirements.txt > /tmp/requirements.nopypi-eu.txt \
     && pip install --no-cache-dir -r /tmp/requirements.nopypi-eu.txt \
     && pip uninstall -y pip setuptools wheel \
     && rm -f /venv/bin/pip /venv/bin/pip3 /venv/bin/pip3.* 2>/dev/null || true
