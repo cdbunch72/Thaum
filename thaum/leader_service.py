@@ -7,6 +7,7 @@ import atexit
 import logging
 import threading
 import time
+import traceback
 from dataclasses import dataclass
 from typing import Any, Callable, Dict, List, Optional
 from uuid import UUID, uuid4
@@ -15,6 +16,8 @@ from gemstone_utils import election
 
 from thaum.factory import BOTS
 from thaum.types import ServerConfig
+from thaum.types import LogLevel
+from log_setup import log_debug_blob
 
 logger = logging.getLogger("thaum.leader_service")
 
@@ -67,8 +70,10 @@ def _run_due_tasks(
             continue
         try:
             t.fn(ctx, t.task_data)
-        except Exception:
-            logger.exception("Leader task %r failed", t.name)
+        except Exception as e:
+            logger.error("Leader task %r failed: %s", t.name, e)
+            if logger.isEnabledFor(LogLevel.SPAM):
+                log_debug_blob(logger, f"leader task traceback ({t.name})", traceback.format_exc(), LogLevel.SPAM)
         last_run[t.name] = now
 
 
@@ -82,8 +87,10 @@ def _leader_loop_body(server_cfg: ServerConfig, config: Dict[str, Any], cid: UUI
             election.elect(cid, ns)
             if election.is_leader(cid, ns):
                 _run_due_tasks(server_cfg, config, last_run)
-        except Exception:
-            logger.exception("Leader loop tick failed")
+        except Exception as e:
+            logger.error("Leader loop tick failed: %s", e)
+            if logger.isEnabledFor(LogLevel.SPAM):
+                log_debug_blob(logger, "leader loop tick traceback", traceback.format_exc(), LogLevel.SPAM)
         if _shutdown.wait(timeout=tick):
             break
 
@@ -112,8 +119,10 @@ def start_leader_loop(
         try:
             if _candidate_id is not None:
                 election.unregister_candidate(_candidate_id, server_cfg.election.namespace)
-        except Exception:
-            logger.debug("unregister_candidate failed during shutdown", exc_info=True)
+        except Exception as e:
+            logger.debug("unregister_candidate failed during shutdown: %s", e)
+            if logger.isEnabledFor(LogLevel.SPAM):
+                log_debug_blob(logger, "leader unregister traceback", traceback.format_exc(), LogLevel.SPAM)
 
     atexit.register(_unregister)
 

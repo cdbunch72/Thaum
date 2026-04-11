@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import logging
+import traceback
 from typing import Any, Dict
 
 from flask import Flask, jsonify, request
@@ -13,6 +14,8 @@ from thaum.database_crypto import apply_database_crypto
 from thaum.factory import BOTS
 from thaum.leader_service import start_leader_loop
 from thaum.types import ServerConfig
+from thaum.types import LogLevel
+from log_setup import log_debug_blob
 
 logger = logging.getLogger("thaum.web")
 
@@ -40,7 +43,9 @@ def create_app(config: Dict[str, Any], *, run_leader_loop: bool = True) -> Flask
         try:
             bot.handle_event(payload)
         except Exception as e:
-            logger.exception("handle_event failed for bot %s: %s", bot_key, e)
+            logger.error("handle_event failed for bot %s: %s", bot_key, e)
+            if logger.isEnabledFor(LogLevel.SPAM):
+                log_debug_blob(logger, f"handle_event traceback (bot={bot_key})", traceback.format_exc(), LogLevel.SPAM)
             return jsonify({"error": "internal error"}), 500
         return "", 204
 
@@ -74,7 +79,14 @@ def create_app(config: Dict[str, Any], *, run_leader_loop: bool = True) -> Flask
         try:
             plugin.handle_status_webhook(payload)
         except Exception as e:
-            logger.exception("alert status webhook handler failed for bot %s: %s", bot_key, e)
+            logger.error("alert status webhook handler failed for bot %s: %s", bot_key, e)
+            if logger.isEnabledFor(LogLevel.SPAM):
+                log_debug_blob(
+                    logger,
+                    f"alert status webhook traceback (bot={bot_key})",
+                    traceback.format_exc(),
+                    LogLevel.SPAM,
+                )
         return "", 204
 
     start_leader_loop(server, config, run_leader_loop=run_leader_loop)
