@@ -8,6 +8,8 @@ import traceback
 from typing import Any, Dict
 
 from flask import Flask, jsonify, request
+from gemstone_utils.db import get_session
+from sqlalchemy import text
 
 from thaum.admin_log_level import admin_log_routes_enabled, handle_admin_log_level_post
 from thaum.database_crypto import apply_database_crypto
@@ -24,6 +26,20 @@ def create_app(config: Dict[str, Any], *, run_leader_loop: bool = True) -> Flask
     """Flask application factory; expects ``bootstrap()`` to have run first."""
     app = Flask(__name__)
     app.config["THAUM"] = config
+
+    @app.get("/health")
+    def health():
+        return jsonify({"status": "ok"}), 200
+
+    @app.get("/ready")
+    def ready():
+        try:
+            with get_session() as session:
+                session.execute(text("SELECT 1"))
+        except Exception as e:
+            logger.warning("Readiness check failed: %s", e)
+            return jsonify({"status": "unavailable", "reason": "database"}), 503
+        return jsonify({"status": "ok"}), 200
 
     @app.post("/bot/<bot_key>")
     def bot_webhook(bot_key: str):

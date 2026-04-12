@@ -19,6 +19,8 @@ I have over 30 years of experience in IT operations and I know the pain of on-ca
 - [Admin log level API](docs/admin-log-level.md) — signed runtime log level changes.
 - [Release notes](RELEASE_NOTES.md)
 
+**Container / load-balancer probes:** `GET /health` returns 200 when the process can serve HTTP (liveness). `GET /ready` returns 200 when the app can reach its database (`SELECT 1` via the normal SQLAlchemy pool); it returns 503 if the database check fails (readiness). Example: `curl -sf http://127.0.0.1:5165/health` and `curl -sf http://127.0.0.1:5165/ready` (adjust host/port to your bind).
+
 ## Container images (CI)
 
 Publishing runs from [`.github/workflows/release.yml`](.github/workflows/release.yml) when a **GitHub Release is published** or when you **Run workflow** manually (`workflow_dispatch`). The job runs the unit tests, then builds [`Dockerfile`](Dockerfile) and pushes two tags: **`<version>`** from `[project].version` in `pyproject.toml`, plus **`:devel`** for manual runs and GitHub prereleases, or **`:latest`** for stable releases.
