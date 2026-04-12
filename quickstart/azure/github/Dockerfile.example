@@ -1,0 +1,23 @@
+# SPDX-License-Identifier: MPL-2.0
+# Example Dockerfile for a small "deploy repo": extend the published Thaum image and bake config.
+#
+# Copy to `Dockerfile` next to your `thaum.conf`. Pin the base image to a release tag or digest
+# (see Thaum README "Container images (CI)"); avoid relying only on :latest for production.
+#
+# Upstream registry defaults to GitHub Container Registry for the Thaum project; replace ORG/REPO
+# if you fork or mirror the image.
+
+ARG THAUM_BASE_IMAGE=ghcr.io/gemstone-software-dev/thaum:latest
+
+FROM ${THAUM_BASE_IMAGE}
+
+# Default in the stock image: /etc/thaum/thaum.conf (see Thaum Dockerfile / docs).
+COPY thaum.conf /etc/thaum/thaum.conf
+
+# --- Simplest path (bundled PostgreSQL in the same container; single instance; not for HA) ---
+# Do not set THAUM_EXTERNAL_DB. See quickstart/azure/github/README.md for ephemeral-disk caveat.
+
+# --- Optional: external managed Postgres ---
+# ENV THAUM_EXTERNAL_DB=true
+# Set [server.database].db_url in thaum.conf (or via env resolution your config supports).
+# Gunicorn-only entrypoint when THAUM_EXTERNAL_DB=true — see Thaum docker/entrypoint.sh

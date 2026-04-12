@@ -1,0 +1,26 @@
+# SPDX-License-Identifier: MPL-2.0
+# Print Azure Key Vault URI (vaultUri) for use in documentation or manual TOML editing.
+# Copy to keyvault-uri.ps1 and run non-interactively, e.g.:
+#   .\keyvault-uri.ps1 -VaultName myvault
+#   .\keyvault-uri.ps1 -VaultName myvault -Subscription "00000000-0000-0000-0000-000000000000"
+#
+# For storing secrets use Azure CLI or your standard process, e.g.:
+#   az keyvault secret set --vault-name myvault --name MySecret --value "..."
+#
+# `azexp:` reference grammar is defined in gemstone_utils (see Thaum thaum_config_check / docs).
+
+param(
+    [Parameter(Mandatory = $true, HelpMessage = "Key Vault name")]
+    [string] $VaultName,
+
+    [Parameter(Mandatory = $false)]
+    [string] $Subscription
+)
+
+$ErrorActionPreference = "Stop"
+
+if ($Subscription) {
+    az account set --subscription $Subscription | Out-Null
+}
+
+az keyvault show --name $VaultName --query properties.vaultUri -o tsv
