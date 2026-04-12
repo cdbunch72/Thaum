@@ -136,6 +136,7 @@ jobs:
               echo 'TAGS<<__THAUM_TAGS__'
               echo "${IMAGE}:${VERSION}"
               echo "${IMAGE}:latest"
+              echo "${IMAGE}:devel"
               echo '__THAUM_TAGS__'
             } >> "$GITHUB_ENV"
           fi
