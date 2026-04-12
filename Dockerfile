@@ -33,7 +33,7 @@ ENV PATH="/venv/bin:$PATH"
 # Install gemstone_utils from GitHub first; omit any gemstone_utils requirement line from requirements.txt.
 RUN pip install --no-cache-dir --upgrade pip setuptools wheel \
     && pip install --no-cache-dir \
-        "gemstone_utils[azure] @ git+https://github.com/cdbunch72/gemstone_utils.git@${GEMSTONE_UTILS_REF}" \
+        "gemstone_utils[azure] @ git+https://github.com/gemstone-software-dev/gemstone_utils.git@${GEMSTONE_UTILS_REF}" \
     && grep -v '^gemstone_utils' requirements.txt > /tmp/requirements.nopypi-eu.txt \
     && pip install --no-cache-dir -r /tmp/requirements.nopypi-eu.txt \
     && pip uninstall -y pip setuptools wheel \

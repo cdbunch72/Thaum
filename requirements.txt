@@ -3,7 +3,7 @@
 # v0.3+ (UUID key ids, KEK canary on GemstoneKeyKdf). Use tag for reproducible installs.
 # Local dev: pip install -e ../gemstone_utils
 # Install from metadata: pip install .
-gemstone_utils @ git+https://github.com/cdbunch72/gemstone_utils.git@v0.3.0a1
+gemstone_utils @ git+https://github.com/gemstone-software-dev/gemstone_utils.git@v0.3.0a1
 tzdata; platform_system == "Windows"
 Flask
 gunicorn
