@@ -94,10 +94,32 @@ jobs:
           )
 
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            THAUM_IMAGE_CHANNEL="edge"
+            export REF_NAME="${{ github.ref_name }}"
+            EDGE_TAG=$(python - <<'PY'
+          import hashlib
+          import os
+          import re
+
+          ref = os.environ.get("REF_NAME", "").strip()
+          if ref == "main":
+              print("edge")
+          else:
+              s = ref.lower().replace("/", "-")
+              s = re.sub(r"[^a-z0-9._-]+", "-", s)
+              s = re.sub(r"-+", "-", s).strip("-")
+              if not s:
+                  s = hashlib.sha256(ref.encode()).hexdigest()[:12]
+              # "edge-" + suffix <= OCI tag length 128
+              max_suffix = 123
+              if len(s) > max_suffix:
+                  s = s[:max_suffix]
+              print(f"edge-{s}")
+          PY
+          )
+            THAUM_IMAGE_CHANNEL="${EDGE_TAG}"
             {
               echo 'TAGS<<__THAUM_TAGS__'
-              echo "${IMAGE}:edge"
+              echo "${IMAGE}:${EDGE_TAG}"
               echo '__THAUM_TAGS__'
             } >> "$GITHUB_ENV"
           elif [ "${{ github.event.release.prerelease }}" = "true" ]; then
