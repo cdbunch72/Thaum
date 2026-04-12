@@ -1,6 +1,6 @@
 # Thaum quickstart
 
-Thaum reads configuration from `THAUM_CONFIG_FILE` (default in the container image: `/etc/thaum/thaum.conf`). Production deployments typically:
+Thaum reads configuration from `THAUM_CONFIG_FILE` (default in the container image: `/etc/thaum/thaum.conf`). The default container layout runs **bundled PostgreSQL** in the image unless `THAUM_EXTERNAL_DB` is set (see [Architecture](../docs/ARCHITECTURE.md)). Production deployments typically:
 
 - Mount config and persistent data (database, logs)
 - Store sensitive values outside the config file using **systemd encrypted credentials** and `secret:name` entries in TOML (see [`systemd/thaum.conf.example`](systemd/thaum.conf.example))

@@ -1,4 +1,10 @@
 #!/usr/bin/env bash
+# Interactive helper for systemd encrypted credentials used by Thaum quickstarts.
+#
+# If you use the container image with bundled PostgreSQL and omit [server.database].db_url
+# in thaum.conf, you do not need thaum_db_url — press Enter at that prompt to skip, and
+# remove the thaum_db_url line from thaum.service.credentials.conf (see example comments).
+
 set -euo pipefail
 
 CREDSTORE_DIR="${CREDSTORE_DIR:-/etc/credstore.encrypted}"
@@ -34,8 +40,27 @@ write_credential() {
   echo "Saved encrypted credential: ${CREDSTORE_DIR}/${cred_name}"
 }
 
+# Optional: skip with empty input (e.g. bundled PostgreSQL with no db_url in config).
+write_credential_optional() {
+  local cred_name="$1"
+  local prompt="$2"
+  local secret_value
+
+  read -r -s -p "${prompt}: " secret_value
+  echo
+
+  if [[ -z "${secret_value}" ]]; then
+    echo "Credential ${cred_name} skipped (empty)."
+    return 0
+  fi
+
+  printf '%s' "${secret_value}" | systemd-creds encrypt - "${CREDSTORE_DIR}/${cred_name}" --name="${cred_name}"
+  chmod 0600 "${CREDSTORE_DIR}/${cred_name}"
+  echo "Saved encrypted credential: ${CREDSTORE_DIR}/${cred_name}"
+}
+
 echo "Creating encrypted systemd credentials for Thaum."
-write_credential "thaum_db_url" "Database URL (example: sqlite:////var/lib/thaum/thaum.db)"
+write_credential_optional "thaum_db_url" "Database URL (bundled PG: postgresql+psycopg://thaum@/thaum?host=/var/run/postgresql; sqlite: sqlite:////var/lib/thaum/thaum.db; or Enter to skip if db_url omitted in config)"
 write_credential "thaum_database_vault_passphrase" "Database vault passphrase"
 write_credential "thaum_jira_api_token" "Jira API token"
 write_credential "thaum_webex_token_database" "Webex bot token (database bot)"

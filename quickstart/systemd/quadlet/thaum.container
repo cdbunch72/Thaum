@@ -4,6 +4,8 @@ After=network-online.target
 Wants=network-online.target
 
 [Container]
+# Local build: podman build -t localhost/thaum:latest .
+# CI image (GHCR, lowercase org/repo): ghcr.io/<github-owner>/thaum:latest or :<version>
 Image=localhost/thaum:latest
 ContainerName=thaum
 PublishPort=127.0.0.1:5165:5165

@@ -13,7 +13,7 @@ On a host running many services, **127.0.0.1:port** is often reachable by **any 
 | Application tree | `/srv/thaum/app` (clone; contains `app.py`) |
 | Virtualenv | `/srv/thaum/venv` |
 | Config | `/etc/thaum/thaum.conf` (from [`../thaum.conf.example`](../thaum.conf.example)) |
-| Database (SQLite) | `/var/lib/thaum/thaum.db` — align `db_url` secret with this path |
+| App database | Depends on `[server.database].db_url` / secrets (e.g. SQLite file under `/var/lib/thaum/`, or PostgreSQL); align paths and credentials with your config |
 | Logs | `/var/log/thaum/` — enable `[logging] file = true` |
 | Unix socket | `/run/thaum/thaum.sock` |
 

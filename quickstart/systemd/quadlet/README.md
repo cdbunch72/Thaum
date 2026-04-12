@@ -14,7 +14,9 @@ A reverse proxy on the **same host** can forward to `http://127.0.0.1:5165`. For
 
 - Podman with Quadlet support
 - systemd with `systemd-creds`
-- A built/published Thaum image (the sample uses `localhost/thaum:latest`)
+- A Thaum container image:
+  - **Published (CI)**: pull from GitHub Container Registry, e.g. `podman pull ghcr.io/<github-owner>/thaum:latest` or `:<version>` from `pyproject.toml` (repository name is lowercase; see [README.md](../../../README.md) “Container images (CI)”).
+  - **Local build**: from the repo root, `podman build -t localhost/thaum:latest .` (matches `Image=` in [`thaum.container`](thaum.container)).
 
 ## 2) Create local config
 
@@ -26,7 +28,7 @@ Install it as `/etc/thaum/thaum.conf` (or another directory you mount to `/etc/t
 
 Secret-backed keys in this example:
 
-- `[server.database].db_url = "secret:thaum_db_url"`
+- `[server.database].db_url = "secret:thaum_db_url"` (optional if you omit `db_url` in config and use bundled PostgreSQL; see comments in [`../thaum.conf.example`](../thaum.conf.example))
 - `[server.database].database_vault_passphrase = "secret:thaum_database_vault_passphrase"`
 - `[defaults.alert.jira].api_token = "secret:thaum_jira_api_token"`
 - `[bots.database].token = "secret:thaum_webex_token_database"`
@@ -41,7 +43,7 @@ sudo ./quickstart/systemd/scripts/setup-systemd-credentials.sh
 
 The script prompts for each value and writes encrypted credentials to:
 
-- `/etc/credstore.encrypted/thaum_db_url`
+- `/etc/credstore.encrypted/thaum_db_url` (optional: press Enter to skip if config omits `db_url`; align the service drop-in)
 - `/etc/credstore.encrypted/thaum_database_vault_passphrase`
 - `/etc/credstore.encrypted/thaum_jira_api_token`
 - `/etc/credstore.encrypted/thaum_webex_token_database`
