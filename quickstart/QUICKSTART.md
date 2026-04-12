@@ -16,4 +16,5 @@ Shared artifacts for both paths below:
 |------|----------|
 | [**systemd/quadlet**](systemd/quadlet/README.md) | Podman Quadlet + container image; app reachable on **127.0.0.1:5165** on the host |
 | [**systemd/containerless**](systemd/containerless/README.md) | Bare metal / venv + systemd; **Unix domain socket** upstream to nginx (recommended for multi-service hosts) |
-| [**azure/github**](azure/github/README.md) | **Azure App Service** (Linux container) + **GitHub Actions**; single-instance quickstart with example Dockerfile and workflow |
+| [**cloud/azure/github**](cloud/azure/github/README.md) | **Azure App Service** (Linux container) + **GitHub Actions**; single-instance quickstart with example Dockerfile and workflow |
+| [**kubernetes**](kubernetes/README.md) | **Kubernetes** (on-prem or cloud clusters); HA-oriented guide with example manifests and external Postgres |

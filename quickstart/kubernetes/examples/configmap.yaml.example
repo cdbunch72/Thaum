@@ -1,0 +1,16 @@
+# SPDX-License-Identifier: MPL-2.0
+# Stub ConfigMap for /etc/thaum/thaum.conf — REPLACE `thaum.conf` body with a real file.
+# Start from quickstart/systemd/thaum.conf.example in this repository; use env: and file:
+# for secrets. Do not commit real tokens.
+
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: thaum-config
+  labels:
+    app.kubernetes.io/name: thaum
+data:
+  thaum.conf: |
+    # Paste and edit from quickstart/systemd/thaum.conf.example
+    # Set [server].base_url to match your Ingress (or rely on THAUM_BASE_URL in the Deployment).
+    # For external Postgres: THAUM_EXTERNAL_DB=true and [server.database].db_url via env: or file:

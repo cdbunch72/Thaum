@@ -15,7 +15,7 @@ FROM ${THAUM_BASE_IMAGE}
 COPY thaum.conf /etc/thaum/thaum.conf
 
 # --- Simplest path (bundled PostgreSQL in the same container; single instance; not for HA) ---
-# Do not set THAUM_EXTERNAL_DB. See quickstart/azure/github/README.md for ephemeral-disk caveat.
+# Do not set THAUM_EXTERNAL_DB. See quickstart/cloud/azure/github/README.md for ephemeral-disk caveat.
 
 # --- Optional: external managed Postgres ---
 # ENV THAUM_EXTERNAL_DB=true

@@ -1,0 +1,29 @@
+# SPDX-License-Identifier: MPL-2.0
+# Example Ingress (adjust apiVersion for your cluster; use Gateway API if preferred).
+# Replace host, TLS secret name, and ingress class.
+
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: thaum
+  labels:
+    app.kubernetes.io/name: thaum
+  annotations:
+    # kubernetes.io/ingress.class: nginx   # if your cluster uses the annotation form
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts:
+        - thaum.example.invalid
+      secretName: thaum-tls
+  rules:
+    - host: thaum.example.invalid
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: thaum
+                port:
+                  name: http

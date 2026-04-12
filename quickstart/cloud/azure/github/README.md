@@ -2,9 +2,9 @@
 
 Deploy Thaum as a **single** Linux container on **Azure App Service**, built and pushed from **GitHub Actions**. This path targets **one Web App instance** and **low cost**: it is **not** a horizontal-scaling or high-availability guide.
 
-- General Thaum quickstart: [QUICKSTART.md](../../QUICKSTART.md)
-- Example TOML (adjust for Azure): [systemd/thaum.conf.example](../../systemd/thaum.conf.example)
-- Container image tags (GHCR, etc.): [README.md](../../../README.md) (section *Container images (CI)*)
+- General Thaum quickstart: [QUICKSTART.md](../../../QUICKSTART.md)
+- Example TOML (adjust for Azure): [systemd/thaum.conf.example](../../../systemd/thaum.conf.example)
+- Container image tags (GHCR, etc.): [README.md](../../../../README.md) (section *Container images (CI)*)
 
 ## What you get
 
@@ -91,7 +91,7 @@ Configure App Service **Health check** (when available on your plan) to hit `/re
 
 ## 2. Configuration file
 
-1. Start from [systemd/thaum.conf.example](../../systemd/thaum.conf.example).
+1. Start from [systemd/thaum.conf.example](../../../systemd/thaum.conf.example).
 2. Set **`[server].base_url`** to your Web App’s public URL, for example `https://thaum-app-<unique>.azurewebsites.net` (or your custom domain).
 3. Place the file in your deploy repo as **`thaum.conf`** (or another name and set `THAUM_CONFIG_FILE` in the Dockerfile).
 
@@ -107,9 +107,9 @@ If your pipeline substitutes `base_url` via environment at build time, some chec
 
 Use [Dockerfile.example](Dockerfile.example):
 
-- **`FROM`** a **pinned** upstream image (version tag or digest), not only `:latest`, for reproducible deploys. Default upstream: `ghcr.io/gemstone-software-dev/thaum` (see [README.md](../../../README.md)).
+- **`FROM`** a **pinned** upstream image (version tag or digest), not only `:latest`, for reproducible deploys. Default upstream: `ghcr.io/gemstone-software-dev/thaum` (see [README.md](../../../../README.md)).
 - **`COPY`** your versioned `thaum.conf` into `/etc/thaum/`.
-- For **external Postgres**, set **`THAUM_EXTERNAL_DB=true`** in the Dockerfile or App Service settings and supply **`db_url`** (and secrets) as documented in [ARCHITECTURE.md](../../../docs/ARCHITECTURE.md).
+- For **external Postgres**, set **`THAUM_EXTERNAL_DB=true`** in the Dockerfile or App Service settings and supply **`db_url`** (and secrets) as documented in [ARCHITECTURE.md](../../../../docs/ARCHITECTURE.md).
 
 ## 4. GitHub Actions
 
@@ -130,7 +130,7 @@ The workflow **builds** your image, runs **`thaum_config_check.py --schema-check
 1. Create a managed Postgres instance and a database/user for Thaum.
 2. Set App Service application setting **`THAUM_EXTERNAL_DB=true`**.
 3. In your TOML, set **`[server.database].db_url`** to the SQLAlchemy URL (use **`env:`** or Key Vault; do not commit passwords).
-4. Redeploy. The container runs **Gunicorn only** (no bundled Postgres); see [Dockerfile](../../../Dockerfile) and [docker/entrypoint.sh](../../../docker/entrypoint.sh).
+4. Redeploy. The container runs **Gunicorn only** (no bundled Postgres); see [Dockerfile](../../../../Dockerfile) and [docker/entrypoint.sh](../../../../docker/entrypoint.sh).
 
 ## Key Vault URI helper
 

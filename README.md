@@ -15,6 +15,7 @@ I have over 30 years of experience in IT operations and I know the pain of on-ca
 
 - [Architecture](docs/ARCHITECTURE.md) — bootstrap, config model, logging, plugins.
 - [Quickstart](quickstart/QUICKSTART.md) — Quadlet (Podman) or containerless (Unix socket + nginx), with encrypted credentials.
+- [Deployment quickstarts](docs/deployment-quickstarts.md) — cloud (Azure; AWS/GCP planned) and Kubernetes.
 - [Style guide](docs/STYLE_GUIDE.md) — code and test conventions.
 - [Admin log level API](docs/admin-log-level.md) — signed runtime log level changes.
 - [Release notes](RELEASE_NOTES.md)

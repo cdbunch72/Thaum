@@ -1,0 +1,65 @@
+# SPDX-License-Identifier: MPL-2.0
+# Example Deployment for Thaum with external PostgreSQL (THAUM_EXTERNAL_DB=true).
+# Copy to deployment.yaml, set namespace, image tag, ConfigMap/Secret names, and THAUM_BASE_URL.
+#
+# Requires: ConfigMap `thaum-config` (see configmap.yaml.example) and a real database URL
+# in thaum.conf via env: or file: references backed by Secrets.
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: thaum
+  labels:
+    app.kubernetes.io/name: thaum
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: thaum
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: thaum
+    spec:
+      containers:
+        - name: thaum
+          image: ghcr.io/gemstone-software-dev/thaum:latest
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 5165
+          env:
+            - name: THAUM_EXTERNAL_DB
+              value: "true"
+            - name: THAUM_CONFIG_FILE
+              value: "/etc/thaum/thaum.conf"
+            # Public URL of this deployment (or set base_url inside thaum.conf)
+            - name: THAUM_BASE_URL
+              value: "https://thaum.example.invalid"
+          volumeMounts:
+            - name: config
+              mountPath: /etc/thaum
+              readOnly: true
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 30
+            periodSeconds: 20
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 10
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "512Mi"
+            limits:
+              cpu: "2"
+              memory: "2Gi"
+      volumes:
+        - name: config
+          configMap:
+            name: thaum-config

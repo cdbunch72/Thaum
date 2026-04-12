@@ -1,0 +1,10 @@
+# Deployment quickstarts
+
+Thaum ships optional **deployment guides** under `quickstart/`. They are examples and templates, not the only way to run the app.
+
+| Topic | Location |
+|--------|----------|
+| **Commercial cloud** (Azure today; AWS and GCP planned) | [quickstart/cloud/README.md](../quickstart/cloud/README.md) |
+| **Kubernetes** (any distro: on-prem, EKS, GKE, AKS, …) | [quickstart/kubernetes/README.md](../quickstart/kubernetes/README.md) |
+
+The main entry point for all quickstart paths is [quickstart/QUICKSTART.md](../quickstart/QUICKSTART.md).

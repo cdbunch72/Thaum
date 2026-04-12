@@ -1,0 +1,17 @@
+# SPDX-License-Identifier: MPL-2.0
+# Example Service (ClusterIP) for Thaum pods.
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: thaum
+  labels:
+    app.kubernetes.io/name: thaum
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: thaum
+  ports:
+    - name: http
+      port: 5165
+      targetPort: http
