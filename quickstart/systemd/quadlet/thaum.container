@@ -6,6 +6,8 @@ Wants=network-online.target
 [Container]
 # Local build: podman build -t localhost/thaum:latest .
 # CI image (GHCR, lowercase org/repo): ghcr.io/<github-owner>/thaum:latest or :<version>
+# Pull=newer: registry-friendly policy (Quadlet → `podman run --pull=newer`). With a fully-qualified `Image=` (e.g. ghcr.io/...), pull only when the registry digest is newer than local. Podman does not implement `--pull=registry`; valid values are always|missing|never|newer.
+Pull=newer
 Image=localhost/thaum:latest
 ContainerName=thaum
 PublishPort=127.0.0.1:5165:5165
