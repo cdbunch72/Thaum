@@ -1,0 +1,150 @@
+# SPDX-License-Identifier: MPL-2.0
+# Copyright 2026 Clinton Bunch
+name: Release
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      registry:
+        description: Registry hostname for docker login (e.g. ghcr.io, docker.io)
+        type: string
+        default: ghcr.io
+      image:
+        description: Full image path without tag (e.g. ghcr.io/org/repo). Empty uses REGISTRY + this repo (lowercase).
+        type: string
+        default: ""
+      python_version:
+        description: PYTHON_VERSION passed to the Dockerfile build-arg
+        type: string
+        default: "3.13"
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install package and dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install .
+
+      - name: Run tests
+        run: python -m unittest discover -s tests -t .
+
+  build-and-push:
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Resolve registry, image, version, and tags
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            REGISTRY="${{ github.event.inputs.registry }}"
+            IMAGE="${{ github.event.inputs.image }}"
+            PYVER="${{ github.event.inputs.python_version }}"
+          else
+            REGISTRY="ghcr.io"
+            IMAGE=""
+            PYVER="3.13"
+          fi
+          if [ -z "${REGISTRY}" ]; then
+            REGISTRY="ghcr.io"
+          fi
+          if [ -z "${PYVER}" ]; then
+            PYVER="3.13"
+          fi
+          if [ -z "${IMAGE}" ]; then
+            REPO_LOWER=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
+            IMAGE="${REGISTRY}/${REPO_LOWER}"
+          fi
+
+          VERSION=$(python - <<'PY'
+          import tomllib
+          with open("pyproject.toml", "rb") as f:
+              print(tomllib.load(f)["project"]["version"])
+          PY
+          )
+
+          GEMSTONE_REF=$(python - <<'PY'
+          import re
+          with open("requirements.txt", encoding="utf-8") as f:
+              for line in f:
+                  line = line.strip()
+                  if line.startswith("gemstone_utils") and "git+" in line:
+                      m = re.search(r"@([^#\s]+)", line)
+                      if m:
+                          print(m.group(1))
+                          break
+              else:
+                  raise SystemExit("gemstone_utils pin not found in requirements.txt")
+          PY
+          )
+
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            EXTRA_TAG="devel"
+          elif [ "${{ github.event.release.prerelease }}" = "true" ]; then
+            EXTRA_TAG="devel"
+          else
+            EXTRA_TAG="latest"
+          fi
+
+          {
+            echo "REGISTRY=${REGISTRY}"
+            echo "IMAGE=${IMAGE}"
+            echo "VERSION=${VERSION}"
+            echo "GEMSTONE_UTILS_REF=${GEMSTONE_REF}"
+            echo "EXTRA_TAG=${EXTRA_TAG}"
+            echo "PYTHON_VERSION=${PYVER}"
+          } >> "$GITHUB_ENV"
+
+      - name: Log in to GitHub Container Registry
+        if: env.REGISTRY == 'ghcr.io'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Log in to Docker Hub
+        if: env.REGISTRY == 'docker.io'
+        uses: docker/login-action@v3
+        with:
+          registry: docker.io
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Log in to other registry
+        if: env.REGISTRY != 'ghcr.io' && env.REGISTRY != 'docker.io'
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ secrets.REGISTRY_USERNAME }}
+          password: ${{ secrets.REGISTRY_PASSWORD }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          build-args: |
+            PYTHON_VERSION=${{ env.PYTHON_VERSION }}
+            GEMSTONE_UTILS_REF=${{ env.GEMSTONE_UTILS_REF }}
+          tags: |
+            ${{ env.IMAGE }}:${{ env.VERSION }}
+            ${{ env.IMAGE }}:${{ env.EXTRA_TAG }}

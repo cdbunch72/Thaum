@@ -18,3 +18,9 @@ I have over 30 years of experience in IT operations and I know the pain of on-ca
 - [Style guide](docs/STYLE_GUIDE.md) — code and test conventions.
 - [Admin log level API](docs/admin-log-level.md) — signed runtime log level changes.
 - [Release notes](RELEASE_NOTES.md)
+
+## Container images (CI)
+
+Publishing runs from [`.github/workflows/release.yml`](.github/workflows/release.yml) when a **GitHub Release is published** or when you **Run workflow** manually (`workflow_dispatch`). The job runs the unit tests, then builds [`Dockerfile`](Dockerfile) and pushes two tags: **`<version>`** from `[project].version` in `pyproject.toml`, plus **`:devel`** for manual runs and GitHub prereleases, or **`:latest`** for stable releases.
+
+By default images go to **GitHub Container Registry** (`ghcr.io/<owner>/<repo>`, lowercase). The workflow needs **`packages: write`** (already set) for GHCR. To use **Docker Hub** instead, run the workflow with inputs `registry: docker.io` and `image: docker.io/<user>/<name>`, and configure repository secrets **`DOCKERHUB_USERNAME`** and **`DOCKERHUB_TOKEN`**. Other registries can use secrets **`REGISTRY_USERNAME`** and **`REGISTRY_PASSWORD`** with the `registry` / `image` inputs.
