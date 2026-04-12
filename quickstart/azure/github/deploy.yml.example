@@ -1,0 +1,104 @@
+# SPDX-License-Identifier: MPL-2.0
+# Example GitHub Actions workflow: build deploy image, schema-check, push to ACR, update Azure Web App.
+# Copy to .github/workflows/deploy.yml in your deploy repository and configure repository Variables
+# (Settings → Secrets and variables → Actions → Variables) and Secrets below.
+#
+# Required GitHub Actions Variables (example names — create in your repo):
+#   ACR_LOGIN_SERVER   e.g. myregistry.azurecr.io
+#   IMAGE_NAME         e.g. thaum-deploy
+#   AZURE_RESOURCE_GROUP
+#   AZURE_WEBAPP_NAME
+#
+# Required GitHub Actions Secrets:
+#   AZURE_CREDENTIALS    JSON from: az ad sp create-for-rbac --sdk-auth
+#                        Service principal needs permission to push to ACR and update the Web App
+#                        (e.g. Contributor on the resource group).
+#
+# Repository must contain: Dockerfile, thaum.conf (see Dockerfile.example).
+
+name: Build and deploy Thaum
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  REGISTRY: ${{ vars.ACR_LOGIN_SERVER }}
+  IMAGE_NAME: ${{ vars.IMAGE_NAME }}
+  RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
+  WEBAPP_NAME: ${{ vars.AZURE_WEBAPP_NAME }}
+  CONFIG_PATH: /etc/thaum/thaum.conf
+  LOCAL_IMAGE: thaum-deploy:ci
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Azure login
+        uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Set ACR short name
+        id: acr
+        run: |
+          REGISTRY="${{ env.REGISTRY }}"
+          if [ -z "$REGISTRY" ]; then
+            echo "Set Actions variable ACR_LOGIN_SERVER (e.g. myregistry.azurecr.io)" >&2
+            exit 1
+          fi
+          ACR_NAME="${REGISTRY%%.*}"
+          echo "name=$ACR_NAME" >> "$GITHUB_OUTPUT"
+
+      - name: Log in to ACR
+        run: az acr login --name "${{ steps.acr.outputs.name }}"
+
+      - name: Build image
+        run: docker build -t "${{ env.LOCAL_IMAGE }}" .
+
+      - name: Schema check (inside built image)
+        run: |
+          docker run --rm \
+            --entrypoint /venv/bin/python \
+            "${{ env.LOCAL_IMAGE }}" \
+            /app/scripts/python/thaum_config_check.py \
+            --schema-check \
+            -c "${{ env.CONFIG_PATH }}"
+
+      - name: Tag and push
+        run: |
+          REGISTRY="${{ env.REGISTRY }}"
+          IMAGE_NAME="${{ env.IMAGE_NAME }}"
+          SHA_TAG="${{ github.sha }}"
+          docker tag "${{ env.LOCAL_IMAGE }}" "${REGISTRY}/${IMAGE_NAME}:${SHA_TAG}"
+          docker tag "${{ env.LOCAL_IMAGE }}" "${REGISTRY}/${IMAGE_NAME}:latest"
+          docker push "${REGISTRY}/${IMAGE_NAME}:${SHA_TAG}"
+          docker push "${REGISTRY}/${IMAGE_NAME}:latest"
+
+      - name: Configure Web App container and restart
+        run: |
+          set -euo pipefail
+          REGISTRY="${{ env.REGISTRY }}"
+          IMAGE_NAME="${{ env.IMAGE_NAME }}"
+          ACR_NAME="${REGISTRY%%.*}"
+          SHA_TAG="${{ github.sha }}"
+          CREDS_JSON=$(az acr credential show --name "$ACR_NAME")
+          ACR_USER=$(echo "$CREDS_JSON" | jq -r .username)
+          ACR_PASS=$(echo "$CREDS_JSON" | jq -r '.passwords[0].value')
+          az webapp config container set \
+            --name "${{ env.WEBAPP_NAME }}" \
+            --resource-group "${{ env.RESOURCE_GROUP }}" \
+            --docker-custom-image-name "${REGISTRY}/${IMAGE_NAME}:${SHA_TAG}" \
+            --docker-registry-server-url "https://${REGISTRY}" \
+            --docker-registry-server-user "$ACR_USER" \
+            --docker-registry-server-password "$ACR_PASS"
+          az webapp restart \
+            --name "${{ env.WEBAPP_NAME }}" \
+            --resource-group "${{ env.RESOURCE_GROUP }}"

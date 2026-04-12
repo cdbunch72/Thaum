@@ -1,0 +1,4 @@
+@echo off
+setlocal
+REM Invoke keyvault-uri.ps1 from cmd. Copy alongside keyvault-uri.ps1 (from .ps1.example).
+powershell -NoProfile -ExecutionPolicy Bypass -File "%~dp0keyvault-uri.ps1" %*
