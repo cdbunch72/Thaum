@@ -15,8 +15,8 @@ A reverse proxy on the **same host** can forward to `http://127.0.0.1:5165`. For
 - Podman with Quadlet support
 - systemd with `systemd-creds`
 - A Thaum container image:
-  - **Published (CI)**: pull from GitHub Container Registry, e.g. `podman pull ghcr.io/<github-owner>/thaum:latest` or `:<version>` from `pyproject.toml` (repository name is lowercase; see [README.md](../../../README.md) “Container images (CI)”).
-  - **Local build**: from the repo root, `podman build -t localhost/thaum:latest .` (matches `Image=` in [`thaum.container`](thaum.container)).
+  - **Published (CI)**: pull from GitHub Container Registry, e.g. `podman pull ghcr.io/cdbunch72/thaum:latest` (default in [`thaum.container`](thaum.container)). Other tags (`:devel`, `:edge`, `:<version>`) are described in [README.md](../../../README.md) “Container images (CI)”.
+  - **Local build**: from the repo root, `podman build -t localhost/thaum:local .` and set `Image=localhost/thaum:local` in [`thaum.container`](thaum.container) instead of the GHCR line.
 
 ## 2) Create local config
 

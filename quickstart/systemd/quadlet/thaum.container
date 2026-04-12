@@ -4,11 +4,11 @@ After=network-online.target
 Wants=network-online.target
 
 [Container]
-# Local build: podman build -t localhost/thaum:latest .
-# CI image (GHCR, lowercase org/repo): ghcr.io/<github-owner>/thaum:latest or :<version>
+# Default: pull stable CI image from GitHub Container Registry (see README.md “Container images (CI)” for :devel, :edge, :<version>).
+# Local Dockerfile build: podman build -t localhost/thaum:local .   then set Image=localhost/thaum:local below.
 # Pull=newer: registry-friendly policy (Quadlet → `podman run --pull=newer`). With a fully-qualified `Image=` (e.g. ghcr.io/...), pull only when the registry digest is newer than local. Podman does not implement `--pull=registry`; valid values are always|missing|never|newer.
 Pull=newer
-Image=localhost/thaum:latest
+Image=ghcr.io/cdbunch72/thaum:latest
 ContainerName=thaum
 PublishPort=127.0.0.1:5165:5165
 Environment=THAUM_CONFIG_FILE=/etc/thaum/thaum.conf

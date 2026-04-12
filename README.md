@@ -23,6 +23,15 @@ I have over 30 years of experience in IT operations and I know the pain of on-ca
 
 ## Container images (CI)
 
-Publishing runs from [`.github/workflows/release.yml`](.github/workflows/release.yml) when a **GitHub Release is published** or when you **Run workflow** manually (`workflow_dispatch`). The job runs the unit tests, then builds [`Dockerfile`](Dockerfile) and pushes two tags: **`<version>`** from `[project].version` in `pyproject.toml`, plus **`:devel`** for manual runs and GitHub prereleases, or **`:latest`** for stable releases.
+Publishing runs from [`.github/workflows/release.yml`](.github/workflows/release.yml) when a **GitHub Release is published** or when you **Run workflow** manually (`workflow_dispatch`). The job runs the unit tests, then builds [`Dockerfile`](Dockerfile) and pushes images to your registry.
+
+| Tag | When it is updated | Use case |
+|-----|-------------------|----------|
+| **`<version>`** | Every **release** publish | Immutable tag matching `[project].version` in `pyproject.toml` (pin to a specific release). |
+| **`:latest`** | **Stable** release (not a GitHub prerelease) | Rolling tag for the latest stable release. |
+| **`:devel`** | **Prerelease** (alpha/beta) publish | Rolling tag for the latest published prerelease; testers can follow pre-releases without pinning semver. |
+| **`:edge`** | **Manual** workflow run only | Latest ad-hoc CI build (smoke tests); not tied to a GitHub Release. |
+
+CI passes **`THAUM_IMAGE_VERSION`** and **`THAUM_IMAGE_CHANNEL`** into the image build; the runtime image sets OCI-style labels (`org.opencontainers.image.version`, `thaum.image.channel`). Inspect with `docker inspect` / `podman inspect` on a pulled image.
 
 By default images go to **GitHub Container Registry** (`ghcr.io/<owner>/<repo>`, lowercase). The workflow needs **`packages: write`** (already set) for GHCR. To use **Docker Hub** instead, run the workflow with inputs `registry: docker.io` and `image: docker.io/<user>/<name>`, and configure repository secrets **`DOCKERHUB_USERNAME`** and **`DOCKERHUB_TOKEN`**. Other registries can use secrets **`REGISTRY_USERNAME`** and **`REGISTRY_PASSWORD`** with the `registry` / `image` inputs.

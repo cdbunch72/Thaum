@@ -1,8 +1,8 @@
 # syntax=docker/dockerfile:1
-# Build: docker build -t thaum .
-# Buildah: buildah bud -t thaum -f Dockerfile .
+# Build (local tag for Dockerfile builds; see quickstart/systemd/quadlet/thaum.container): docker build -t localhost/thaum:local .
+# Buildah: buildah bud -t localhost/thaum:local -f Dockerfile .
 #
-# Python 3.14: docker build --build-arg PYTHON_VERSION=3.14 -t thaum .
+# Python 3.14: docker build --build-arg PYTHON_VERSION=3.14 -t localhost/thaum:local .
 #
 # Bundled PostgreSQL (default): unset THAUM_EXTERNAL_DB or false; app connects via Unix socket (peer).
 # External DB: THAUM_EXTERNAL_DB=true and set [server.database].db_url — entrypoint runs gunicorn only.
@@ -41,6 +41,11 @@ RUN pip install --no-cache-dir --upgrade pip setuptools wheel \
 
 # --- runtime: copy venv + app only ---
 FROM python:${PYTHON_VERSION}-slim AS runtime
+
+ARG THAUM_IMAGE_VERSION=unknown
+ARG THAUM_IMAGE_CHANNEL=local
+LABEL org.opencontainers.image.version="${THAUM_IMAGE_VERSION}" \
+      thaum.image.channel="${THAUM_IMAGE_CHANNEL}"
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \

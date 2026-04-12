@@ -94,19 +94,37 @@ jobs:
           )
 
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
-            EXTRA_TAG="devel"
+            THAUM_IMAGE_CHANNEL="edge"
+            {
+              echo 'TAGS<<__THAUM_TAGS__'
+              echo "${IMAGE}:edge"
+              echo '__THAUM_TAGS__'
+            } >> "$GITHUB_ENV"
           elif [ "${{ github.event.release.prerelease }}" = "true" ]; then
-            EXTRA_TAG="devel"
+            THAUM_IMAGE_CHANNEL="devel"
+            {
+              echo 'TAGS<<__THAUM_TAGS__'
+              echo "${IMAGE}:${VERSION}"
+              echo "${IMAGE}:devel"
+              echo '__THAUM_TAGS__'
+            } >> "$GITHUB_ENV"
           else
-            EXTRA_TAG="latest"
+            THAUM_IMAGE_CHANNEL="latest"
+            {
+              echo 'TAGS<<__THAUM_TAGS__'
+              echo "${IMAGE}:${VERSION}"
+              echo "${IMAGE}:latest"
+              echo '__THAUM_TAGS__'
+            } >> "$GITHUB_ENV"
           fi
 
           {
             echo "REGISTRY=${REGISTRY}"
             echo "IMAGE=${IMAGE}"
             echo "VERSION=${VERSION}"
+            echo "THAUM_IMAGE_VERSION=${VERSION}"
+            echo "THAUM_IMAGE_CHANNEL=${THAUM_IMAGE_CHANNEL}"
             echo "GEMSTONE_UTILS_REF=${GEMSTONE_REF}"
-            echo "EXTRA_TAG=${EXTRA_TAG}"
             echo "PYTHON_VERSION=${PYVER}"
           } >> "$GITHUB_ENV"
 
@@ -145,6 +163,6 @@ jobs:
           build-args: |
             PYTHON_VERSION=${{ env.PYTHON_VERSION }}
             GEMSTONE_UTILS_REF=${{ env.GEMSTONE_UTILS_REF }}
-          tags: |
-            ${{ env.IMAGE }}:${{ env.VERSION }}
-            ${{ env.IMAGE }}:${{ env.EXTRA_TAG }}
+            THAUM_IMAGE_VERSION=${{ env.THAUM_IMAGE_VERSION }}
+            THAUM_IMAGE_CHANNEL=${{ env.THAUM_IMAGE_CHANNEL }}
+          tags: ${{ env.TAGS }}
