@@ -12,7 +12,7 @@ ARG PYTHON_VERSION=3.13
 # --- build stage: venv, deps from git + requirements, then strip pip ---
 FROM python:${PYTHON_VERSION}-slim AS builder
 
-ARG GEMSTONE_UTILS_REF=v0.3.0a1
+ARG GEMSTONE_UTILS_REF=v0.3.0a2
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
