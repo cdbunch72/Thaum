@@ -21,7 +21,10 @@ lookup_plugin = "null"
 [server.database]
 # Shared app DB (lookup cache, election, crypto metadata, admin state). SQLAlchemy URL.
 # Supports ResolvedSecret forms via resolve_secret (inline, env:VAR, file:/path, secret:name).
-# Empty/unset -> in-memory SQLite (not durable across restarts).
+# Empty/unset: bundled PostgreSQL default (Unix socket) when THAUM_EXTERNAL_DB is unset/false;
+# if THAUM_EXTERNAL_DB is true, you must set db_url (e.g. managed Postgres or sqlite for dev).
+# Bundled default uses peer auth on the Unix socket (no password); optional THAUM_PG_USER,
+# THAUM_PG_DATABASE, THAUM_PG_SOCKET_DIR (see docs/ARCHITECTURE.md).
 # db_url = "sqlite:////var/lib/thaum/thaum.db"
 # database_vault_passphrase = "env:THAUM_DATABASE_VAULT_PASSPHRASE"   # required if Webex omits hmac_secret (shared DB HMAC)
 # data_key_rotate_days = 60       # 0 = disable automatic DEK rotation
@@ -45,6 +48,7 @@ lookup_plugin = "null"
 # timezone = "UTC"
 # no_timestamp = false
 # fractional_seconds = false
+# Runtime: THAUM_LOG_TO_VAR_LOG=1|true|yes|on enables default file path /var/log/thaum/thaum.log when "file" is not set here.
 # Opt-in file logging: true / 1 / "yes" / "true" / "1" → default path /var/log/thaum/thaum.log
 # (parent dir must exist). Any other non-empty string → that path. file_backup_count = 5
 # file = true

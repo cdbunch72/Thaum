@@ -5,10 +5,12 @@ from __future__ import annotations
 
 import io
 import logging
+import os
 import unittest
 from contextlib import redirect_stderr
 from pathlib import Path
 import tempfile
+from unittest.mock import patch
 
 from log_setup import configure_logging
 from thaum.types import DEFAULT_LOG_FILE_PATH, LogConfig, LogLevel
@@ -82,3 +84,19 @@ class ConfigureLoggingFileTest(unittest.TestCase):
             self.assertEqual(len(w.handlers), len(r.handlers))
             self.assertIs(w.handlers[0], r.handlers[0])
             self.assertIs(w.handlers[1], r.handlers[1])
+
+
+class LogEnvDefaultFileTest(unittest.TestCase):
+    def test_thaum_log_to_var_log_sets_default_path(self) -> None:
+        from bootstrap import _log_config_with_env_defaults
+
+        with patch.dict(os.environ, {"THAUM_LOG_TO_VAR_LOG": "1"}):
+            merged = _log_config_with_env_defaults(LogConfig())
+        self.assertEqual(merged.file, DEFAULT_LOG_FILE_PATH)
+
+    def test_explicit_file_in_toml_untouched(self) -> None:
+        from bootstrap import _log_config_with_env_defaults
+
+        with patch.dict(os.environ, {"THAUM_LOG_TO_VAR_LOG": "1"}):
+            merged = _log_config_with_env_defaults(LogConfig(file="/tmp/custom.log"))
+        self.assertEqual(merged.file, "/tmp/custom.log")

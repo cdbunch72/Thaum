@@ -9,3 +9,4 @@ Flask
 webexpythonsdk
 SQLAlchemy
 ldap3
+psycopg[binary]>=3.2

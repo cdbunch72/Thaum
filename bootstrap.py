@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import logging
+import os
 from typing import Any, Dict
 
 from pydantic import BaseModel
@@ -18,9 +19,19 @@ from plugin_loader import ensure_plugin_loaded, get_plugin_config_model
 from thaum.database_crypto import apply_database_crypto, requires_database_vault_passphrase
 from thaum.factory import initialize_bots
 from thaum.maintenance_bootstrap import register_all_maintenance_tasks
-from thaum.types import LogLevel, ServerConfig
+from thaum.types import DEFAULT_LOG_FILE_PATH, LogLevel, LogConfig, ServerConfig
 
 logger = logging.getLogger("thaum.bootstrap")
+
+
+def _log_config_with_env_defaults(log_cfg: LogConfig) -> LogConfig:
+    """If ``THAUM_LOG_TO_VAR_LOG`` is set, enable default file logging when TOML did not set ``file``."""
+    v = os.environ.get("THAUM_LOG_TO_VAR_LOG", "").strip().lower()
+    if not v or v not in ("1", "true", "yes", "on"):
+        return log_cfg
+    if log_cfg.file is not None:
+        return log_cfg
+    return log_cfg.model_copy(update={"file": DEFAULT_LOG_FILE_PATH})
 
 
 def _merge_alert_defaults(defaults_root: Any, alert_type: str, instance: Any) -> Dict[str, Any]:
@@ -101,7 +112,7 @@ def bootstrap(config_path: str) -> Dict[str, Any]:
     config = load_and_validate(config_path)
     server: ServerConfig = config["server"]
 
-    configure_logging(config["log"], server)
+    configure_logging(_log_config_with_env_defaults(config["log"]), server)
 
     validated_lookup = validate_config_after_load(config)
     lookup_type = server.lookup_plugin

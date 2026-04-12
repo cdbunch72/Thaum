@@ -3,6 +3,9 @@
 # Buildah: buildah bud -t thaum -f Dockerfile .
 #
 # Python 3.14: docker build --build-arg PYTHON_VERSION=3.14 -t thaum .
+#
+# Bundled PostgreSQL (default): unset THAUM_EXTERNAL_DB or false; app connects via Unix socket (peer).
+# External DB: THAUM_EXTERNAL_DB=true and set [server.database].db_url — entrypoint runs gunicorn only.
 
 ARG PYTHON_VERSION=3.13
 
@@ -40,7 +43,16 @@ RUN pip install --no-cache-dir --upgrade pip setuptools wheel \
 # --- runtime: copy venv + app only ---
 FROM python:${PYTHON_VERSION}-slim AS runtime
 
-RUN useradd --create-home --uid 1000 --shell /usr/sbin/nologin thaum
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        gosu \
+        postgresql \
+        postgresql-client \
+        supervisor \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN useradd --create-home --uid 1000 --shell /usr/sbin/nologin thaum \
+    && usermod -aG postgres thaum
 
 WORKDIR /app
 ENV PATH="/venv/bin:$PATH" \
@@ -51,16 +63,21 @@ ENV PATH="/venv/bin:$PATH" \
 COPY --from=builder /venv /venv
 COPY --chown=1000:1000 . .
 
-USER 1000
-VOLUME ["/etc/thaum"]
+COPY docker/supervisord.conf /etc/supervisor/supervisord.conf
+
+RUN chmod +x \
+        /app/docker/entrypoint.sh \
+        /app/docker/wait_for_pg.sh \
+        /app/docker/run_thaum.sh \
+        /app/docker/pg_bootstrap.py
+
+USER root
+VOLUME ["/etc/thaum", "/var/lib/postgresql/data"]
 EXPOSE 5165
 
-# Default 0.0.0.0: reverse proxy (nginx, traefik, host ingress) reaches this container via its
-# own IP — not loopback. Binding 127.0.0.1 would drop those connections unless the proxy shares
-# this network namespace or uses a Unix socket. Do not publish this port to the public host;
-# expose only the proxy. Override for co-located proxy: -e GUNICORN_BIND=127.0.0.1:5165
+# Default 0.0.0.0: reverse proxy reaches this container via its own IP.
+# Do not publish this port to the public host; expose only the proxy.
 ENV GUNICORN_BIND=0.0.0.0:5165
-# Leader election registers Webex webhooks once; multiple workers are supported. Override:
-# -e GUNICORN_WORKERS=4
 ENV GUNICORN_WORKERS=1
-ENTRYPOINT ["/bin/sh", "-c", "exec /venv/bin/gunicorn --bind \"$GUNICORN_BIND\" --workers \"${GUNICORN_WORKERS:-1}\" app:app"]
+
+ENTRYPOINT ["/app/docker/entrypoint.sh"]

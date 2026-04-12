@@ -174,7 +174,7 @@ class RespondersList:
 class ServerDatabaseConfig(BaseModel):
     """``[server.database]``: app DB URL, field-encryption vault, DEK rotation."""
 
-    # SQLAlchemy URL; empty/unset -> in-memory SQLite (see thaum.db_bootstrap.DEFAULT_APP_DB_URL).
+    # SQLAlchemy URL; empty/unset -> bundled PostgreSQL URL or error (see thaum.db_bootstrap.resolve_app_db_url).
     db_url: OptionalResolvedSecret = None
     database_vault_passphrase: OptionalResolvedSecret = None
     data_key_rotate_days: int = 60

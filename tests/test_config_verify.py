@@ -14,7 +14,7 @@ import thaum.db_bootstrap  # noqa: F401 — load thaum package before bootstrap 
 
 from bootstrap import validate_config_after_load
 from config import load_and_validate
-from thaum.db_bootstrap import DEFAULT_APP_DB_URL, verify_app_db_connection
+from thaum.db_bootstrap import verify_app_db_connection
 from thaum.types import schema_only_validation
 
 
@@ -48,6 +48,7 @@ MINIMAL_TEST_TOML = textwrap.dedent(
     lookup_plugin = "null"
 
     [server.database]
+    db_url = "sqlite:///:memory:"
     database_vault_passphrase = "unit-test-vault-passphrase-not-for-production-use"
 
     [bots.testbot]
@@ -111,11 +112,11 @@ class TestConfigCliTest(unittest.TestCase):
                 mod.run_test_config(path)
             mock_ping.assert_called_once()
             url = mock_ping.call_args[0][0]
-            self.assertEqual(url, DEFAULT_APP_DB_URL)
+            self.assertEqual(url, "sqlite:///:memory:")
         finally:
             Path(path).unlink(missing_ok=True)
 
 
 class TestAppDbConnectionTest(unittest.TestCase):
     def test_select_one_sqlite_memory(self) -> None:
-        verify_app_db_connection(DEFAULT_APP_DB_URL)
+        verify_app_db_connection("sqlite:///:memory:")

@@ -5,7 +5,9 @@
 from __future__ import annotations
 
 import logging
+import os
 from typing import Any, Dict
+from urllib.parse import quote_plus
 
 from sqlalchemy import create_engine, text
 
@@ -14,15 +16,55 @@ from thaum.types import ServerConfig
 
 logger = logging.getLogger("thaum.db_bootstrap")
 
-DEFAULT_APP_DB_URL = "sqlite:///:memory:"
+DEFAULT_PG_USER = "thaum"
+DEFAULT_PG_DATABASE = "thaum"
+DEFAULT_PG_SOCKET_DIR = "/var/run/postgresql"
+
+
+def _external_db_env_true() -> bool:
+    """True when ``THAUM_EXTERNAL_DB`` requests an external-only deployment (no bundled default)."""
+    v = os.environ.get("THAUM_EXTERNAL_DB", "").strip().lower()
+    if not v:
+        return False
+    return v in ("1", "true", "yes", "on")
+
+
+def default_bundled_db_url() -> str:
+    """
+    SQLAlchemy URL for the bundled PostgreSQL instance (Unix socket only).
+
+    Uses **peer** authentication: the OS user running Thaum (``thaum`` in the
+    container) must match the role name. No password is embedded in the URL.
+
+    Optional env: ``THAUM_PG_USER``, ``THAUM_PG_DATABASE``, ``THAUM_PG_SOCKET_DIR``
+    (see module defaults).
+    """
+    user = (os.environ.get("THAUM_PG_USER") or DEFAULT_PG_USER).strip() or DEFAULT_PG_USER
+    dbname = (os.environ.get("THAUM_PG_DATABASE") or DEFAULT_PG_DATABASE).strip() or DEFAULT_PG_DATABASE
+    sock_dir = (os.environ.get("THAUM_PG_SOCKET_DIR") or DEFAULT_PG_SOCKET_DIR).strip() or DEFAULT_PG_SOCKET_DIR
+    return (
+        f"postgresql+psycopg://{quote_plus(user)}@/{quote_plus(dbname)}?host={quote_plus(sock_dir)}"
+    )
 
 
 def resolve_app_db_url(server_cfg: ServerConfig) -> str:
-    """Resolve SQLAlchemy URL from ``[server.database].db_url`` (default: in-memory SQLite)."""
+    """
+    Resolve SQLAlchemy URL from ``[server.database].db_url``.
+
+    If ``db_url`` is unset or empty: when ``THAUM_EXTERNAL_DB`` is true, raises
+    ``ValueError`` (must set an explicit ``db_url``); otherwise returns the
+    bundled PostgreSQL URL from :func:`default_bundled_db_url`.
+    """
     raw = server_cfg.database.db_url
-    if raw is None or (isinstance(raw, str) and not raw.strip()):
-        return DEFAULT_APP_DB_URL
-    return str(raw).strip()
+    if raw is not None and isinstance(raw, str) and raw.strip():
+        return str(raw).strip()
+
+    if _external_db_env_true():
+        raise ValueError(
+            "[server.database].db_url is required when THAUM_EXTERNAL_DB is set (true/yes/1)."
+        )
+
+    return default_bundled_db_url()
 
 
 def engine_kwargs_for_sqlite_url(db_url: str) -> Dict[str, Any]:
