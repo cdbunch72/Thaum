@@ -6,7 +6,7 @@
 #   thaum.service.d/credentials.conf.
 # - Or keep `db_url = "secret:thaum_db_url"` and put the bundled URL or an external DSN in the
 #   thaum_db_url credential. Bundled URL:
-#   postgresql+psycopg://thaum@/thaum?host=/var/run/postgresql
+#   postgresql+psycopg://thaum@/thaum?host=/run/thaum/postgres
 #
 # Omit-db_url variant (bundled PG in container) — use this OR the active [server.database] below:
 # [server.database]

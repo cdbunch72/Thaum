@@ -4,7 +4,7 @@ This path deploys Thaum with Podman Quadlet, systemd encrypted credentials, and 
 
 - Config mounted at `/etc/thaum`
 - Logs persisted at `/var/log/thaum`
-- Database persisted at `/var/lib/thaum`
+- App data (including bundled PostgreSQL under `postgresql/data` and optional SQLite files) persisted at `/var/lib/thaum`
 - Secrets loaded with systemd encrypted credentials and referenced as `secret:name` in config
 - Gunicorn binds **`127.0.0.1:5165`** inside the container; the host publishes **`127.0.0.1:5165:5165`** only (not `0.0.0.0`)
 

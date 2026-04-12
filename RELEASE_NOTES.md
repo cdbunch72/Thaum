@@ -1,5 +1,20 @@
 # Thaum release notes
 
+## v0.2.0a2 (alpha 2) — 2026-04-11
+
+Container image change: bundled PostgreSQL now uses **`PGDATA`** at **`/var/lib/thaum/postgresql/data`** and Unix sockets under **`/run/thaum/postgres`**, matching the default in **`thaum.db_bootstrap`** (`DEFAULT_PG_SOCKET_DIR`) and the **`/var/lib/thaum`** volume used by Podman quadlet quickstart. The image declares a single app data volume at **`/var/lib/thaum`** (replacing a separate **`/var/lib/postgresql/data`** volume).
+
+### Upgrade from v0.2.0a1
+
+- If you used **bundled** PostgreSQL with the **0.2.0a1** image, migrate the data directory from **`/var/lib/postgresql/data`** to **`/var/lib/thaum/postgresql/data`** inside your volume, or plan for a **fresh cluster** and restore from backup.
+- If you **pinned** **`db_url`** with **`host=/var/run/postgresql`**, update it to **`host=/run/thaum/postgres`** (or rely on the default by omitting an explicit bundled URL).
+
+### Alpha caveats
+
+- Breaking changes may occur before **v0.2.0** stable.
+
+---
+
 ## v0.2.0a1 (alpha 1) — 2026-04-11
 
 First **0.2.x** prerelease. Development since **v0.1.0a1** included substantial refactors and new capabilities; the **0.2** line better matches that scope than another snapshot labeled as marching toward **0.1.0** stable.

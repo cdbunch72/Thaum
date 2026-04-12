@@ -72,7 +72,7 @@ RUN chmod +x \
         /app/docker/pg_bootstrap.py
 
 USER root
-VOLUME ["/etc/thaum", "/var/lib/postgresql/data"]
+VOLUME ["/etc/thaum", "/var/lib/thaum"]
 EXPOSE 5165
 
 # Default 0.0.0.0: reverse proxy reaches this container via its own IP.

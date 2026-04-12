@@ -18,7 +18,7 @@ logger = logging.getLogger("thaum.db_bootstrap")
 
 DEFAULT_PG_USER = "thaum"
 DEFAULT_PG_DATABASE = "thaum"
-DEFAULT_PG_SOCKET_DIR = "/var/run/postgresql"
+DEFAULT_PG_SOCKET_DIR = "/run/thaum/postgres"
 
 
 def _external_db_env_true() -> bool:

@@ -57,7 +57,7 @@ class DefaultBundledDbUrlTest(unittest.TestCase):
         with patch.dict(os.environ, {}, clear=True):
             u = default_bundled_db_url()
         self.assertTrue(u.startswith("postgresql+psycopg://thaum@/thaum"))
-        self.assertIn("host=%2Fvar%2Frun%2Fpostgresql", u)
+        self.assertIn("host=%2Frun%2Fthaum%2Fpostgres", u)
         rest = u.split("://", 1)[1]
         auth = rest.split("@", 1)[0]
         self.assertNotIn(":", auth)

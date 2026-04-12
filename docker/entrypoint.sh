@@ -17,9 +17,9 @@ if [ "$EXTERNAL" = 1 ]; then
     app:app
 fi
 
-export PGDATA="${PGDATA:-/var/lib/postgresql/data}"
-mkdir -p /var/log/thaum /var/run/postgresql /var/log/supervisor
-chown postgres:postgres /var/run/postgresql
+export PGDATA="${PGDATA:-/var/lib/thaum/postgresql/data}"
+mkdir -p /var/log/thaum /run/thaum/postgres /var/log/supervisor
+chown postgres:postgres /run/thaum/postgres
 mkdir -p "$PGDATA"
 chown postgres:postgres "$PGDATA"
 
@@ -27,13 +27,13 @@ if [ ! -s "$PGDATA/PG_VERSION" ]; then
   gosu postgres initdb -D "$PGDATA"
   cat > "$PGDATA/postgresql.auto.conf" <<'EOF'
 listen_addresses = ''
-unix_socket_directories = '/var/run/postgresql'
+unix_socket_directories = '/run/thaum/postgres'
 EOF
   touch "$PGDATA/.thaum_configured"
 elif [ ! -f "$PGDATA/.thaum_configured" ]; then
   cat > "$PGDATA/postgresql.auto.conf" <<'EOF'
 listen_addresses = ''
-unix_socket_directories = '/var/run/postgresql'
+unix_socket_directories = '/run/thaum/postgres'
 EOF
   touch "$PGDATA/.thaum_configured"
 fi
