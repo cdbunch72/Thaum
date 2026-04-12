@@ -1,5 +1,21 @@
 # Thaum release notes
 
+## v0.2.0a3 (alpha 3) — 2026-04-12
+
+- **HTTP probes** — **`GET /health`** returns **200** with JSON `{"status": "ok"}` for liveness (process can serve HTTP). **`GET /ready`** returns **200** after a **`SELECT 1`** against the configured app database, or **503** with `{"status": "unavailable", "reason": "database"}` if the check fails (readiness for load balancers and orchestrators).
+- **Packaging** — **gunicorn** is listed in **`requirements.txt`** and **`pyproject.toml`** dependencies; the **Dockerfile** no longer installs it in a separate **`pip`** step (same image contents, single dependency path for container and **pip**/venv installs).
+
+### Upgrade from v0.2.0a2
+
+- **Container image**: no PostgreSQL layout change from **a2**. Configure probes to use **`/health`** (liveness) and **`/ready`** (readiness) on your app bind or reverse proxy path as needed.
+- **pip / containerless venvs**: reinstall or **`pip install -U .`** (or **`-r requirements.txt`**) so **gunicorn** is installed from project metadata if you previously installed it manually.
+
+### Alpha caveats
+
+- Breaking changes may occur before **v0.2.0** stable.
+
+---
+
 ## v0.2.0a2 (alpha 2) — 2026-04-11
 
 Container image change: bundled PostgreSQL now uses **`PGDATA`** at **`/var/lib/thaum/postgresql/data`** and Unix sockets under **`/run/thaum/postgres`**, matching the default in **`thaum.db_bootstrap`** (`DEFAULT_PG_SOCKET_DIR`) and the **`/var/lib/thaum`** volume used by Podman quadlet quickstart. The image declares a single app data volume at **`/var/lib/thaum`** (replacing a separate **`/var/lib/postgresql/data`** volume).
