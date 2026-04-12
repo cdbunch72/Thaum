@@ -34,7 +34,6 @@ ENV PATH="/venv/bin:$PATH"
 RUN pip install --no-cache-dir --upgrade pip setuptools wheel \
     && pip install --no-cache-dir \
         "gemstone_utils[azure] @ git+https://github.com/cdbunch72/gemstone_utils.git@${GEMSTONE_UTILS_REF}" \
-    && pip install --no-cache-dir gunicorn \
     && grep -v '^gemstone_utils' requirements.txt > /tmp/requirements.nopypi-eu.txt \
     && pip install --no-cache-dir -r /tmp/requirements.nopypi-eu.txt \
     && pip uninstall -y pip setuptools wheel \

@@ -6,6 +6,7 @@
 gemstone_utils @ git+https://github.com/cdbunch72/gemstone_utils.git@v0.3.0a1
 tzdata; platform_system == "Windows"
 Flask
+gunicorn
 pydantic>=2.0
 webexpythonsdk
 SQLAlchemy
