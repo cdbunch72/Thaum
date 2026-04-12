@@ -1,5 +1,22 @@
 # Thaum release notes
 
+## v0.2.0a4 (alpha 4) — 2026-04-12
+
+- **Documentation** — **[`docs/deployment-quickstarts.md`](docs/deployment-quickstarts.md)** indexes cloud and Kubernetes paths. New **Kubernetes** example manifests under **`quickstart/kubernetes/`**; **Azure App Service** (Linux container) + **GitHub Actions** guide under **`quickstart/cloud/azure/github/`**; **[`quickstart/cloud/README.md`](quickstart/cloud/README.md)** lists available cloud quickstarts.
+- **Dependencies** — **`gemstone_utils`** is installed from **`gemstone-software-dev/gemstone_utils`** and pinned to **`v0.3.0a2`** (see **`pyproject.toml`** and **`requirements.txt`**).
+- **CI / images** — README and release workflow clarify **`:devel`**, **`:latest`**, and **`:edge`** container tags (no change to application behavior).
+
+### Upgrade from v0.2.0a3
+
+- **pip / venv**: if you install from the repo, **`pip install -U .`** (or **`-r requirements.txt`**) picks up the **`gemstone_utils`** URL and tag above.
+- **Containers**: **`ghcr.io`** (or your registry) **`0.2.0a4`** and **`:devel`** images include the same dependency pin; no database or probe changes from **a3**.
+
+### Alpha caveats
+
+- Breaking changes may occur before **v0.2.0** stable.
+
+---
+
 ## v0.2.0a3 (alpha 3) — 2026-04-12
 
 - **HTTP probes** — **`GET /health`** returns **200** with JSON `{"status": "ok"}` for liveness (process can serve HTTP). **`GET /ready`** returns **200** after a **`SELECT 1`** against the configured app database, or **503** with `{"status": "unavailable", "reason": "database"}` if the check fails (readiness for load balancers and orchestrators).
