@@ -3,6 +3,9 @@
 # Copyright 2026 Clinton Bunch
 set -e
 
+# So gunicorn (and similar) do not use /root when dropping to user thaum via gosu/supervisor.
+export HOME=/home/thaum
+
 ext_raw="${THAUM_EXTERNAL_DB:-}"
 ext="$(printf %s "$ext_raw" | tr '[:upper:]' '[:lower:]')"
 case "$ext" in
