@@ -60,7 +60,7 @@ write_credential_optional() {
 }
 
 echo "Creating encrypted systemd credentials for Thaum."
-write_credential_optional "thaum_db_url" "Database URL (bundled PG: postgresql+psycopg://thaum@/thaum?host=/tmp/postgres; sqlite: sqlite:////var/lib/thaum/thaum.db; or Enter to skip if db_url omitted in config)"
+write_credential_optional "thaum_db_url" "Database URL (bundled PG: postgresql+psycopg://thaum@/thaum?host=/tmp/postgres&client_encoding=utf8; sqlite: sqlite:////var/lib/thaum/thaum.db; or Enter to skip if db_url omitted in config)"
 write_credential "thaum_database_vault_passphrase" "Database vault passphrase"
 write_credential "thaum_jira_api_token" "Jira API token"
 write_credential "thaum_webex_token_database" "Webex bot token (database bot)"

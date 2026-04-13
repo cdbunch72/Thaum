@@ -29,6 +29,22 @@ def _external_db_env_true() -> bool:
     return v in ("1", "true", "yes", "on")
 
 
+def _ensure_psycopg_client_encoding_utf8(db_url: str) -> str:
+    """
+    Append ``client_encoding=utf8`` to ``postgresql+psycopg://`` URLs when missing.
+
+    If the session uses ``SQL_ASCII`` (no real encoding), psycopg3 returns ``bytes``
+    for text; SQLAlchemy then fails in ``_get_server_version_info`` (regex expects
+    ``str``). See https://github.com/psycopg/psycopg/issues/813
+    """
+    u = db_url.strip()
+    if not u.lower().startswith("postgresql+psycopg://"):
+        return u
+    if "client_encoding=" in u.lower():
+        return u
+    return f"{u}{'&' if '?' in u else '?'}client_encoding=utf8"
+
+
 def default_bundled_db_url() -> str:
     """
     SQLAlchemy URL for the bundled PostgreSQL instance (Unix socket only).
@@ -42,7 +58,7 @@ def default_bundled_db_url() -> str:
     user = (os.environ.get("THAUM_PG_USER") or DEFAULT_PG_USER).strip() or DEFAULT_PG_USER
     dbname = (os.environ.get("THAUM_PG_DATABASE") or DEFAULT_PG_DATABASE).strip() or DEFAULT_PG_DATABASE
     sock_dir = (os.environ.get("THAUM_PG_SOCKET_DIR") or DEFAULT_PG_SOCKET_DIR).strip() or DEFAULT_PG_SOCKET_DIR
-    return (
+    return _ensure_psycopg_client_encoding_utf8(
         f"postgresql+psycopg://{quote_plus(user)}@/{quote_plus(dbname)}?host={quote_plus(sock_dir)}"
     )
 
@@ -57,7 +73,7 @@ def resolve_app_db_url(server_cfg: ServerConfig) -> str:
     """
     raw = server_cfg.database.db_url
     if raw is not None and isinstance(raw, str) and raw.strip():
-        return str(raw).strip()
+        return _ensure_psycopg_client_encoding_utf8(str(raw).strip())
 
     if _external_db_env_true():
         raise ValueError(

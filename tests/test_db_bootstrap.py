@@ -20,6 +20,28 @@ class ResolveAppDbUrlTest(unittest.TestCase):
         )
         self.assertEqual(resolve_app_db_url(server), "sqlite:////var/lib/thaum/thaum.db")
 
+    def test_explicit_psycopg_url_gets_client_encoding(self) -> None:
+        server = ServerConfig(
+            base_url="https://test.example.com",
+            bot_type="webex",
+            database=ServerDatabaseConfig(
+                db_url="postgresql+psycopg://u@/d?host=/tmp/postgres"
+            ),
+        )
+        self.assertEqual(
+            resolve_app_db_url(server),
+            "postgresql+psycopg://u@/d?host=/tmp/postgres&client_encoding=utf8",
+        )
+
+    def test_explicit_psycopg_url_preserves_existing_client_encoding(self) -> None:
+        url = "postgresql+psycopg://u@/d?host=/tmp/postgres&client_encoding=UTF8"
+        server = ServerConfig(
+            base_url="https://test.example.com",
+            bot_type="webex",
+            database=ServerDatabaseConfig(db_url=url),
+        )
+        self.assertEqual(resolve_app_db_url(server), url)
+
     def test_env_secret_db_url_is_resolved(self) -> None:
         with patch.dict(
             os.environ,
@@ -58,6 +80,7 @@ class DefaultBundledDbUrlTest(unittest.TestCase):
             u = default_bundled_db_url()
         self.assertTrue(u.startswith("postgresql+psycopg://thaum@/thaum"))
         self.assertIn("host=%2Ftmp%2Fpostgres", u)
+        self.assertIn("client_encoding=utf8", u)
         rest = u.split("://", 1)[1]
         auth = rest.split("@", 1)[0]
         self.assertNotIn(":", auth)
