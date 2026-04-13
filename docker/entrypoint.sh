@@ -62,5 +62,5 @@ fi
 gosu postgres pg_ctl -D "$PGDATA" -l /var/log/thaum/postgresql/postgres-init.log start -w
 gosu postgres /venv/bin/python /app/docker/pg_bootstrap.py
 gosu postgres pg_ctl -D "$PGDATA" stop -m fast
-
+sleep 600
 exec /usr/bin/supervisord -c /etc/supervisor/supervisord.conf
