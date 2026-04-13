@@ -13,7 +13,7 @@ from psycopg import sql
 def main() -> int:
     user = (os.environ.get("THAUM_PG_USER") or "thaum").strip() or "thaum"
     dbname = (os.environ.get("THAUM_PG_DATABASE") or "thaum").strip() or "thaum"
-    sock = (os.environ.get("THAUM_PG_SOCKET_DIR") or "/run/thaum/postgres").strip() or "/run/thaum/postgres"
+    sock = (os.environ.get("THAUM_PG_SOCKET_DIR") or "/tmp/postgres").strip() or "/tmp/postgres"
 
     conn_str = f"host={sock} user=postgres dbname=postgres"
     conn = psycopg.connect(conn_str)

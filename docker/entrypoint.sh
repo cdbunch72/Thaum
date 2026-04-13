@@ -39,8 +39,9 @@ if [ "$EXTERNAL" = 1 ]; then
 fi
 
 export PGDATA="${PGDATA:-/var/lib/thaum/postgresql/data}"
-mkdir -p /var/log/thaum/postgresql /run/thaum/postgres /var/log/supervisor
-chown postgres:postgres /run/thaum/postgres /var/log/thaum/postgresql
+mkdir -p /var/log/thaum/postgresql /var/log/supervisor
+install -d -m 0750 -o postgres -g postgres /tmp/postgres
+chown postgres:postgres /var/log/thaum/postgresql
 mkdir -p "$PGDATA"
 chown postgres:postgres "$PGDATA"
 
@@ -48,17 +49,21 @@ if [ ! -s "$PGDATA/PG_VERSION" ]; then
   gosu postgres initdb -D "$PGDATA"
   cat > "$PGDATA/postgresql.auto.conf" <<'EOF'
 listen_addresses = ''
-unix_socket_directories = '/run/thaum/postgres'
+unix_socket_directories = '/tmp/postgres'
 EOF
   touch "$PGDATA/.thaum_configured"
 elif [ ! -f "$PGDATA/.thaum_configured" ]; then
   cat > "$PGDATA/postgresql.auto.conf" <<'EOF'
 listen_addresses = ''
-unix_socket_directories = '/run/thaum/postgres'
+unix_socket_directories = '/tmp/postgres'
 EOF
   touch "$PGDATA/.thaum_configured"
 fi
-sleep 600
+# Legacy clusters: socket was under /run/thaum/postgres (parent dir perms broke some hosts).
+if [ -f "$PGDATA/postgresql.auto.conf" ] && grep -Fq "unix_socket_directories = '/run/thaum/postgres'" "$PGDATA/postgresql.auto.conf"; then
+  sed -i "s|unix_socket_directories = '/run/thaum/postgres'|unix_socket_directories = '/tmp/postgres'|" "$PGDATA/postgresql.auto.conf"
+fi
+
 gosu postgres pg_ctl -D "$PGDATA" -l /var/log/thaum/postgresql/postgres-init.log start -w
 gosu postgres /venv/bin/python /app/docker/pg_bootstrap.py
 gosu postgres pg_ctl -D "$PGDATA" stop -m fast

@@ -51,7 +51,7 @@ Flask app is created.
 
   - **`THAUM_EXTERNAL_DB`** true (`1`, `true`, `yes`, `on`): **error** — set an explicit `db_url` for your external or dev database.
 
-  - Otherwise (unset/false): **bundled PostgreSQL** — the URL is built by `default_bundled_db_url()` as `postgresql+psycopg://…` over a **Unix socket** (`host` query parameter), using **peer** authentication (no password in the URL; the process OS user must match the role, e.g. `thaum` in the container). Optional: **`THAUM_PG_USER`** (default `thaum`), **`THAUM_PG_DATABASE`** (default `thaum`), **`THAUM_PG_SOCKET_DIR`** (default `/run/thaum/postgres`).
+  - Otherwise (unset/false): **bundled PostgreSQL** — the URL is built by `default_bundled_db_url()` as `postgresql+psycopg://…` over a **Unix socket** (`host` query parameter), using **peer** authentication (no password in the URL; the process OS user must match the role, e.g. `thaum` in the container). Optional: **`THAUM_PG_USER`** (default `thaum`), **`THAUM_PG_DATABASE`** (default `thaum`), **`THAUM_PG_SOCKET_DIR`** (default `/tmp/postgres`).
 
 - The single container image uses **`THAUM_EXTERNAL_DB`** in `entrypoint.sh`: external DB → `gunicorn` only; bundled → `supervisord` (PostgreSQL + app). See the `Dockerfile` and `docker/` assets.
 

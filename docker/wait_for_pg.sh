@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: MPL-2.0
 # Copyright 2026 Clinton Bunch
 set -e
-sock="${THAUM_PG_SOCKET_DIR:-/run/thaum/postgres}"
+sock="${THAUM_PG_SOCKET_DIR:-/tmp/postgres}"
 i=0
 while [ "$i" -lt 120 ]; do
   if pg_isready -h "$sock" -U postgres -d postgres >/dev/null 2>&1; then
