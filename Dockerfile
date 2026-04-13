@@ -53,7 +53,11 @@ RUN apt-get update \
         postgresql \
         postgresql-client \
         supervisor \
-    && rm -rf /var/lib/apt/lists/*
+    && rm -rf /var/lib/apt/lists/* \
+    && PG_BINDIR="$(ls -d /usr/lib/postgresql/*/bin | head -n1)" \
+    && for f in initdb pg_ctl postgres pg_isready; do \
+        ln -sf "${PG_BINDIR}/${f}" "/usr/local/bin/${f}"; \
+    done
 
 RUN useradd --create-home --uid 1000 --shell /usr/sbin/nologin thaum \
     && usermod -aG postgres thaum
