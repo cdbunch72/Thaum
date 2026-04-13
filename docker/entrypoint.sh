@@ -6,7 +6,10 @@ set -e
 # So gunicorn (and similar) do not use /root when dropping to user thaum via gosu/supervisor.
 export HOME=/home/thaum
 
-# Stage orchestrator-mounted secrets into a non-root-readable location when requested.
+# Systemd/orchestrator credentials often appear under /run/secrets (or /var/run/secrets) with
+# permissions readable only by root. The app runs as user thaum, so resolve_secret(secret:...)
+# cannot read those files unless we copy them to a tmpfs dir (see Quadlet THAUM_CREDS_DIR) and
+# point CREDENTIALS_DIRECTORY there. This must run before any exec path (external DB or supervisord).
 if [ -n "${THAUM_CREDS_DIR:-}" ]; then
   umask 077
   thaum_creds_dir="$THAUM_CREDS_DIR/thaum"
