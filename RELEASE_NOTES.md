@@ -1,5 +1,20 @@
 # Thaum release notes
 
+## v0.2.0a5 (alpha 5) — 2026-04-12
+
+- **Containers (bundled PostgreSQL)** — Debian installs server programs under **`/usr/lib/postgresql/<major>/bin/`**, so **`initdb`** / **`pg_ctl`** / **`postgres`** were not always on the default **`PATH`** inside the image, and **`gosu postgres initdb`** could fail at startup. The image now adds **symlinks in `/usr/local/bin`** to those binaries (version discovered at build time), and **supervisord** runs **`/usr/local/bin/postgres`**. No change to **`PGDATA`**, sockets, or app config for bundled DB.
+
+### Upgrade from v0.2.0a4
+
+- **Containers**: rebuild or pull the **`0.2.0a5`** image; existing **`/var/lib/thaum`** volumes are compatible (same data layout as **a4**).
+- **pip / venv**: no dependency changes from **a4**; upgrade only if you want the packaging version bump.
+
+### Alpha caveats
+
+- Breaking changes may occur before **v0.2.0** stable.
+
+---
+
 ## v0.2.0a4 (alpha 4) — 2026-04-12
 
 - **Documentation** — **[`docs/deployment-quickstarts.md`](docs/deployment-quickstarts.md)** indexes cloud and Kubernetes paths. New **Kubernetes** example manifests under **`quickstart/kubernetes/`**; **Azure App Service** (Linux container) + **GitHub Actions** guide under **`quickstart/cloud/azure/github/`**; **[`quickstart/cloud/README.md`](quickstart/cloud/README.md)** lists available cloud quickstarts.
