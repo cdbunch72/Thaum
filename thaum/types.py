@@ -256,9 +256,15 @@ def _normalize_log_file_value(v: object) -> Optional[str]:
 
 LogFileSetting = Annotated[Optional[str], BeforeValidator(_normalize_log_file_value)]
 
+LogLevelSetting = Annotated[
+    LogLevel,
+    # IntEnum rejects str names in Pydantic; map config strings to members explicitly.
+    BeforeValidator(lambda v: LogLevel[v.strip().upper()] if isinstance(v, str) else v),
+]
+
 
 class LogConfig(BaseModel):
-    level: LogLevel =  LogLevel.INFO
+    level: LogLevelSetting = LogLevel.INFO
     timezone: str = "UTC"
     no_timestamp: bool = False
     fractional_seconds: bool = False

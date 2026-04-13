@@ -17,6 +17,10 @@ from thaum.types import DEFAULT_LOG_FILE_PATH, LogConfig, LogLevel
 
 
 class LogFileNormalizationTest(unittest.TestCase):
+    def test_log_level_string_normalized(self) -> None:
+        self.assertEqual(LogConfig(level="info").level, LogLevel.INFO)
+        self.assertEqual(LogConfig(level="  debug  ").level, LogLevel.DEBUG)
+
     def test_default_off(self) -> None:
         self.assertIsNone(LogConfig().file)
 
