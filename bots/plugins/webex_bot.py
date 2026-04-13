@@ -93,7 +93,7 @@ class WebexChatBot(BaseChatBot):
     def _webhook_secret_for_api(self) -> Optional[str]:
         return self._effective_hmac_secret()
 
-    def _ensure_webhooks(self) -> None:
+    def register_bot_webhook(self) -> None:
         target = (self.endpoint or "").strip()
         if not target:
             self.logger.error("Cannot register Webex webhooks: bot endpoint is not configured.")
@@ -173,7 +173,7 @@ class WebexChatBot(BaseChatBot):
 
         ids = self._webhook_ids
         if not ids:
-            self._ensure_webhooks()
+            self.register_bot_webhook()
             return
 
         for wid in ids:
@@ -187,7 +187,7 @@ class WebexChatBot(BaseChatBot):
             except Exception:
                 self.logger.info("Webex webhook probe failed for %s; reconciling.", wid)
                 self._webhook_ids = None
-                self._ensure_webhooks()
+                self.register_bot_webhook()
                 return
 
     def _leader_maintenance_tick(self) -> None:
