@@ -18,8 +18,8 @@ if [ "$EXTERNAL" = 1 ]; then
 fi
 
 export PGDATA="${PGDATA:-/var/lib/thaum/postgresql/data}"
-mkdir -p /var/log/thaum /run/thaum/postgres /var/log/supervisor
-chown postgres:postgres /run/thaum/postgres
+mkdir -p /var/log/thaum/postgresql /run/thaum/postgres /var/log/supervisor
+chown postgres:postgres /run/thaum/postgres /var/log/thaum/postgresql
 mkdir -p "$PGDATA"
 chown postgres:postgres "$PGDATA"
 
@@ -38,7 +38,7 @@ EOF
   touch "$PGDATA/.thaum_configured"
 fi
 
-gosu postgres pg_ctl -D "$PGDATA" -l /var/log/thaum/postgres-init.log start -w
+gosu postgres pg_ctl -D "$PGDATA" -l /var/log/thaum/postgresql/postgres-init.log start -w
 gosu postgres /venv/bin/python /app/docker/pg_bootstrap.py
 gosu postgres pg_ctl -D "$PGDATA" stop -m fast
 
