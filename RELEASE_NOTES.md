@@ -1,5 +1,26 @@
 # Thaum release notes
 
+## v0.2.0a6 (alpha 6) — 2026-04-13
+
+- **Containers (bundled PostgreSQL)** — Unix socket directory moved from **`/run/thaum/postgres`** to **`/tmp/postgres`** so permission quirks on some hosts no longer block the app from connecting; existing clusters are migrated on startup via **`postgresql.auto.conf`**. Startup sequence still initializes the DB, runs **`pg_bootstrap`**, then hands off to **supervisord**.
+- **Docker entrypoint** — **`HOME=/home/thaum`** so gunicorn does not treat **`/root`** as home when dropping privileges. When **`THAUM_CREDS_DIR`** is set, credentials from **`/run/secrets`** / **`/var/run/secrets`** are copied into a **thaum**-owned tree and **`CREDENTIALS_DIRECTORY`** is set for **`resolve_secret`**. Aligns with **systemd** / **Quadlet** credential layouts.
+- **Imports** — Refactors in **`thaum.__init__`** and bot loading remove circular import issues during startup.
+- **Database** — **`db_bootstrap`** handles PostgreSQL URLs more robustly when building the engine.
+- **Logging** — **`LogConfig`** normalizes configured log levels for consistent behavior.
+- **Webex** — **`WebexChatBot`** webhook registration path refactored for clarity.
+- **Operations** — With **`GET /health`** returning **200** in your deployment (liveness), load balancers and platform health checks can use the documented probe paths; **`GET /ready`** remains the database readiness check.
+
+### Upgrade from v0.2.0a5
+
+- **Containers**: rebuild or pull the **`0.2.0a6`** image; existing **`/var/lib/thaum`** volumes remain compatible (socket path is updated in config on startup where needed).
+- **pip / venv**: no dependency pin changes from **a5**; upgrade for the packaging version and runtime fixes above.
+
+### Alpha caveats
+
+- Breaking changes may occur before **v0.2.0** stable.
+
+---
+
 ## v0.2.0a5 (alpha 5) — 2026-04-12
 
 - **Containers (bundled PostgreSQL)** — Debian installs server programs under **`/usr/lib/postgresql/<major>/bin/`**, so **`initdb`** / **`pg_ctl`** / **`postgres`** were not always on the default **`PATH`** inside the image, and **`gosu postgres initdb`** could fail at startup. The image now adds **symlinks in `/usr/local/bin`** to those binaries (version discovered at build time), and **supervisord** runs **`/usr/local/bin/postgres`**. No change to **`PGDATA`**, sockets, or app config for bundled DB.
