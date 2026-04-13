@@ -14,7 +14,7 @@ from uuid import UUID, uuid4
 
 from gemstone_utils import election
 
-from thaum.factory import BOTS
+from thaum.bots_registry import BOTS
 from thaum.types import ServerConfig
 from thaum.types import LogLevel
 from log_setup import log_debug_blob

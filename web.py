@@ -13,7 +13,7 @@ from sqlalchemy import text
 
 from thaum.admin_log_level import admin_log_routes_enabled, handle_admin_log_level_post
 from thaum.database_crypto import apply_database_crypto
-from thaum.factory import BOTS
+from thaum.bots_registry import BOTS
 from thaum.leader_service import start_leader_loop
 from thaum.types import ServerConfig
 from thaum.types import LogLevel

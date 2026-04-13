@@ -6,14 +6,12 @@ from __future__ import annotations
 import logging
 from typing import Any, Dict
 
-from bots.base import BaseChatBot
 from bots.factory import create_bot_from_model
 from lookup.instance import get_lookup_plugin
 from plugin_loader import get_plugin
+from thaum.bots_registry import BOTS
 from thaum.handlers import bind_thaum_handlers
 from thaum.types import LogLevel, ThaumPerson, RespondersList
-
-BOTS: Dict[str, BaseChatBot] = {}
 
 
 def register_all_bot_webhooks() -> None:
