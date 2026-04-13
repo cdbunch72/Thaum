@@ -6,6 +6,7 @@
 .venv
 venv
 *.md
+quickstart/
 terminals
 .cursor
 .env

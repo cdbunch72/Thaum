@@ -6,6 +6,7 @@ This path deploys Thaum with Podman Quadlet, systemd encrypted credentials, and 
 - Logs persisted at `/var/log/thaum`
 - App data (including bundled PostgreSQL under `postgresql/data` and optional SQLite files) persisted at `/var/lib/thaum`
 - Secrets loaded with systemd encrypted credentials and referenced as `secret:name` in config
+- Root-only mounted credentials are staged to a non-root tmpfs directory and exported as `CREDENTIALS_DIRECTORY`
 - Gunicorn binds **`127.0.0.1:5165`** inside the container; the host publishes **`127.0.0.1:5165:5165`** only (not `0.0.0.0`)
 
 A reverse proxy on the **same host** can forward to `http://127.0.0.1:5165`. For nginx talking to Thaum over a **Unix domain socket** (stronger isolation on multi-service hosts), use [containerless](../containerless/README.md) instead.
@@ -56,6 +57,13 @@ Copy these files to `/etc/containers/systemd/`:
 - `quickstart/systemd/quadlet/thaum-data.volume`
 - `quickstart/systemd/quadlet/thaum-log.volume`
 
+The `thaum.container` example includes:
+
+- `Volume=%d:/run/secrets:ro` to mount systemd credentials in the container (root-readable source).
+- `Mount=type=tmpfs,destination=/mycreds,noswap` and `Environment=THAUM_CREDS_DIR=/mycreds` for runtime staging.
+
+At startup, `docker/entrypoint.sh` copies secret files from `/run/secrets` or `/var/run/secrets` into `THAUM_CREDS_DIR/thaum`, fixes ownership to `thaum`, and exports `CREDENTIALS_DIRECTORY` to the staged path.
+
 Then ensure `/etc/thaum/thaum.conf` exists and reload systemd:
 
 ```bash
@@ -84,6 +92,12 @@ sudo systemctl daemon-reload
 sudo systemctl enable --now thaum.service
 sudo systemctl status thaum.service
 sudo journalctl -u thaum.service -n 100 --no-pager
+```
+
+Verify staged credentials inside the running container:
+
+```bash
+sudo podman exec thaum sh -lc 'echo "$CREDENTIALS_DIRECTORY"; ls -l "$CREDENTIALS_DIRECTORY"'
 ```
 
 If you enable file logging (`[logging] file = true`), logs are written to `/var/log/thaum/thaum.log`.

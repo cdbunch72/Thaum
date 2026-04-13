@@ -6,6 +6,24 @@ set -e
 # So gunicorn (and similar) do not use /root when dropping to user thaum via gosu/supervisor.
 export HOME=/home/thaum
 
+# Stage orchestrator-mounted secrets into a non-root-readable location when requested.
+if [ -n "${THAUM_CREDS_DIR:-}" ]; then
+  umask 077
+  thaum_creds_dir="$THAUM_CREDS_DIR/thaum"
+  install -d -m 0700 -o thaum -g thaum "$thaum_creds_dir"
+
+  for secrets_src in /run/secrets /var/run/secrets; do
+    [ -d "$secrets_src" ] || continue
+    for secrets_file in "$secrets_src"/*; do
+      [ -e "$secrets_file" ] || continue
+      [ -f "$secrets_file" ] || continue
+      install -m 0400 -o thaum -g thaum "$secrets_file" "$thaum_creds_dir/$(basename "$secrets_file")"
+    done
+  done
+
+  export CREDENTIALS_DIRECTORY="$thaum_creds_dir"
+fi
+
 ext_raw="${THAUM_EXTERNAL_DB:-}"
 ext="$(printf %s "$ext_raw" | tr '[:upper:]' '[:lower:]')"
 case "$ext" in
