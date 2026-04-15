@@ -25,6 +25,7 @@ from thaum.types import AlertPriority, LogLevel, RespondersList, ThaumPerson
 
 class JiraPlugin(BaseAlertPlugin):
     supports_status_webhooks: bool = True
+    supports_acknowledge: bool = False
 
     def __init__(self, config: JiraAlertPluginConfig):
         super().__init__(config)

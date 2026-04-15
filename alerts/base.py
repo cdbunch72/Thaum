@@ -29,9 +29,13 @@ class BaseAlertPlugin:
     Plugins that expose status webhooks implement their own authorization logic.
     For integrations that only support a static Bearer value, use the canonical JSON
     pattern via `_validate_static_webhook_bearer` (see `alerts.webhook_bearer`).
+
+    ``supports_acknowledge``: when True, the chat ``ack`` command and tracking-ID help
+    text apply; integrations that cannot attribute ack to the requesting user should set False.
     """
 
     supports_status_webhooks: bool = False
+    supports_acknowledge: bool = True
     _ALPHABET: Final[str] = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
 
     def __init__(self, config: BaseAlertPluginConfig):

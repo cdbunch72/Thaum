@@ -75,9 +75,11 @@ emergency[: summary]
 {% if bot.send_alerts %}
 alert[: message]
   Alerts the {{ bot.team_description }} on-call with a message. Does not create a room.
+{%- if supports_acknowledge %}
   Produces an alert ID for tracking.
 ack alert_id
   Acknowledges an alert and assigns ownership to you.
+{%- endif %}
 {% endif %}
 implode
   Deletes the current room if {{ bot.name }} created it.
@@ -117,16 +119,28 @@ def bind_thaum_handlers(bot: 'BaseChatBot') -> None:
     if bot.high_pri_on:
         bot.hears(r"^(?P<cmd>emergency)(?:\s*:\s*(?P<summary>.*))?$",priority=10)(handle_help_emergency)
 
-    # conditionally register the alert and ack commands
+    # conditionally register the alert command; ack only when the plugin supports chat ack
     if bot.send_alerts:
+        plugin_cls = type(bot.alert_plugin)
+
         @bot.hears(r"^alert(?:\s*:\s*(?P<msg>.*))",priority=10)
         def handle_alert(bot: 'BaseChatBot', ctx: 'MessageContext', match: re.Match):
-            msg=match.group('msg')
-            bot.alert_plugin.trigger_alert(msg,ctx.room_id,ctx.person)
-    
-        @bot.hears(r"^ack\s+(?P<alert_id>[A-Z2-9]{4}).*$",priority=10)
-        def handle_ack(bot: 'BaseChatBot', ctx: 'MessageContext', match: re.Match):
-            acknowledge_incident(bot, match.group('alert_id'), ctx.person)
+            msg = match.group("msg")
+            short_id, _alert_id = bot.alert_plugin.trigger_alert(msg, ctx.room_id, ctx.person)
+            if plugin_cls.supports_acknowledge:
+                bot.say(
+                    ctx.room_id,
+                    f"Alert sent. Tracking ID: **{short_id}**",
+                    markdown=True,
+                )
+            else:
+                bot.say(ctx.room_id, "Alert sent.", markdown=True)
+
+        if plugin_cls.supports_acknowledge:
+
+            @bot.hears(r"^ack\s+(?P<alert_id>[A-Z2-9]{4}).*$", priority=10)
+            def handle_ack(bot: 'BaseChatBot', ctx: 'MessageContext', match: re.Match):
+                acknowledge_incident(bot, match.group("alert_id"), ctx.person)
     # -- End if send_alerts
     
     @bot.hears(r"^\s*(implode).*$", priority=80)
@@ -135,8 +149,8 @@ def bind_thaum_handlers(bot: 'BaseChatBot') -> None:
     
     @bot.hears(r"^\s*(usage|commands|\?).*",priority=90)
     def handle_usage(bot, ctx, match):
-        # Render with bot as the context object
-        rendered = Template(USAGE_TEMPLATE).render(bot=bot)
+        supports_acknowledge = type(bot.alert_plugin).supports_acknowledge
+        rendered = Template(USAGE_TEMPLATE).render(bot=bot, supports_acknowledge=supports_acknowledge)
         bot.say(ctx.room_id, rendered, markdown=True)
     
     @bot.hears(r"^(?P<cmd>\S+)\s+.*$",priority=99)
