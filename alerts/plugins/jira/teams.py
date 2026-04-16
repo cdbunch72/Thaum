@@ -27,6 +27,7 @@ def refresh_team_cache(
     headers: dict[str, str],
     auth: Any,
     team_name_by_folded: dict[str, str],
+    team_id_by_folded: dict[str, str],
     logger: logging.Logger,
 ) -> None:
     """Warm cache with all JSM Ops teams (including teams not referenced in config)."""
@@ -46,6 +47,7 @@ def refresh_team_cache(
             continue
         t = ThaumTeam(bot=bot, team_name=team_name, alert_id=team_id, lookup_id=team_id)
         team_name_by_folded[team_name.casefold()] = team_name
+        team_id_by_folded[team_name.casefold()] = team_id
 
         lookup = getattr(bot, "lookup_plugin", None)
         if lookup is not None:

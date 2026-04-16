@@ -39,6 +39,7 @@ class JiraPlugin(BaseAlertPlugin):
         self.auth = HTTPBasicAuth(self.cfg.user, self.cfg.api_token.get_secret_value())
 
         self._team_name_by_folded: dict[str, str] = {}
+        self._team_id_by_folded: dict[str, str] = {}
     # -- End Method __init__
 
     def attach_bot(self, bot) -> None:
@@ -87,6 +88,7 @@ class JiraPlugin(BaseAlertPlugin):
             self.headers,
             self.auth,
             self._team_name_by_folded,
+            self._team_id_by_folded,
             self.logger,
         )
     # -- End Method _refresh_team_cache
@@ -96,7 +98,7 @@ class JiraPlugin(BaseAlertPlugin):
     # -- End Method _resolve_email_to_account_id
 
     def _resolve_config_responders(self) -> RespondersList:
-        """Resolve plugin config responders into a typed RespondersList."""
+        """Resolve Jira plugin config responders into a typed RespondersList."""
         self._refresh_team_cache()
         lookup = getattr(self.bot, "lookup_plugin", None)
         if lookup is None:
@@ -122,6 +124,34 @@ class JiraPlugin(BaseAlertPlugin):
         )
     # -- End Method _resolve_config_responders
 
+    def _resolve_alert_responders(self) -> RespondersList:
+        """
+        Resolve responders used for Jira alert payloads.
+
+        Jira `responders` config is authoritative when non-empty. When empty, fall back
+        to the bot's room responder list.
+        """
+        refs = list(getattr(self.cfg, "responders", []))
+        if refs:
+            return self._resolve_config_responders()
+        return getattr(self.bot, "responders", RespondersList())
+    # -- End Method _resolve_alert_responders
+
+    def _enrich_team_alert_ids(self, responders: RespondersList) -> RespondersList:
+        """Fill missing `ThaumTeam.alert_id` values from Jira team cache."""
+        self._refresh_team_cache()
+        enriched = RespondersList(people=list(responders.people), teams=list(responders.teams))
+        for team in enriched.teams:
+            if getattr(team, "alert_id", None):
+                continue
+            folded = str(getattr(team, "team_name", "")).strip().casefold()
+            if folded:
+                team_id = self._team_id_by_folded.get(folded)
+                if team_id:
+                    team.alert_id = team_id
+        return enriched
+    # -- End Method _enrich_team_alert_ids
+
     def _responders_list_to_jira_payload(self, responders: RespondersList) -> list[dict[str, str]]:
         return responders_list_to_jira_payload(
             responders,
@@ -134,7 +164,8 @@ class JiraPlugin(BaseAlertPlugin):
         """Verify we can read team list and resolve responder references."""
         try:
             self._refresh_team_cache()
-            _ = self._responders_list_to_jira_payload(self._resolve_config_responders())
+            responders = self._resolve_alert_responders()
+            _ = self._responders_list_to_jira_payload(self._enrich_team_alert_ids(responders))
             return True
         except Exception as e:
             self.logger.error("Jira connection/resolve validation failed: %s", e)
@@ -158,7 +189,8 @@ class JiraPlugin(BaseAlertPlugin):
         short_id = self._generate_short_id(4)
         url = f"{self.api_prefix}/v1/alerts"
 
-        responders_typed = self._resolve_config_responders()
+        responders_typed = self._resolve_alert_responders()
+        responders_typed = self._enrich_team_alert_ids(responders_typed)
         responders_payload = self._responders_list_to_jira_payload(responders_typed)
 
         bk = str(getattr(self.bot, "bot_key", None) or "")

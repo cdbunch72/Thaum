@@ -39,7 +39,9 @@ def responders_list_to_jira_payload(
         payload.append({"type": "team", "id": tid})
 
     for person in responders.people:
-        account_id = resolve_email_to_account_id(person.email)
+        account_id = (person.platform_ids.get("jira") or "").strip()
+        if not account_id:
+            account_id = resolve_email_to_account_id(person.email)
         if not account_id:
             logger.warning("Jira responder email '%s' did not resolve to accountId", person.email)
             continue

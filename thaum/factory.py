@@ -44,39 +44,25 @@ def initialize_bots(bot_type: str, config: Dict[str, Any]) -> None:
             bot.lookup_plugin = get_lookup_plugin()
 
             resolved_responders = RespondersList()
-            for ref in getattr(bot, "responder_refs", []):
-                if ref.startswith("person:"):
-                    email = ref[7:].strip()
-                    if email:
-                        resolved_responders += ThaumPerson(email=email)
-                    continue
-
-                if ref.startswith("team:"):
-                    team_name = ref[5:].strip()
-                    if not team_name:
+            refs = list(getattr(bot, "responder_refs", []))
+            if bot.lookup_plugin is not None:
+                resolved_responders = bot.lookup_plugin.resolve_responder_refs(
+                    bot,
+                    refs,
+                    source_plugin="bot_config",
+                )
+            else:
+                for raw in refs:
+                    ref = (raw or "").strip()
+                    if not ref:
                         continue
-                    team = bot.lookup_plugin.get_team_by_name(bot, team_name)
-                    if team is not None:
-                        resolved_responders += team
-                    else:
-                        boot_logger.warning(
-                            "Responder team '%s' was not found in lookup cache.", team_name
-                        )
-                    continue
-
-                if "@" in ref:
-                    email = ref.strip()
-                    if email:
-                        resolved_responders += ThaumPerson(email=email)
-                    continue
-
-                team = bot.lookup_plugin.get_team_by_name(bot, ref)
-                if team is not None:
-                    resolved_responders += team
-                else:
-                    boot_logger.warning(
-                        "Responder reference '%s' did not resolve as person or team.", ref
-                    )
+                    if ref.lower().startswith("person:"):
+                        email = ref[7:].strip()
+                        if email:
+                            resolved_responders += ThaumPerson(email=email)
+                        continue
+                    if "@" in ref and not ref.lower().startswith("team:"):
+                        resolved_responders += ThaumPerson(email=ref)
             bot.responders = resolved_responders
 
             plugin = get_plugin(validated_bot.alert_type, validated_alert)

@@ -199,6 +199,8 @@ class BaseLookupPlugin(ABC):
         Supported refs:
           - person:<email>
           - team:<team_name>
+          - id:team:<team_id>
+          - id:person:<person_id>
           - plain email (contains '@')
           - bare team name
         """
@@ -225,6 +227,28 @@ class BaseLookupPlugin(ABC):
                     out += team
                 else:
                     self.logger.warning("Responder team '%s' was not found in lookup cache.", team_name)
+                continue
+
+            if ref.lower().startswith("id:team:"):
+                team_id = ref[8:].strip()
+                if not team_id:
+                    continue
+                team = self.get_team_by_id(bot, "jira", team_id)
+                if team is not None:
+                    team.alert_id = team_id
+                    out += team
+                else:
+                    out += ThaumTeam(bot=bot, team_name=team_id, alert_id=team_id, lookup_id=team_id)
+                continue
+
+            if ref.lower().startswith("id:person:"):
+                person_id = ref[10:].strip()
+                if person_id:
+                    out += ThaumPerson(
+                        email=f"jira-account-id:{person_id}",
+                        platform_ids={"jira": person_id},
+                        source_plugin=source_plugin,
+                    )
                 continue
 
             if "@" in ref:
