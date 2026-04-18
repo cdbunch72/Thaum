@@ -17,6 +17,7 @@ from alerts.base import BaseAlertPlugin
 _PLUGIN_PACKAGE_BY_FAMILY: Dict[str, str] = {
     "alerts": "alerts.plugins",
     "bots": "bots.plugins",
+    "connections": "connections.plugins",
     "lookup": "lookup.plugins",
 }
 
@@ -64,7 +65,7 @@ def ensure_plugin_loaded(family: str, name: str) -> types.ModuleType:
     """
     Import ``{package}.{name}`` for the given family and return the module.
 
-    Families: ``alerts``, ``bots``, ``lookup`` -> ``alerts.plugins``, etc.
+    Families: ``alerts``, ``bots``, ``connections``, ``lookup`` -> ``*.plugins``, etc.
     Alert modules are also registered for :func:`get_plugin` / :func:`get_plugin_config_model`.
     """
     if family not in _PLUGIN_PACKAGE_BY_FAMILY:
@@ -143,3 +144,24 @@ def get_plugin_config_model(plugin_name: str) -> type[BaseModel]:
         )
     model_cls = get_model()
     return model_cls
+
+
+def get_connection_plugin_config_model(plugin_name: str) -> type[BaseModel]:
+    """
+    Return a connection plugin module's Pydantic config model class.
+
+    Modules under ``connections.plugins.<plugin_name>`` must define
+    ``get_config_model() -> type[BaseModel]``.
+    """
+    ensure_plugin_loaded("connections", plugin_name)
+    module = _PLUGIN_MODULES[("connections", plugin_name)]
+
+    get_model = cast(
+        Callable[[], type[BaseModel]] | None,
+        getattr(module, "get_config_model", None),
+    )
+    if get_model is None:
+        raise ValueError(
+            f"Connection plugin '{plugin_name}' is missing required get_config_model() entry point."
+        )
+    return get_model()

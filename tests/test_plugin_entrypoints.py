@@ -76,6 +76,16 @@ class PluginEntrypointContractsTest(unittest.TestCase):
                 f"{module_file.stem} is missing create_instance_lookup(config)",
             )
 
+    def test_connection_plugins_expose_required_entrypoints(self) -> None:
+        # Connection plugins are config-only; validate via get_config_model().
+        conn_dir = Path(__file__).resolve().parents[1] / "connections" / "plugins"
+        for module_file in _iter_plugin_files(conn_dir, {"__init__"}):
+            fn_names = _module_function_names(module_file)
+            self.assertTrue(
+                "get_config_model" in fn_names,
+                f"{module_file.stem} is missing get_config_model()",
+            )
+
 
 if __name__ == "__main__":
     unittest.main()

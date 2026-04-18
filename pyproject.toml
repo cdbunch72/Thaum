@@ -25,4 +25,4 @@ dependencies = [
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["thaum*", "alerts*", "bots*", "lookup*"]
+include = ["thaum*", "alerts*", "bots*", "connections*", "lookup*"]

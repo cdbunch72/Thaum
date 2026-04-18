@@ -60,6 +60,16 @@ lookup_plugin = "null"
 # Configure the DB URL under [server.database].db_url (not here).
 # default_team_ttl_seconds = 14400
 
+# Named connection profiles (connections.plugins.<plugin>). Merge order for consumers is
+# connection → defaults → plugin/bot. Optional: connection_ref on a consumer points here.
+# [connections.example]
+# plugin = "atlassian"
+# site_url = "https://your-site.atlassian.net"
+# cloud_id = "00000000-0000-0000-0000-000000000000"
+# org_id = "your-atlassian-org-id"
+# user = "service@example.com"
+# api_token = "file:/run/secrets/atlassian_api_token"
+
 # -----------------------------------------------------------------------------
 # Shared Jira (JSM Ops) alert defaults merged into each bot that uses alert_type "jira".
 # Keys must match alerts.plugins.jira.config.JiraAlertPluginConfig.

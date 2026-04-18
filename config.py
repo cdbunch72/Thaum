@@ -41,10 +41,15 @@ def load_and_validate(path: str) -> Dict[str, Any]:
             raise ValueError(f"Bot '{bot_id}' must be configured as a table/object.")
         normalized_bots[bot_id] = dict(bot_cfg)
 
+    connections_raw = config_raw.get("connections", {})
+    if not isinstance(connections_raw, dict):
+        raise ValueError("[connections] must be a table.")
+
     config: Dict[str, Any] = {}
     config["raw"] = config_raw
     config["defaults"] = config_raw.get("defaults", {})
     config["lookup"] = config_raw.get("lookup", {})
+    config["connections"] = connections_raw
     config["bots"] = normalized_bots
     try:
         config["server"] = ServerConfig(**server)
