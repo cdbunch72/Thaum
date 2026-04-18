@@ -72,6 +72,13 @@ lookup_plugin = "null"
 # user = "service@example.com"
 # api_token = "file:/run/secrets/atlassian_api_token"
 
+# Atlassian Cloud lookup (lookup.plugins.atlassian): Public Teams + Jira REST. Uses platform id key "jira".
+# server.lookup_plugin = "atlassian"
+# [lookup.atlassian]
+# connection_ref = "example"
+# teams_page_size = 50
+# http_timeout_seconds = 30
+
 # -----------------------------------------------------------------------------
 # Shared Jira (JSM Ops) alert defaults merged into each bot that uses alert_type "jira".
 # Keys must match alerts.plugins.jira.config.JiraAlertPluginConfig.

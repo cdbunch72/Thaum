@@ -12,7 +12,7 @@ from pydantic import BaseModel
 from bots.factory import validate_bot_config
 from config import load_and_validate
 from log_setup import apply_runtime_log_level_from_db, configure_logging, start_log_admin_state_poller
-from lookup.factory import merged_lookup_plugin_config
+from lookup.factory import merge_lookup_connection_profile, merged_lookup_plugin_config
 from lookup.instance import initialize_lookup_plugin
 from thaum.db_bootstrap import init_app_db, resolve_app_db_url
 from plugin_loader import ensure_plugin_loaded, get_plugin_config_model
@@ -74,6 +74,7 @@ def validate_config_after_load(config: Dict[str, Any]) -> BaseModel:
 
     lookup_raw = config.get("lookup") if isinstance(config.get("lookup"), dict) else {}
     merged_lookup = merged_lookup_plugin_config(lookup_type, lookup_raw)
+    merged_lookup = merge_lookup_connection_profile(config, merged_lookup)
     lookup_mod = ensure_plugin_loaded("lookup", lookup_type)
     get_lm = getattr(lookup_mod, "get_config_model", None)
     if get_lm is None:
