@@ -10,6 +10,7 @@ Shared artifacts for both paths below:
 - Example config: [`systemd/thaum.conf.example`](systemd/thaum.conf.example)
 - Interactive credential helper: [`systemd/scripts/setup-systemd-credentials.sh`](systemd/scripts/setup-systemd-credentials.sh)
 - Atlassian Cloud (**site id**, **org id**, API token): [Atlassian / Jira](../docs/Atlassian-Jira.md)
+- LDAP / Active Directory lookup (optional **platform_ids** attribute): [LDAP-AD lookup](../docs/LDAP-AD-lookup.md)
 
 ## Choose a deployment path
 
