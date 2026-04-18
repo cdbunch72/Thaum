@@ -63,19 +63,20 @@ lookup_plugin = "null"
 # default_team_ttl_seconds = 14400
 
 # Named connection profiles (connections.plugins.<plugin>). Merge order for consumers is
-# connection → defaults → plugin/bot. Optional: connection_ref on a consumer points here.
-# [connections.example]
+# connection → defaults → plugin/bot. Optional: connection_ref on lookup points here.
+# Use secret:name for systemd encrypted credentials (Quadlet); file:/run/secrets often fails for rootless.
+# [connections.example-atlassian]
 # plugin = "atlassian"
-# site_url = "https://your-site.atlassian.net"
+# site_url = "https://example.atlassian.net"
 # cloud_id = "00000000-0000-0000-0000-000000000000"
-# org_id = "your-atlassian-org-id"
-# user = "service@example.com"
-# api_token = "file:/run/secrets/atlassian_api_token"
+# org_id = "ffffffff-ffff-ffff-ffff-ffffffffffff"
+# user = "thaum-atlassian-bot@example.com"
+# api_token = "secret:atlassian-api-token"
 
-# Atlassian Cloud lookup (lookup.plugins.atlassian): Public Teams + Jira REST. Uses platform id key "jira".
+# Atlassian Cloud lookup (lookup.plugins.atlassian): Public Teams + Jira REST. Platform id key "jira".
 # server.lookup_plugin = "atlassian"
 # [lookup.atlassian]
-# connection_ref = "example"
+# connection_ref = "example-atlassian"
 # teams_page_size = 50
 # http_timeout_seconds = 30
 
@@ -86,13 +87,12 @@ lookup_plugin = "null"
 # Also inherits alerts.base.BaseAlertPluginConfig (e.g. status_mentions).
 # -----------------------------------------------------------------------------
 [defaults.alert.jira]
-site_url = "https://your-site.atlassian.net"
+# Match [connections.example-atlassian] (alert plugin has no connection_ref yet). Same api_token secret as connections.
+site_url = "https://example.atlassian.net"
 # Atlassian cloud UUID for Jira Service Management Ops REST (api.atlassian.com path segment).
 cloud_id = "00000000-0000-0000-0000-000000000000"
-# Jira API user identity (API token is scoped to this account). Often called "username" in docs.
-user = "thaum-jira-bot@example.com"
-# API token via ResolvedSecret (gemstone_utils resolve_secret): inline, env:VAR, file:/path, etc.
-api_token = "file:/run/secrets/jira_api_token"
+user = "thaum-atlassian-bot@example.com"
+api_token = "secret:atlassian-api-token"
 # Bearer for POST {base_url}/alerts/<bot_key>/status (canonical JSON pattern). Empty disables verification.
 status_webhook_bearer = ""
 # Default empty; each Jira bot normally sets responders under [bots.<id>.alert].

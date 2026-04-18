@@ -4,6 +4,7 @@ Thaum ships optional **deployment guides** under `quickstart/`. They are example
 
 | Topic | Location |
 |--------|----------|
+| **Atlassian / Jira Cloud** (site id, org id, API token, permissions) | [Atlassian-Jira.md](Atlassian-Jira.md) |
 | **Commercial cloud** (Azure today; AWS and GCP planned) | [quickstart/cloud/README.md](../quickstart/cloud/README.md) |
 | **Kubernetes** (any distro: on-prem, EKS, GKE, AKS, …) | [quickstart/kubernetes/README.md](../quickstart/kubernetes/README.md) |
 

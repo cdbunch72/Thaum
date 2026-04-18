@@ -16,7 +16,7 @@
 [server]
 base_url = "https://thaum.example.com"
 bot_type = "webex"
-lookup_plugin = "null"
+lookup_plugin = "atlassian"
 
 [server.database]
 db_url = "secret:thaum_db_url"
@@ -28,11 +28,25 @@ level = "INFO"
 file = true
 file_backup_count = 5
 
-[defaults.alert.jira]
-site_url = "https://your-site.atlassian.net"
+# Shared Atlassian Cloud identity (merged into [lookup.atlassian] via connection_ref).
+# Use the same api_token secret as [defaults.alert.jira] when one token serves both.
+[connections.example-atlassian]
+plugin = "atlassian"
+site_url = "https://example.atlassian.net"
 cloud_id = "00000000-0000-0000-0000-000000000000"
-user = "thaum-jira-bot@example.com"
-api_token = "secret:thaum_jira_api_token"
+org_id = "ffffffff-ffff-ffff-ffff-ffffffffffff"
+user = "thaum-atlassian-bot@example.com"
+api_token = "secret:atlassian-api-token"
+
+[lookup.atlassian]
+connection_ref = "example-atlassian"
+
+[defaults.alert.jira]
+# Alert plugin does not support connection_ref yet — duplicate site/cloud/user/token to match [connections.example-atlassian].
+site_url = "https://example.atlassian.net"
+cloud_id = "00000000-0000-0000-0000-000000000000"
+user = "thaum-atlassian-bot@example.com"
+api_token = "secret:atlassian-api-token"
 status_webhook_bearer = ""
 responders = []
 
