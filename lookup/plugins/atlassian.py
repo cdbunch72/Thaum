@@ -287,6 +287,70 @@ class AtlassianLookupPlugin(BaseLookupPlugin):
             source_plugin=self.plugin_name,
         )
 
+    def _resolve_person_by_email_via_jira(self, email_key: str) -> Optional[ThaumPerson]:
+        """Jira ``GET /rest/api/3/user/search`` by email; merge into cache when a match is found."""
+        url = f"{self._site_url}/rest/api/3/user/search"
+        try:
+            response = requests.get(
+                url,
+                headers={"Accept": "application/json"},
+                params={"query": email_key, "maxResults": 50},
+                auth=self._auth,
+                timeout=self._request_timeout(),
+            )
+            self._log_debug_exchange(method="GET", url=response.url, response=response)
+            response.raise_for_status()
+        except Exception as e:
+            self.logger.warning("Jira user/search failed for %s: %s", email_key, e)
+            return None
+
+        users = response.json()
+        if not isinstance(users, list):
+            return None
+
+        def _merge_from_entry(u: dict) -> Optional[ThaumPerson]:
+            account_id = str((u.get("accountId") or "")).strip()
+            if not account_id:
+                return None
+            display_name = str((u.get("displayName") or "")).strip()
+            fragment = ThaumPerson(
+                email=email_key,
+                platform_ids={_JIRA_PLATFORM_KEY: account_id},
+                source_plugin=self.plugin_name,
+            )
+            if display_name:
+                fragment.display_name = display_name
+            return self.merge_person(fragment)
+
+        for u in users:
+            if not isinstance(u, dict):
+                continue
+            email_addr = str((u.get("emailAddress") or "")).strip().lower()
+            account_id = str((u.get("accountId") or "")).strip()
+            if account_id and email_addr == email_key:
+                return _merge_from_entry(u)
+
+        for u in users:
+            if not isinstance(u, dict):
+                continue
+            account_id = str((u.get("accountId") or "")).strip()
+            if account_id:
+                return _merge_from_entry(u)
+
+        return None
+
+    def get_person_by_email(self, email: str) -> Optional[ThaumPerson]:
+        key = (email or "").strip().lower()
+        if not key:
+            return None
+        cached = self._get_cached_person_by_email(key)
+        if cached is not None and cached.platform_ids.get(_JIRA_PLATFORM_KEY):
+            return cached
+        resolved = self._resolve_person_by_email_via_jira(key)
+        if resolved is not None:
+            return resolved
+        return cached
+
     def get_person_by_id(self, bot_plugin_name: str, person_id: str) -> Optional[ThaumPerson]:
         cached = super().get_person_by_id(bot_plugin_name, person_id)
         if cached is not None:

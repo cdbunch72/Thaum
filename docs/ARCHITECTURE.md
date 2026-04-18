@@ -85,6 +85,8 @@ Thaum uses a layered configuration model.
 
 - `[lookup]` merged with `[lookup.<plugin>]` for cache paths and plugin-specific options (not the DB URL)
 
+- Lookup plugins: public contract includes ``get_person_by_email`` (default: DB cache only); implementations may override to query their source of truth, then ``merge_person``. See ``lookup/base.py``.
+
 ### **BotConfig**
 
 - Driver-specific model (e.g. Webex) extending ``BaseChatBotConfig``

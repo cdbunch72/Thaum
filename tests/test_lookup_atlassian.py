@@ -55,3 +55,64 @@ class AtlassianLookupPluginUnitTest(unittest.TestCase):
 
         self.assertEqual(len(members), 2)
         self.assertEqual({m.email for m in members}, {"a@x.com", "b@x.com"})
+
+    def test_get_person_by_email_cache_hit_skips_http(self) -> None:
+        plugin = AtlassianLookupPlugin(
+            site_url="https://site.example.net",
+            cloud_id="cid",
+            org_id="oid",
+            user="u@example.net",
+            api_token="tok",
+            default_team_ttl_seconds=3600,
+        )
+        cached = MagicMock()
+        cached.platform_ids = {"jira": "acc-cached"}
+
+        with patch.object(
+            AtlassianLookupPlugin,
+            "_get_cached_person_by_email",
+            return_value=cached,
+        ) as mock_cached:
+            with patch("lookup.plugins.atlassian.requests.get") as mock_get:
+                out = plugin.get_person_by_email("any@example.com")
+
+        self.assertIs(out, cached)
+        mock_cached.assert_called_once()
+        mock_get.assert_not_called()
+
+    def test_get_person_by_email_jira_search_merges(self) -> None:
+        plugin = AtlassianLookupPlugin(
+            site_url="https://site.example.net",
+            cloud_id="cid",
+            org_id="oid",
+            user="u@example.net",
+            api_token="tok",
+            default_team_ttl_seconds=3600,
+        )
+
+        with patch.object(AtlassianLookupPlugin, "_get_cached_person_by_email", return_value=None):
+            mock_get = MagicMock()
+            mock_resp = MagicMock()
+            mock_resp.json.return_value = [
+                {
+                    "accountId": "acc-99",
+                    "emailAddress": "u@example.com",
+                    "displayName": "User",
+                }
+            ]
+            mock_resp.raise_for_status = MagicMock()
+            mock_resp.url = "https://site.example.net/rest/api/3/user/search"
+            mock_get.return_value = mock_resp
+
+            merged = MagicMock()
+            merged.platform_ids = {"jira": "acc-99"}
+
+            with patch("lookup.plugins.atlassian.requests.get", mock_get):
+                with patch.object(AtlassianLookupPlugin, "merge_person", return_value=merged) as mock_merge:
+                    out = plugin.get_person_by_email("u@example.com")
+
+        self.assertIs(out, merged)
+        mock_merge.assert_called_once()
+        frag = mock_merge.call_args[0][0]
+        self.assertEqual(frag.email, "u@example.com")
+        self.assertEqual(frag.platform_ids.get("jira"), "acc-99")

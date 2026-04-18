@@ -72,6 +72,12 @@ class BaseLookupPlugin(ABC):
          `ThaumPerson` keyed by email.
       3. Caller passes that partial object to `merge_person(fragment)` so the cache
          merges by email (and persists any new platform ids).
+
+      Similarly, `get_person_by_email(email)` is the entry point for resolving a person
+      by email: the default implementation reads only the DB cache; plugins override
+      it to query their source of truth on miss, then `merge_person` and return.
+      Subclasses that need the cache row without triggering remote lookup should call
+      :meth:`_get_cached_person_by_email` (internal).
     """
 
     plugin_name: str = "lookup"
@@ -125,13 +131,24 @@ class BaseLookupPlugin(ABC):
             source_plugin=row.source_plugin or self.plugin_name,
         )
 
-    def get_person_by_email(self, email: str) -> Optional[ThaumPerson]:
-        """Return a cached person by canonical email, if present."""
+    def _get_cached_person_by_email(self, email: str) -> Optional[ThaumPerson]:
+        """Load a person from the identity cache by canonical email (DB read only). Not part of the public plugin API."""
         key = (email or "").strip()
         if not key:
             return None
         with get_session() as session:
             return self._get_person_by_email(session, key)
+
+    def get_person_by_email(self, email: str) -> Optional[ThaumPerson]:
+        """
+        Return a :class:`ThaumPerson` for *email*, using the cache and optionally a
+        plugin-specific resolution path.
+
+        Default behavior is cache-only (same as :meth:`_get_cached_person_by_email`).
+        Subclasses override this to query their directory or API on miss, merge
+        fragments with :meth:`merge_person`, and return the merged row.
+        """
+        return self._get_cached_person_by_email(email)
 
     def merge_person(self, fragment: ThaumPerson) -> ThaumPerson:
         """

@@ -133,6 +133,106 @@ class LdapAdLookupPlugin(BaseLookupPlugin):
             return f"(&{base_filter}{extra})"
         return base_filter
 
+    def _person_id_attr_name(self) -> str:
+        if self.cfg.person_id_mode == "samaccountname":
+            return "sAMAccountName"
+        if self.cfg.person_id_mode == "uid":
+            return "uid"
+        return self.cfg.person_id_attribute or "sAMAccountName"
+
+    def _build_email_search_filter(self, email_key: str) -> str:
+        esc = ldap3.utils.conv.escape_filter_chars(email_key)  # type: ignore[attr-defined]
+        mail_f = f"({self.cfg.email_attribute}={esc})"
+        parts = [mail_f]
+        for a in self.cfg.fallback_email_attributes:
+            if a.strip() and a != self.cfg.email_attribute:
+                parts.append(f"({a.strip()}={esc})")
+        combined = f"(|{''.join(parts)})"
+        extra = self.cfg.people_search_filter.strip()
+        if extra:
+            return f"(&{combined}{extra})"
+        return combined
+
+    def _person_fragment_from_ldap_entry(self, entry: Any, bot_plugin_name: str) -> Optional[ThaumPerson]:
+        def _get_attr(attr: str) -> str:
+            try:
+                v = entry[attr].value
+                return "" if v is None else str(v)
+            except Exception:
+                return ""
+
+        display_name = _get_attr(self.cfg.display_name_attribute)
+
+        email = _get_attr(self.cfg.email_attribute)
+        if not email:
+            for a in self.cfg.fallback_email_attributes:
+                email = _get_attr(a)
+                if email:
+                    break
+
+        id_attr = self._person_id_attr_name()
+        person_id = _get_attr(id_attr).strip()
+        if not person_id:
+            return None
+
+        if not email:
+            email = f"{person_id}@{bot_plugin_name}.unresolved"
+
+        return ThaumPerson(
+            email=email,
+            display_name=display_name,
+            platform_ids={bot_plugin_name: person_id},
+            source_plugin=self.plugin_name,
+        )
+
+    def get_person_by_email(self, email: str) -> Optional[ThaumPerson]:
+        key = (email or "").strip()
+        if not key:
+            return None
+        cached = self._get_cached_person_by_email(key)
+        if cached is not None:
+            return cached
+
+        try:
+            conn = self._connect()
+        except Exception as e:
+            self.logger.warning("LDAP connect failed (get_person_by_email): %s", e)
+            return None
+
+        try:
+            id_attr = self._person_id_attr_name()
+            attributes = list(
+                {
+                    self.cfg.email_attribute,
+                    self.cfg.display_name_attribute,
+                    id_attr,
+                    *self.cfg.fallback_email_attributes,
+                }
+            )
+            search_filter = self._build_email_search_filter(key)
+            ok = conn.search(
+                search_base=self.cfg.base_dn,
+                search_filter=search_filter,
+                attributes=attributes,
+                size_limit=2,
+            )
+            if not ok or not conn.entries:
+                return None
+
+            entry = conn.entries[0]
+            frag = self._person_fragment_from_ldap_entry(entry, self.plugin_name)
+            if frag is None:
+                return None
+            return self.merge_person(frag)
+        except Exception as e:
+            self.logger.warning("LDAP get_person_by_email failed for %s: %s", key, e)
+            return None
+        finally:
+            try:
+                conn.unbind()
+            except Exception:
+                pass
+
     def get_person_by_id(self, bot_plugin_name: str, person_id: str) -> Optional[ThaumPerson]:
         # First hit: identity cache.
         cached = super().get_person_by_id(bot_plugin_name, person_id)
@@ -150,10 +250,12 @@ class LdapAdLookupPlugin(BaseLookupPlugin):
             return None
 
         try:
+            id_attr = self._person_id_attr_name()
             attributes = list(
                 {
                     self.cfg.email_attribute,
                     self.cfg.display_name_attribute,
+                    id_attr,
                     *self.cfg.fallback_email_attributes,
                 }
             )
@@ -169,33 +271,9 @@ class LdapAdLookupPlugin(BaseLookupPlugin):
                 return None
 
             entry = conn.entries[0]
-
-            def _get_attr(attr: str) -> str:
-                try:
-                    v = entry[attr].value
-                    return "" if v is None else str(v)
-                except Exception:
-                    return ""
-
-            display_name = _get_attr(self.cfg.display_name_attribute)
-
-            email = _get_attr(self.cfg.email_attribute)
-            if not email:
-                for a in self.cfg.fallback_email_attributes:
-                    email = _get_attr(a)
-                    if email:
-                        break
-
-            if not email:
-                # Still allow caching placeholder identities (better than returning None).
-                email = f"{person_id}@{bot_plugin_name}.unresolved"
-
-            fragment = ThaumPerson(
-                email=email,
-                display_name=display_name,
-                platform_ids={bot_plugin_name: person_id},
-                source_plugin=self.plugin_name,
-            )
+            fragment = self._person_fragment_from_ldap_entry(entry, bot_plugin_name)
+            if fragment is None:
+                return None
             return self.merge_person(fragment)
         except Exception as e:
             self.logger.warning("LDAP person lookup failed for %s/%s: %s", bot_plugin_name, person_id, e)
