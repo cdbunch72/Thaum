@@ -128,6 +128,7 @@ jobs:
               echo 'TAGS<<__THAUM_TAGS__'
               echo "${IMAGE}:${VERSION}"
               echo "${IMAGE}:devel"
+              echo "${IMAGE}:edge"
               echo '__THAUM_TAGS__'
             } >> "$GITHUB_ENV"
           else
@@ -137,6 +138,7 @@ jobs:
               echo "${IMAGE}:${VERSION}"
               echo "${IMAGE}:latest"
               echo "${IMAGE}:devel"
+              echo "${IMAGE}:edge"
               echo '__THAUM_TAGS__'
             } >> "$GITHUB_ENV"
           fi

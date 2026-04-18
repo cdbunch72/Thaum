@@ -33,7 +33,7 @@ Publishing runs from [`.github/workflows/release.yml`](.github/workflows/release
 | **`<version>`** | Every **release** publish | Immutable tag matching `[project].version` in `pyproject.toml` (pin to a specific release). |
 | **`:latest`** | **Stable** release (not a GitHub prerelease) | Rolling tag for the latest stable release. |
 | **`:devel`** | **Prerelease** or **stable** release publish | On a **prerelease**, points at that prerelease image. On a **stable** release, updated to the **same digest as `:latest`** so it tracks the latest published release; the **next prerelease** moves `:devel` to that prerelease image. |
-| **`:edge`** | **Manual** workflow from branch **`main`** | Latest ad-hoc CI build from `main` (smoke tests); not tied to a GitHub Release. |
+| **`:edge`** | **Stable** or **prerelease** GitHub Release publish, or **manual** workflow from branch **`main`** | Always points at the **image from the most recent** of those events (same digest as that build’s version tag). Rolling “current” image for smoke tests and releases. |
 | **`:edge-<branch>`** | **Manual** workflow from any **other** branch | Same as `:edge`, but tag is **`edge-`** plus a sanitized branch name (e.g. `feature-foo` from `feature/foo`) so topic branches do not overwrite `:edge`. Long suffixes are truncated to fit registry tag limits. |
 
 CI passes **`THAUM_IMAGE_VERSION`** and **`THAUM_IMAGE_CHANNEL`** into the image build; the runtime image sets OCI-style labels (`org.opencontainers.image.version`, `thaum.image.channel`). Inspect with `docker inspect` / `podman inspect` on a pulled image.
