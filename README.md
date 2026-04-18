@@ -7,6 +7,8 @@ I have implemented Webex and Jira Service Manager Ops.  But plugins could be wri
 
 I have over 30 years of experience in IT operations and I know the pain of on-call.  I also know the pain of trying to use logging to troubleshoot an operational system. (Stacktraces are not logs!)  I built something I want to use, and I hope you'll find it useful too.
 
+Some code in this repository was written with the help of **Cursor** and **GitHub Copilot** (assistive tooling; human review and integration remain the author’s responsibility).
+
 ## Requirements
 
 - **Python 3.11 or newer** — enforced in `pyproject.toml` (`requires-python`) so installers and tools can detect an unsupported interpreter. Dependencies are declared in `pyproject.toml` (`[project.dependencies]`); `requirements.txt` mirrors the same pins for `pip install -r` / Docker. Install into a virtual environment (e.g. `python3.11 -m venv .venv`), then run **`pip install .`** or **`pip install -r requirements.txt`** from the repo root.
