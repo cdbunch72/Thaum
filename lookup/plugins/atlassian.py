@@ -14,6 +14,7 @@ from pydantic import Field, model_validator
 from requests.auth import HTTPBasicAuth
 
 from lookup.base import BaseLookupPlugin, BaseLookupPluginConfig
+from thaum.http_timeouts import timeout_pair
 from thaum.types import LogLevel, OptionalResolvedSecret, ServerConfig, ThaumPerson, ThaumTeam
 
 # Platform id key shared with Jira alert integration and BaseLookupPlugin.resolve_responder_refs.
@@ -38,7 +39,13 @@ class AtlassianLookupPluginConfig(BaseLookupPluginConfig):
     api_token: OptionalResolvedSecret = None
 
     teams_page_size: int = Field(default=50, ge=1, le=50, description="Public Teams API page size (max 50).")
-    http_timeout_seconds: float = 30.0
+    http_timeout_seconds: float = Field(
+        default=30.0,
+        description=(
+            "Read-phase timeout for Atlassian HTTP responses (connect uses a short fractional timeout; "
+            "see thaum.http_timeouts.HTTP_CONNECT_TIMEOUT)."
+        ),
+    )
 
     @model_validator(mode="after")
     def _require_atlassian_fields(self) -> AtlassianLookupPluginConfig:
@@ -77,8 +84,8 @@ class AtlassianLookupPlugin(BaseLookupPlugin):
             "Content-Type": "application/json",
         }
 
-    def _timeout(self) -> float:
-        return float(self.cfg.http_timeout_seconds)
+    def _request_timeout(self) -> tuple[float, float]:
+        return timeout_pair(float(self.cfg.http_timeout_seconds))
 
     def _log_debug_exchange(self, *, method: str, url: str, response: Optional[requests.Response] = None) -> None:
         if not self.logger.isEnabledFor(logging.DEBUG):
@@ -109,7 +116,7 @@ class AtlassianLookupPlugin(BaseLookupPlugin):
                     params=params,
                     headers=self._json_headers,
                     auth=self._auth,
-                    timeout=self._timeout(),
+                    timeout=self._request_timeout(),
                 )
                 self._log_debug_exchange(method="GET", url=r.url, response=r)
                 r.raise_for_status()
@@ -216,7 +223,7 @@ class AtlassianLookupPlugin(BaseLookupPlugin):
                     headers=self._json_headers,
                     auth=self._auth,
                     json=body,
-                    timeout=self._timeout(),
+                    timeout=self._request_timeout(),
                 )
                 self._log_debug_exchange(method="POST", url=r.url, response=r)
                 r.raise_for_status()
@@ -256,7 +263,7 @@ class AtlassianLookupPlugin(BaseLookupPlugin):
                 params={"accountId": account_id},
                 headers={"Accept": "application/json"},
                 auth=self._auth,
-                timeout=self._timeout(),
+                timeout=self._request_timeout(),
             )
             self._log_debug_exchange(method="GET", url=r.url, response=r)
             r.raise_for_status()

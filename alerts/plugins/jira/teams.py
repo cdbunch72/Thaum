@@ -8,6 +8,7 @@ from typing import Any
 
 import requests
 
+from thaum.http_timeouts import timeout_pair
 from thaum.types import ThaumTeam
 
 
@@ -35,7 +36,7 @@ def refresh_team_cache(
         return
 
     url = f"{api_prefix}/v1/teams"
-    response = requests.get(url, headers=headers, auth=auth, timeout=15)
+    response = requests.get(url, headers=headers, auth=auth, timeout=timeout_pair(15.0))
     response.raise_for_status()
     payload = response.json()
 

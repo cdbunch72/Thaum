@@ -9,6 +9,7 @@ from typing import Any, Optional
 
 import requests
 
+from thaum.http_timeouts import timeout_pair
 from log_setup import log_debug_blob
 from thaum.types import LogLevel, ThaumPerson
 
@@ -50,7 +51,7 @@ def resolve_email_to_account_id(
         headers={"Accept": "application/json"},
         params={"query": key, "maxResults": 50},
         auth=auth,
-        timeout=15,
+        timeout=timeout_pair(15.0),
     )
     response.raise_for_status()
 

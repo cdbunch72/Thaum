@@ -11,6 +11,7 @@ from typing import Any, Optional
 
 import requests
 
+from thaum.http_timeouts import timeout_pair
 from thaum.types import AlertPriority, RespondersList, ThaumPerson
 
 
@@ -60,14 +61,14 @@ def post_alert(
     alert: dict[str, Any],
     headers: dict[str, str],
     auth: Any,
-    timeout: float = 15,
+    read_timeout: float = 15.0,
 ) -> requests.Response:
     return requests.post(
         url,
         data=json.dumps(alert),
         headers=headers,
         auth=auth,
-        timeout=timeout,
+        timeout=timeout_pair(read_timeout),
     )
 # -- End Function post_alert
 
