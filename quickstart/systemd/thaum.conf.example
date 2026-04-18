@@ -28,8 +28,7 @@ level = "INFO"
 file = true
 file_backup_count = 5
 
-# Shared Atlassian Cloud identity (merged into [lookup.atlassian] via connection_ref).
-# Use the same api_token secret as [defaults.alert.jira] when one token serves both.
+# Shared Atlassian Cloud identity (merged into [lookup.atlassian] and [defaults.alert.jira] via connection_ref).
 [connections.example-atlassian]
 plugin = "atlassian"
 site_url = "https://example.atlassian.net"
@@ -42,11 +41,7 @@ api_token = "secret:atlassian-api-token"
 connection_ref = "example-atlassian"
 
 [defaults.alert.jira]
-# Alert plugin does not support connection_ref yet — duplicate site/cloud/user/token to match [connections.example-atlassian].
-site_url = "https://example.atlassian.net"
-cloud_id = "00000000-0000-0000-0000-000000000000"
-user = "thaum-atlassian-bot@example.com"
-api_token = "secret:atlassian-api-token"
+connection_ref = "example-atlassian"
 status_webhook_bearer = ""
 responders = []
 

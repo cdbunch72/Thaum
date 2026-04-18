@@ -2,11 +2,11 @@
 
 Thaum can integrate with **Atlassian Cloud** using:
 
-- **`[connections.<name>]`** with **`plugin = "atlassian"`** — shared **`site_url`**, **`cloud_id`**, **`org_id`**, **`user`**, and **`api_token`** (merged into **`[lookup.atlassian]`** when **`connection_ref`** is set; see **`sample.config.toml`**).
+- **`[connections.<name>]`** with **`plugin = "atlassian"`** — shared **`site_url`**, **`cloud_id`**, **`org_id`**, **`user`**, and **`api_token`** (merged into **`[lookup.atlassian]`** and alert defaults when **`connection_ref`** is set; see **`sample.config.toml`**). **`org_id`** is required for lookup (Public Teams); the Jira alert plugin does not use it, but retaining it on the merged dict is harmless.
 - **`lookup.atlassian`** — Public Teams API (`api.atlassian.com`) and Jira REST for users; uses platform id key **`jira`** in the identity cache.
 - **`alerts.plugins.jira`** — Jira Service Management Ops alerts; same site REST and **`api.atlassian.com/{cloud_id}/...`** paths.
 
-Alert defaults do **not** yet support **`connection_ref`**; duplicate **`site_url`**, **`cloud_id`**, **`user`**, and **`api_token`** in **`[defaults.alert.jira]`** so they match your connection profile, or merge by hand. Use **one** API token credential for both (e.g. **`secret:atlassian-api-token`**) when the token is stored once in systemd credentials.
+**`[defaults.alert.jira]`** (and per-bot **`[bots.<id>.alert]`**) may set **`connection_ref`** to the same **`[connections.*]`** name as lookup, or override individual keys after that merge. Use **one** API token credential for both when the token is stored once in systemd credentials (e.g. **`secret:atlassian-api-token`**).
 
 ## Finding **`cloud_id`** (site id)
 
@@ -55,4 +55,4 @@ using a single technical user and API token where possible.
 
 Prefer **`secret:credential-name`** in TOML (systemd **encrypted credentials**), not **`file:/run/secrets/...`**, for Quadlet and rootless-friendly layouts: the container entrypoint stages credentials into a path readable by the app user and sets **`CREDENTIALS_DIRECTORY`** (see [quadlet README](../quickstart/systemd/quadlet/README.md)).
 
-The sample uses **`secret:atlassian-api-token`** for the shared Atlassian API token so **one** credential file backs both **`[connections.*].api_token`** and **`[defaults.alert.jira].api_token`** when they share the same token value.
+The sample uses **`secret:atlassian-api-token`** in **`[connections.*]`** and **`connection_ref`** on Jira alert defaults so **one** credential file backs lookup and alerts when they share the same token value.

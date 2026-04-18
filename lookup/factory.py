@@ -7,8 +7,9 @@ import logging
 import os
 from typing import Any, Dict
 
+from connections.merge import merge_connection_profile
 from lookup.base import BaseLookupPlugin
-from plugin_loader import ensure_plugin_loaded, get_connection_plugin_config_model
+from plugin_loader import ensure_plugin_loaded
 
 logger = logging.getLogger("lookup.factory")
 
@@ -21,30 +22,7 @@ def merge_lookup_connection_profile(full_config: Dict[str, Any], merged_lookup: 
     Removes ``connection_ref`` from the result. Drops ``plugin`` from the connection payload
     so it does not collide with consumer models.
     """
-    ref = merged_lookup.get("connection_ref")
-    if ref is None or (isinstance(ref, str) and not ref.strip()):
-        return merged_lookup
-    ref_key = str(ref).strip()
-    connections = full_config.get("connections")
-    if not isinstance(connections, dict):
-        raise ValueError("[connections] must be a table when lookup.connection_ref is set.")
-    if ref_key not in connections:
-        raise ValueError(
-            f"lookup connection_ref {ref_key!r} not found under [connections]. "
-            f"Available: {sorted(connections.keys())!r}"
-        )
-    conn_raw = connections[ref_key]
-    if not isinstance(conn_raw, dict):
-        raise ValueError(f"[connections.{ref_key}] must be a table.")
-    conn_plugin = str(conn_raw.get("plugin") or "atlassian")
-    ensure_plugin_loaded("connections", conn_plugin)
-    conn_model = get_connection_plugin_config_model(conn_plugin)
-    validated_conn = conn_model(**conn_raw)
-    base = validated_conn.model_dump(mode="python")
-    base.pop("plugin", None)
-    out: Dict[str, Any] = {**base, **merged_lookup}
-    out.pop("connection_ref", None)
-    return out
+    return merge_connection_profile(full_config, merged_lookup)
 
 
 def merged_lookup_plugin_config(lookup_type: str, lookup_raw: Dict[str, Any]) -> Dict[str, Any]:

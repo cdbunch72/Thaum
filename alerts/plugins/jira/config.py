@@ -3,6 +3,8 @@
 # alerts/plugins/jira/config.py
 from __future__ import annotations
 
+from typing import Optional
+
 from pydantic import ConfigDict, Field
 
 from alerts.base import BaseAlertPluginConfig
@@ -23,6 +25,14 @@ class JiraAlertPluginConfig(BaseAlertPluginConfig):
     """Status Jinja templates get: team_description, sender_*, responder_* (see status_webhook)."""
 
     plugin: str = "jira"
+    connection_ref: Optional[str] = Field(
+        default=None,
+        description=(
+            "Optional name under [connections.*]; merged at bootstrap via "
+            "connections.merge.merge_connection_profile (same as lookup). "
+            "Requires site_url, cloud_id, user, and api_token after merge."
+        ),
+    )
     site_url: str
     cloud_id: str
     user: str

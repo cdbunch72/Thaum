@@ -11,6 +11,7 @@ from pydantic import BaseModel
 
 from bots.factory import validate_bot_config
 from config import load_and_validate
+from connections.merge import merge_connection_profile
 from log_setup import apply_runtime_log_level_from_db, configure_logging, start_log_admin_state_poller
 from lookup.factory import merge_lookup_connection_profile, merged_lookup_plugin_config
 from lookup.instance import initialize_lookup_plugin
@@ -90,6 +91,7 @@ def validate_config_after_load(config: Dict[str, Any]) -> BaseModel:
         at = str(validated_bot.alert_type)
         instance_alert = bot_row.get("alert") if isinstance(bot_row.get("alert"), dict) else {}
         merged_a = _merge_alert_defaults(defaults_root, at, instance_alert)
+        merged_a = merge_connection_profile(config, merged_a)
         alert_cfg_model = get_plugin_config_model(at)
         validated_alert = alert_cfg_model(**merged_a)
         bot_row["_validated_bot"] = validated_bot
