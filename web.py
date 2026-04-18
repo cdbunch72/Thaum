@@ -105,6 +105,12 @@ def create_app(config: Dict[str, Any], *, run_leader_loop: bool = True) -> Flask
                 )
         return "", 204
 
-    start_leader_loop(server, config, run_leader_loop=run_leader_loop)
+    leader_cid = config.pop("_thaum_leader_candidate_id", None)
+    start_leader_loop(
+        server,
+        config,
+        candidate_id=leader_cid,
+        run_leader_loop=run_leader_loop,
+    )
     return app
 # -- End Function create_app

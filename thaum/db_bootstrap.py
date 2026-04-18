@@ -125,6 +125,7 @@ def init_app_db(db_url: str, *, echo: bool = False, **engine_kw: Any) -> None:
     import thaum.admin_models  # noqa: F401 — admin log-level nonce + state
     import thaum.webhook_bearer_warn  # noqa: F401 — webhook bearer warn throttle
     import gemstone_utils.election  # noqa: F401 — election ORM tables
+    import thaum.leader_init_status  # noqa: F401 — leader init barrier row
     import gemstone_utils.sqlalchemy.key_storage  # noqa: F401 — GemstoneKeyKdf / GemstoneKeyRecord
     import thaum.bot_webhook_state  # noqa: F401 — bot_webhook_hmac
 

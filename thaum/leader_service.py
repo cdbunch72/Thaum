@@ -15,6 +15,7 @@ from uuid import UUID, uuid4
 from gemstone_utils import election
 
 from thaum.bots_registry import BOTS
+from thaum import leader_init
 from thaum.types import ServerConfig
 from thaum.types import LogLevel
 from log_setup import log_debug_blob
@@ -99,10 +100,14 @@ def start_leader_loop(
     server_cfg: ServerConfig,
     config: Dict[str, Any],
     *,
+    candidate_id: Optional[UUID] = None,
     run_leader_loop: bool = True,
 ) -> None:
     """
     Start the election + maintenance daemon (skipped when ``run_leader_loop`` is False, e.g. tests).
+
+    Pass ``candidate_id`` from :func:`thaum.leader_bootstrap.run_leader_bootstrap_phase` so this process
+    does not register a second candidate; the background loop continues heartbeats/election only.
     """
     global _loop_thread, _candidate_id
     if not run_leader_loop:
@@ -111,9 +116,13 @@ def start_leader_loop(
         return
 
     election.set_expire(int(server_cfg.election.lease_seconds))
-    cid = uuid4()
-    _candidate_id = cid
-    election.register_candidate(cid, server_cfg.election.namespace)
+    if candidate_id is not None:
+        cid = candidate_id
+        _candidate_id = cid
+    else:
+        cid = uuid4()
+        _candidate_id = cid
+        election.register_candidate(cid, server_cfg.election.namespace)
 
     def _unregister() -> None:
         try:
@@ -148,3 +157,4 @@ def reset_for_tests() -> None:
     _loop_thread = None
     _candidate_id = None
     _tasks = []
+    leader_init.reset_for_tests()

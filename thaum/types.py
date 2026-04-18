@@ -199,6 +199,8 @@ class ServerElectionConfig(BaseModel):
     namespace: str = "thaum"
     lease_seconds: int = 60
     heartbeat_seconds: float = 15.0
+    # Non-leader workers wait this long for leader init barrier (see thaum.leader_bootstrap).
+    leader_init_wait_timeout_seconds: float = 300.0
 
     model_config = ConfigDict(extra="forbid", validate_assignment=False)
 

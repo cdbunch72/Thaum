@@ -18,6 +18,7 @@ from thaum.db_bootstrap import init_app_db, resolve_app_db_url
 from plugin_loader import ensure_plugin_loaded, get_plugin_config_model
 from thaum.database_crypto import apply_database_crypto, requires_database_vault_passphrase
 from thaum.factory import initialize_bots
+from thaum.leader_bootstrap import run_leader_bootstrap_phase
 from thaum.maintenance_bootstrap import register_all_maintenance_tasks
 from thaum.types import DEFAULT_LOG_FILE_PATH, LogLevel, LogConfig, ServerConfig
 
@@ -107,7 +108,9 @@ def validate_config_after_load(config: Dict[str, Any]) -> BaseModel:
 def bootstrap(config_path: str) -> Dict[str, Any]:
     """
     Load config, logging, import plugins, validate all Pydantic configs, init DB,
-    instantiate lookup + bots + alert plugins.
+    instantiate lookup, run election leader init (barrier), then bots + alert plugins.
+
+    Sets ``config["_thaum_leader_candidate_id"]`` for :func:`web.create_app` to pass to the leader loop.
     """
     config = load_and_validate(config_path)
     server: ServerConfig = config["server"]
@@ -127,6 +130,9 @@ def bootstrap(config_path: str) -> Dict[str, Any]:
     start_log_admin_state_poller(server)
 
     initialize_lookup_plugin(lookup_type, validated_lookup.model_dump(mode="python"))
+
+    leader_candidate_id = run_leader_bootstrap_phase(server, config)
+    config["_thaum_leader_candidate_id"] = leader_candidate_id
 
     initialize_bots(bot_type, config)
     logger.log(LogLevel.VERBOSE, "Thaum bootstrap complete for config %s", config_path)

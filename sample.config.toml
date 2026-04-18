@@ -31,9 +31,11 @@ lookup_plugin = "null"
 
 [server.election]
 # All workers participate; Webex webhooks are registered by the leader only.
+# Non-leader workers block in bootstrap until leader init tasks finish (DB barrier row).
 # namespace = "thaum"
 # lease_seconds = 60
 # heartbeat_seconds = 15.0
+# leader_init_wait_timeout_seconds = 300.0
 
 [server.admin]
 # Signed log-level admin (see docs/admin-log-level.md).
