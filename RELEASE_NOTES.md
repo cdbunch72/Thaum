@@ -1,5 +1,30 @@
 # Thaum release notes
 
+## v0.3.0a1 (alpha 1) — 2026-04-16
+
+First **0.3.x** prerelease: Atlassian-aware lookup, shared connection profiles, and coordinated multi-worker bootstrap.
+
+### Highlights
+
+- **Connections (`connections.plugins.*`)** — Named **`[connections.<name>]`** profiles (initially **`atlassian`**: `site_url`, `cloud_id`, `org_id`, optional `user` / `api_token`). Validated via Pydantic; no runtime behavior beyond config merge.
+- **Lookup merge** — **`[lookup.<plugin>].connection_ref`** merges a connection profile into lookup settings (connection first, plugin table wins on conflicts). Used by **`lookup.atlassian`** to share Cloud identity with other consumers.
+- **`lookup.atlassian`** — **Public Teams API** (`api.atlassian.com`) for org teams (leader preload into identity cache without members); **POST** members + **Jira REST** `GET /rest/api/3/user` for account ids. Platform id key **`jira`** for compatibility with **`id:team:`** / **`id:person:`** and the Jira alert plugin. Optional **`leader_init_tasks_register`** preloads teams before **`initialize_bots`**.
+- **Leader bootstrap** — After **`initialize_lookup_plugin`**, workers run election once: the **leader** runs registered **one-shot init tasks** (e.g. team preload); **non-leaders** wait on a **DB barrier** (`schema_leader_init_status`) until the leader finishes or reports failure. Configurable wait: **`[server.election].leader_init_wait_timeout_seconds`** (default **300**). **`create_app`** reuses the same election candidate id for the background leader loop (no second **`register_candidate`**).
+- **HTTP timeouts** — **`thaum.http_timeouts`**: fractional **connect** timeout (**`HTTP_CONNECT_TIMEOUT`**, default **2.5** s) plus **read** timeout **`(connect, read)`** tuples for **`requests`** on Jira alert and Atlassian lookup paths (avoids hanging forever on stalled TCP while allowing slower JSON reads).
+
+### Upgrade from v0.2.0a6
+
+- **Database**: deploy with a shared app DB as today; new ORM table **`schema_leader_init_status`** is created on startup via **`init_db`** (no manual migration file required for the default layout).
+- **Multi-worker**: non-leader processes block in bootstrap until the leader completes init tasks or the barrier wait times out; ensure **`[server.election]`** and DB connectivity match your deployment.
+- **pip / venv**: **`pip install -U .`** or **`-r requirements.txt`**; **`gemstone_utils`** pin unchanged (**`v0.3.0a2`**).
+- **Containers**: rebuild or pull an image tagged **`0.3.0a1`** when published; existing **`/var/lib/thaum`** volume usage is unchanged aside from new metadata rows.
+
+### Alpha caveats
+
+- Breaking changes may occur before **v0.3.0** stable.
+
+---
+
 ## v0.2.0a6 (alpha 6) — 2026-04-13
 
 - **Containers (bundled PostgreSQL)** — Unix socket directory moved from **`/run/thaum/postgres`** to **`/tmp/postgres`** so permission quirks on some hosts no longer block the app from connecting; existing clusters are migrated on startup via **`postgresql.auto.conf`**. Startup sequence still initializes the DB, runs **`pg_bootstrap`**, then hands off to **supervisord**.
