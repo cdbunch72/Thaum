@@ -8,19 +8,32 @@ import os
 from pathlib import Path
 
 
+def _candidate_paths(base: Path) -> tuple[Path, ...]:
+    """Order: title-case ``Thaum`` stem, then lowercase ``thaum``, ``.toml`` before ``.conf``; then ``config``."""
+    return (
+        base / "Thaum.toml",
+        base / "Thaum.conf",
+        base / "thaum.toml",
+        base / "thaum.conf",
+        base / "config.toml",
+        base / "config.conf",
+    )
+
+
 def resolve_config_path() -> str:
     """
-    Path to TOML config: ``THAUM_CONFIG_FILE``, else first existing
-    ``/etc/thaum/thaum.conf`` or ``./thaum.toml``, else ``thaum.toml`` in the working directory.
+    Path to config (TOML in all cases): ``THAUM_CONFIG_FILE`` if set, else the first existing file in order:
+
+    * ``/etc/thaum/`` — ``Thaum.toml``, ``Thaum.conf``, ``thaum.toml``, ``thaum.conf``, ``config.toml``, ``config.conf``
+    * working directory — same basename sequence under ``./``
+
+    If none exist, returns ``thaum.toml`` (typical path for a new file in the working directory).
     """
     env_path = os.environ.get("THAUM_CONFIG_FILE")
     if env_path:
         return env_path
 
-    candidates = (
-        Path("/etc/thaum/thaum.conf"),
-        Path("./thaum.toml"),
-    )
+    candidates = (*_candidate_paths(Path("/etc/thaum")), *_candidate_paths(Path(".")))
     for candidate in candidates:
         if candidate.exists():
             return str(candidate)

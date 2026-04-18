@@ -4,8 +4,10 @@
 """
 WSGI entry: ``gunicorn app:app`` (multiple workers supported: leader election registers Webex
 webhooks once per deployment). Set ``server.database.database_vault_passphrase`` when using shared DB
-Webex HMAC (omit ``hmac_secret`` in bot config). Config: ``THAUM_CONFIG_FILE``, else
-``/etc/thaum/thaum.conf`` or ``thaum.toml`` in the working directory.
+Webex HMAC (omit ``hmac_secret`` in bot config). Config: ``THAUM_CONFIG_FILE`` if set; else the first
+existing file in ``/etc/thaum/`` then ``./``, in order:
+``Thaum.toml``, ``Thaum.conf``, ``thaum.toml``, ``thaum.conf``, ``config.toml``, ``config.conf``;
+if none exist, ``thaum.toml``. See ``thaum.paths.resolve_config_path``.
 """
 
 from __future__ import annotations

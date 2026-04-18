@@ -14,7 +14,7 @@
 #                        Service principal needs permission to push to ACR and update the Web App
 #                        (e.g. Contributor on the resource group).
 #
-# Repository must contain: Dockerfile, thaum.conf (see Dockerfile.example).
+# Repository must contain: Dockerfile, thaum.toml (see Dockerfile.example).
 
 name: Build and deploy Thaum
 
@@ -31,7 +31,7 @@ env:
   IMAGE_NAME: ${{ vars.IMAGE_NAME }}
   RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
   WEBAPP_NAME: ${{ vars.AZURE_WEBAPP_NAME }}
-  CONFIG_PATH: /etc/thaum/thaum.conf
+  CONFIG_PATH: /etc/thaum/Thaum.toml
   LOCAL_IMAGE: thaum-deploy:ci
 
 jobs:

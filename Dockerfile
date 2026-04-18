@@ -63,10 +63,11 @@ RUN useradd --create-home --uid 1000 --shell /usr/sbin/nologin thaum \
     && usermod -aG postgres thaum
 
 WORKDIR /app
+# Do not set THAUM_CONFIG_FILE: the app uses resolve_config_path() (tries /etc/thaum/Thaum.toml first, then other
+# names). Prefer .toml over .conf for the same TOML content — better syntax highlighting in Vim and most editors.
 ENV PATH="/venv/bin:$PATH" \
     PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1 \
-    THAUM_CONFIG_FILE=/etc/thaum/thaum.conf
+    PYTHONUNBUFFERED=1
 
 COPY --from=builder /venv /venv
 COPY --chown=1000:1000 . .
