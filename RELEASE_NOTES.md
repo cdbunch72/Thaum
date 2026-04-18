@@ -1,5 +1,20 @@
 # Thaum release notes
 
+## v0.4.0.dev0 (development) — unreleased
+
+**`main` now targets the 0.4.x line.** This dev release is **not** an alpha or a published artifact—it only signals that ongoing work is **no longer** aimed at shipping **0.3.0** stable, and that the next numbered prereleases will be **0.4.0a1**, **0.4.0b1**, etc., when ready.
+
+**`pyproject.toml`** is set to **`0.4.0.dev0`** so installs from an unreleased git checkout (e.g. `pip install .` from **`main`**) report a distinct version from published packages such as **v0.3.0a1**.
+
+Themes accumulated on **`main`** since **v0.3.0a1** (non-exhaustive; details will be finalized for the first **0.4.x** prerelease):
+
+- **Lookup** — `get_person_by_email` contract: cache vs live resolution; **Atlassian** Jira user search and **LDAP/AD** mail search; internal **`_get_cached_person_by_email`**.
+- **Connections** — Shared **`merge_connection_profile`**; **Jira** alert **`connection_ref`** merged in bootstrap (no plugin branch).
+- **LDAP** — Optional **`platform_ids_ldap_attribute`** / **`platform_ids_format`** (`json` or multi-value delimited) for extra Thaum platform ids; **[`docs/LDAP-AD-lookup.md`](docs/LDAP-AD-lookup.md)**.
+- **CI / containers** — **`:edge`** updated on **prerelease** and **stable** GitHub Releases (and manual **`main`** workflow) so it tracks the current image.
+
+---
+
 ## v0.3.0a1 (alpha 1) — 2026-04-16
 
 First **0.3.x** prerelease: Atlassian-aware lookup, shared connection profiles, and coordinated multi-worker bootstrap.
