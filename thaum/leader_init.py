@@ -83,7 +83,14 @@ def mark_leader_init_failed(session: Session, message: str) -> None:
 
 def run_registered_init_tasks(server_cfg: ServerConfig, config: Dict[str, Any]) -> None:
     """Execute registered tasks in order; first failure stops and re-raises."""
-    for name, fn in _init_tasks:
+    for i, (name, fn) in enumerate(_init_tasks):
+        logger.log(
+            LogLevel.VERBOSE,
+            "Leader init task starting (%d/%d): %s",
+            i + 1,
+            len(_init_tasks),
+            name,
+        )
         try:
             fn(server_cfg, config)
         except Exception as e:
@@ -91,6 +98,7 @@ def run_registered_init_tasks(server_cfg: ServerConfig, config: Dict[str, Any]) 
             if logger.isEnabledFor(LogLevel.SPAM):
                 log_debug_blob(logger, f"leader init task traceback ({name})", traceback.format_exc(), LogLevel.SPAM)
             raise
+        logger.log(LogLevel.VERBOSE, "Leader init task completed: %s", name)
 
 
 def wait_for_leader_init_barrier(

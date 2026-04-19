@@ -45,6 +45,12 @@ def create_app(config: Dict[str, Any], *, run_leader_loop: bool = True) -> Flask
     def bot_webhook(bot_key: str):
         bot = BOTS.get(bot_key)
         if bot is None:
+            logger.log(
+                LogLevel.DEBUG,
+                "unknown bot_key=%r for POST /bot; registered keys: %s",
+                bot_key,
+                sorted(BOTS.keys()),
+            )
             return jsonify({"error": "unknown bot"}), 404
         try:
             if not bot.authenticate_request(request):
@@ -78,6 +84,12 @@ def create_app(config: Dict[str, Any], *, run_leader_loop: bool = True) -> Flask
     def alert_status_webhook(bot_key: str):
         bot = BOTS.get(bot_key)
         if bot is None:
+            logger.log(
+                LogLevel.DEBUG,
+                "unknown bot_key=%r for POST /alerts/.../status; registered keys: %s",
+                bot_key,
+                sorted(BOTS.keys()),
+            )
             return jsonify({"error": "unknown bot"}), 404
         plugin = getattr(bot, "alert_plugin", None)
         if plugin is None or not getattr(plugin, "supports_status_webhooks", False):

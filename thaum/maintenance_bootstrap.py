@@ -31,12 +31,23 @@ def register_all_leader_init_tasks(server_cfg: ServerConfig, config: Dict[str, A
         mod = ensure_plugin_loaded(kind, name)
         reg = getattr(mod, "leader_init_tasks_register", None)
         if reg is not None:
+            logger.log(
+                LogLevel.VERBOSE,
+                "Leader init: registering tasks from %s plugin %r",
+                kind,
+                name,
+            )
             reg(leader_init, server_cfg=server_cfg, config=config)
 
     for at in sorted(alert_types):
         mod = ensure_plugin_loaded("alerts", at)
         reg = getattr(mod, "leader_init_tasks_register", None)
         if reg is not None:
+            logger.log(
+                LogLevel.VERBOSE,
+                "Leader init: registering tasks from alerts plugin %r",
+                at,
+            )
             reg(leader_init, server_cfg=server_cfg, config=config)
 
     logger.log(LogLevel.VERBOSE, "Leader init task registration complete")
@@ -58,16 +69,28 @@ def register_all_maintenance_tasks(server_cfg: ServerConfig, config: Dict[str, A
         mod = ensure_plugin_loaded(kind, name)
         reg = getattr(mod, "maintenance_tasks_register", None)
         if reg is not None:
+            logger.log(
+                LogLevel.VERBOSE,
+                "Leader maintenance: invoking %s plugin %r maintenance_tasks_register",
+                kind,
+                name,
+            )
             reg(leader_service, server_cfg=server_cfg, config=config)
 
     for at in sorted(alert_types):
         mod = ensure_plugin_loaded("alerts", at)
         reg = getattr(mod, "maintenance_tasks_register", None)
         if reg is not None:
+            logger.log(
+                LogLevel.VERBOSE,
+                "Leader maintenance: invoking alerts plugin %r maintenance_tasks_register",
+                at,
+            )
             reg(leader_service, server_cfg=server_cfg, config=config)
 
     from thaum import builtin_leader_tasks
 
+    logger.log(LogLevel.VERBOSE, "Leader maintenance: registering builtin tasks")
     builtin_leader_tasks.register_builtin_tasks(leader_service, server_cfg=server_cfg, config=config)
     logger.log(LogLevel.VERBOSE, "Leader maintenance task registration complete")
 

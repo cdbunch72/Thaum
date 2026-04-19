@@ -472,7 +472,14 @@ def maintenance_tasks_register(registry: Any, *, server_cfg: ServerConfig, confi
             if getattr(bot, "plugin_name", None) == "webex":
                 bot._leader_maintenance_tick()
 
-    registry.register_task("webex_webhook_maintenance", max(60.0, interval), _tick)
+    tick_interval = max(60.0, interval)
+    logging.getLogger(__name__).log(
+        LogLevel.VERBOSE,
+        "Leader maintenance: registered webex_webhook_maintenance every %.1f s "
+        "(leader runs webhook ensure/register on tick when ids missing or probe fails)",
+        tick_interval,
+    )
+    registry.register_task("webex_webhook_maintenance", tick_interval, _tick)
 
 
 def get_config_model():

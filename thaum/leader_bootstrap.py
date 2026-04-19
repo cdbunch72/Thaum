@@ -39,10 +39,17 @@ def run_leader_bootstrap_phase(server_cfg: ServerConfig, config: Dict[str, Any])
     cid = uuid4()
     election.register_candidate(cid, ns)
     election.heartbeat(cid, ns)
-    election.elect(cid, ns)
+    leader_cid = election.elect(cid, ns)
+    logger.log(
+        LogLevel.VERBOSE,
+        "Election after bootstrap elect: worker_cid=%s leader_cid=%s namespace=%r",
+        cid,
+        leader_cid,
+        ns,
+    )
 
     if election.is_leader(cid, ns):
-        logger.info("This worker is election leader; running leader init tasks.")
+        logger.info(f"This worker ({cid}) is election leader; running leader init tasks.")
         with get_session() as session:
             with session.begin():
                 mark_leader_init_running(session)

@@ -132,11 +132,23 @@ def bootstrap(config_path: str) -> Dict[str, Any]:
     apply_runtime_log_level_from_db()
     start_log_admin_state_poller(server)
 
+    logger.log(LogLevel.VERBOSE, "Bootstrap: initializing lookup plugin %r", lookup_type)
     initialize_lookup_plugin(lookup_type, validated_lookup.model_dump(mode="python"))
 
+    logger.log(
+        LogLevel.VERBOSE,
+        "Bootstrap: leader election bootstrap phase (namespace=%r)",
+        server.election.namespace,
+    )
     leader_candidate_id = run_leader_bootstrap_phase(server, config)
     config["_thaum_leader_candidate_id"] = leader_candidate_id
+    logger.log(
+        LogLevel.VERBOSE,
+        "Bootstrap: leader bootstrap finished; worker_candidate_id=%s",
+        leader_candidate_id,
+    )
 
+    logger.log(LogLevel.VERBOSE, "Bootstrap: initializing bots (bot_type=%r)", bot_type)
     initialize_bots(bot_type, config)
     logger.log(LogLevel.VERBOSE, "Thaum bootstrap complete for config %s", config_path)
     return config
