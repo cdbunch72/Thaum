@@ -532,20 +532,6 @@ class WebexChatBotConfig(BaseChatBotConfig):
         return self
 
 
-def leader_post_bots_init_tasks_register(registry: Any, *, server_cfg: ServerConfig, config: Dict[str, Any]) -> None:
-    """Election leader: register inbound Webex webhooks once bot instances exist (see also maintenance tick)."""
-
-    if server_cfg.bot_type != "webex":
-        return
-
-    def _register_webex_webhooks(_server_cfg: ServerConfig, _config: Dict[str, Any]) -> None:
-        from thaum.factory import register_all_bot_webhooks
-
-        register_all_bot_webhooks()
-
-    registry.register_post_bots_init_task("webex_register_webhooks", _register_webex_webhooks)
-
-
 def maintenance_tasks_register(registry: Any, *, server_cfg: ServerConfig, config: Dict[str, Any]) -> None:
     if server_cfg.bot_type != "webex":
         return
@@ -567,10 +553,15 @@ def maintenance_tasks_register(registry: Any, *, server_cfg: ServerConfig, confi
     logging.getLogger(__name__).log(
         LogLevel.VERBOSE,
         "Leader maintenance: registered webex_webhook_maintenance every %.1f s "
-        "(leader runs webhook ensure/register on tick when ids missing or probe fails)",
+        "(run_on_startup=True; leader also runs on tick when ids missing or probe fails)",
         tick_interval,
     )
-    registry.register_task("webex_webhook_maintenance", tick_interval, _tick)
+    registry.register_task(
+        "webex_webhook_maintenance",
+        tick_interval,
+        _tick,
+        run_on_startup=True,
+    )
 
 
 def get_config_model():
