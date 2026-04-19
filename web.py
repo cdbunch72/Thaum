@@ -3,9 +3,7 @@
 # web.py
 from __future__ import annotations
 
-import json
 import logging
-import time
 import traceback
 from typing import Any, Dict
 
@@ -126,28 +124,5 @@ def create_app(config: Dict[str, Any], *, run_leader_loop: bool = True) -> Flask
         candidate_id=leader_cid,
         run_leader_loop=run_leader_loop,
     )
-    # #region agent log
-    try:
-        with open(
-            "/var/log/thaum/debug-ce1c69.log",
-            "a",
-            encoding="utf-8",
-        ) as _f:
-            _f.write(
-                json.dumps(
-                    {
-                        "sessionId": "ce1c69",
-                        "hypothesisId": "H2",
-                        "location": "web.py:create_app",
-                        "message": "create_app finished; register_all_bot_webhooks not invoked here",
-                        "data": {"run_leader_loop": run_leader_loop},
-                        "timestamp": int(time.time() * 1000),
-                    }
-                )
-                + "\n"
-            )
-    except Exception:
-        pass
-    # #endregion
     return app
 # -- End Function create_app

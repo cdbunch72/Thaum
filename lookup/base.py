@@ -3,7 +3,6 @@
 # lookup/base.py
 from __future__ import annotations
 
-import json
 import logging
 import time
 from abc import ABC, abstractmethod
@@ -242,33 +241,6 @@ class BaseLookupPlugin(ABC):
                 if not team_name:
                     continue
                 team = self.get_team_by_name(bot, team_name)
-                # #region agent log
-                try:
-                    with open(
-                        "/var/log/thaum/debug-ce1c69.log",
-                        "a",
-                        encoding="utf-8",
-                    ) as _f:
-                        _f.write(
-                            json.dumps(
-                                {
-                                    "sessionId": "ce1c69",
-                                    "hypothesisId": "H3",
-                                    "location": "lookup/base.py:resolve_responder_refs",
-                                    "message": "team: ref resolution",
-                                    "data": {
-                                        "team_name_resolved": team_name,
-                                        "found_in_cache": team is not None,
-                                        "source_plugin": source_plugin,
-                                    },
-                                    "timestamp": int(time.time() * 1000),
-                                }
-                            )
-                            + "\n"
-                        )
-                except Exception:
-                    pass
-                # #endregion
                 if team is not None:
                     out += team
                 else:
