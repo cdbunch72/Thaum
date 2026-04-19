@@ -152,10 +152,10 @@ def bootstrap(config_path: str) -> Dict[str, Any]:
     logger.log(LogLevel.VERBOSE, "Bootstrap: initializing bots (bot_type=%r)", bot_type)
     initialize_bots(bot_type, config)
     if election.is_leader(leader_candidate_id, server.election.namespace):
-        from thaum.leader_init import run_registered_post_bots_init_tasks
+        from thaum.leader_service import run_startup_leader_tasks
 
-        logger.log(LogLevel.VERBOSE, "Bootstrap: leader post-bots init tasks")
-        run_registered_post_bots_init_tasks(server, config)
+        logger.log(LogLevel.VERBOSE, "Bootstrap: leader maintenance tasks (run_on_startup)")
+        run_startup_leader_tasks(server, config)
     logger.log(LogLevel.VERBOSE, "Thaum bootstrap complete for config %s", config_path)
     return config
 # -- End Function bootstrap

@@ -28,7 +28,6 @@ from log_setup import log_debug_blob
 logger = logging.getLogger("thaum.leader_init")
 
 _init_tasks: List[Tuple[str, Callable[[ServerConfig, Dict[str, Any]], None]]] = []
-_post_bots_init_tasks: List[Tuple[str, Callable[[ServerConfig, Dict[str, Any]], None]]] = []
 
 
 def register_init_task(
@@ -39,18 +38,9 @@ def register_init_task(
     _init_tasks.append((name, fn))
 
 
-def register_post_bots_init_task(
-    name: str,
-    fn: Callable[[ServerConfig, Dict[str, Any]], None],
-) -> None:
-    """Register a leader-only task after ``initialize_bots`` (plugins call via ``leader_post_bots_init_tasks_register``)."""
-    _post_bots_init_tasks.append((name, fn))
-
-
 def reset_for_tests() -> None:
     """Clear registered tasks (unit tests)."""
     _init_tasks.clear()
-    _post_bots_init_tasks.clear()
 
 
 def _ensure_row(session: Session) -> LeaderInitStatus:
@@ -109,31 +99,6 @@ def run_registered_init_tasks(server_cfg: ServerConfig, config: Dict[str, Any]) 
                 log_debug_blob(logger, f"leader init task traceback ({name})", traceback.format_exc(), LogLevel.SPAM)
             raise
         logger.log(LogLevel.VERBOSE, "Leader init task completed: %s", name)
-
-
-def run_registered_post_bots_init_tasks(server_cfg: ServerConfig, config: Dict[str, Any]) -> None:
-    """Execute leader-only tasks that require ``BOTS`` to be populated; first failure stops and re-raises."""
-    for i, (name, fn) in enumerate(_post_bots_init_tasks):
-        logger.log(
-            LogLevel.VERBOSE,
-            "Leader post-bots init task starting (%d/%d): %s",
-            i + 1,
-            len(_post_bots_init_tasks),
-            name,
-        )
-        try:
-            fn(server_cfg, config)
-        except Exception as e:
-            logger.error("Leader post-bots init task %r failed: %s", name, e)
-            if logger.isEnabledFor(LogLevel.SPAM):
-                log_debug_blob(
-                    logger,
-                    f"leader post-bots init task traceback ({name})",
-                    traceback.format_exc(),
-                    LogLevel.SPAM,
-                )
-            raise
-        logger.log(LogLevel.VERBOSE, "Leader post-bots init task completed: %s", name)
 
 
 def wait_for_leader_init_barrier(

@@ -29,6 +29,7 @@ class LeaderTask:
     interval_seconds: float
     fn: Callable[..., None]
     task_data: Any = None
+    run_on_startup: bool = False
 
 
 _tasks: List[LeaderTask] = []
@@ -42,10 +43,20 @@ def register_task(
     interval_seconds: float,
     fn: Callable[..., None],
     task_data: Any = None,
+    *,
+    run_on_startup: bool = False,
 ) -> None:
     if interval_seconds <= 0:
         raise ValueError("interval_seconds must be positive")
-    _tasks.append(LeaderTask(name=name, interval_seconds=interval_seconds, fn=fn, task_data=task_data))
+    _tasks.append(
+        LeaderTask(
+            name=name,
+            interval_seconds=interval_seconds,
+            fn=fn,
+            task_data=task_data,
+            run_on_startup=run_on_startup,
+        )
+    )
 
 
 def build_maintenance_context(server_cfg: ServerConfig, config: Dict[str, Any]) -> Dict[str, Any]:
@@ -54,6 +65,38 @@ def build_maintenance_context(server_cfg: ServerConfig, config: Dict[str, Any]) 
         "server_cfg": server_cfg,
         "config": config,
     }
+
+
+def run_startup_leader_tasks(server_cfg: ServerConfig, config: Dict[str, Any]) -> None:
+    """
+    Run maintenance tasks registered with ``run_on_startup=True`` once ``BOTS`` is populated.
+
+    Call only on the election leader during bootstrap, after :func:`thaum.factory.initialize_bots`.
+    Failures propagate (same as pre-bots leader init tasks).
+    """
+    ctx = build_maintenance_context(server_cfg, config)
+    startup = [t for t in _tasks if t.run_on_startup]
+    for i, t in enumerate(startup):
+        logger.log(
+            LogLevel.VERBOSE,
+            "Leader maintenance startup run (%d/%d): %s",
+            i + 1,
+            len(startup),
+            t.name,
+        )
+        try:
+            t.fn(ctx, t.task_data)
+        except Exception as e:
+            logger.error("Leader maintenance startup task %r failed: %s", t.name, e)
+            if logger.isEnabledFor(LogLevel.SPAM):
+                log_debug_blob(
+                    logger,
+                    f"leader maintenance startup task traceback ({t.name})",
+                    traceback.format_exc(),
+                    LogLevel.SPAM,
+                )
+            raise
+        logger.log(LogLevel.VERBOSE, "Leader maintenance startup task completed: %s", t.name)
 
 
 def _run_due_tasks(
