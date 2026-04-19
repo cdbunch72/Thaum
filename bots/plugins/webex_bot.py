@@ -3,7 +3,6 @@
 # bots/plugins/webex_bot.py
 from __future__ import annotations
 
-import json
 import logging
 import time
 from typing import TYPE_CHECKING, Any, Dict, List, Literal, Optional
@@ -166,34 +165,6 @@ class WebexChatBot(BaseChatBot):
         now = time.monotonic()
         _interval = float(self._web_cfg.webhook_probe_interval_seconds)
         _elapsed = now - self._last_probe_monotonic
-        # #region agent log
-        try:
-            with open(
-                "/var/log/thaum/debug-ce1c69.log",
-                "a",
-                encoding="utf-8",
-            ) as _f:
-                _f.write(
-                    json.dumps(
-                        {
-                            "sessionId": "ce1c69",
-                            "hypothesisId": "H1",
-                            "location": "webex_bot.py:_probe_webhook_status",
-                            "message": "probe throttle check",
-                            "data": {
-                                "elapsed_since_last_probe": _elapsed,
-                                "interval_seconds": _interval,
-                                "will_skip_throttle": _elapsed < _interval,
-                                "webhook_ids_set": bool(self._webhook_ids),
-                            },
-                            "timestamp": int(time.time() * 1000),
-                        }
-                    )
-                    + "\n"
-                )
-        except Exception:
-            pass
-        # #endregion
         if _elapsed < _interval:
             return
         self._last_probe_monotonic = now
@@ -204,29 +175,6 @@ class WebexChatBot(BaseChatBot):
 
         ids = self._webhook_ids
         if not ids:
-            # #region agent log
-            try:
-                with open(
-                    "/var/log/thaum/debug-ce1c69.log",
-                    "a",
-                    encoding="utf-8",
-                ) as _f:
-                    _f.write(
-                        json.dumps(
-                            {
-                                "sessionId": "ce1c69",
-                                "hypothesisId": "H5",
-                                "location": "webex_bot.py:_probe_webhook_status",
-                                "message": "calling register_bot_webhook (no cached ids)",
-                                "data": {"endpoint_configured": bool((self.endpoint or "").strip())},
-                                "timestamp": int(time.time() * 1000),
-                            }
-                        )
-                        + "\n"
-                    )
-            except Exception:
-                pass
-            # #endregion
             self.register_bot_webhook()
             return
 
@@ -245,29 +193,6 @@ class WebexChatBot(BaseChatBot):
                 return
 
     def _leader_maintenance_tick(self) -> None:
-        # #region agent log
-        try:
-            with open(
-                "/var/log/thaum/debug-ce1c69.log",
-                "a",
-                encoding="utf-8",
-            ) as _f:
-                _f.write(
-                    json.dumps(
-                        {
-                            "sessionId": "ce1c69",
-                            "hypothesisId": "H5",
-                            "location": "webex_bot.py:_leader_maintenance_tick",
-                            "message": "leader maintenance tick",
-                            "data": {"endpoint_configured": bool((self.endpoint or "").strip())},
-                            "timestamp": int(time.time() * 1000),
-                        }
-                    )
-                    + "\n"
-                )
-        except Exception:
-            pass
-        # #endregion
         if not (self.endpoint or "").strip():
             return
         self._probe_webhook_status()
