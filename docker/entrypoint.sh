@@ -6,6 +6,9 @@ set -e
 # So gunicorn (and similar) do not use /root when dropping to user thaum via gosu/supervisor.
 export HOME=/home/thaum
 
+# App NDJSON debug logs (session-specific filename) and other runtime logs under /var/log/thaum.
+install -d -m 0755 -o thaum -g thaum /var/log/thaum
+
 # Systemd/orchestrator credentials often appear under /run/secrets (or /var/run/secrets) with
 # permissions readable only by root. The app runs as user thaum, so resolve_secret(secret:...)
 # cannot read those files unless we copy them to a tmpfs dir (see Quadlet THAUM_CREDS_DIR) and
