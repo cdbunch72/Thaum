@@ -48,7 +48,9 @@ class WebexChatBot(BaseChatBot):
         self._hmac_cache_plain: Optional[str] = None
         self._hmac_cache_monotonic: float = 0.0
         self._webhook_ids: Optional[tuple[str, str, str]] = None
-        self._last_probe_monotonic: float = 0.0
+        # First probe must not be delayed until `webhook_probe_interval_seconds` elapses; monotonic
+        # time 0 is only ~seconds after boot, so initializing to 0 incorrectly throttles registration.
+        self._last_probe_monotonic: float = float("-inf")
         self._hears_routes = []
 
     def complete_runtime_init(self, server_cfg: ServerConfig) -> None:
@@ -528,6 +530,20 @@ class WebexChatBotConfig(BaseChatBotConfig):
         else:
             self.hmac_secret = None
         return self
+
+
+def leader_post_bots_init_tasks_register(registry: Any, *, server_cfg: ServerConfig, config: Dict[str, Any]) -> None:
+    """Election leader: register inbound Webex webhooks once bot instances exist (see also maintenance tick)."""
+
+    if server_cfg.bot_type != "webex":
+        return
+
+    def _register_webex_webhooks(_server_cfg: ServerConfig, _config: Dict[str, Any]) -> None:
+        from thaum.factory import register_all_bot_webhooks
+
+        register_all_bot_webhooks()
+
+    registry.register_post_bots_init_task("webex_register_webhooks", _register_webex_webhooks)
 
 
 def maintenance_tasks_register(registry: Any, *, server_cfg: ServerConfig, config: Dict[str, Any]) -> None:

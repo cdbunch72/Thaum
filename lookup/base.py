@@ -7,6 +7,7 @@ import json
 import logging
 import time
 from abc import ABC, abstractmethod
+from difflib import get_close_matches
 from typing import Any, Callable, Dict, List, Optional
 
 from pydantic import BaseModel, ConfigDict
@@ -316,12 +317,20 @@ class BaseLookupPlugin(ABC):
     def get_team_by_name(self, bot: Any, team_name: str) -> Optional[ThaumTeam]:
         with get_session() as session:
             row = session.get(SchemaTeam, team_name)
+            resolved_key = team_name
+            if row is None:
+                all_names = list(session.scalars(select(SchemaTeam.team_name)).all())
+                if all_names:
+                    matches = get_close_matches(team_name, all_names, n=1, cutoff=0.88)
+                    if matches:
+                        resolved_key = matches[0]
+                        row = session.get(SchemaTeam, resolved_key)
             if row is None:
                 return None
 
             email_rows = session.scalars(
                 select(SchemaTeamMember.email).where(
-                    SchemaTeamMember.team_name == team_name
+                    SchemaTeamMember.team_name == resolved_key
                 )
             ).all()
 
@@ -333,7 +342,7 @@ class BaseLookupPlugin(ABC):
 
         return ThaumTeam(
             bot=bot,
-            team_name=team_name,
+            team_name=resolved_key,
             last_cached=row.last_cached,
             ttl=row.ttl,
             _members=members,

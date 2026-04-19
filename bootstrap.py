@@ -8,6 +8,7 @@ import os
 from typing import Any, Dict
 
 from pydantic import BaseModel
+from gemstone_utils import election
 
 from bots.factory import validate_bot_config
 from config import load_and_validate
@@ -150,6 +151,11 @@ def bootstrap(config_path: str) -> Dict[str, Any]:
 
     logger.log(LogLevel.VERBOSE, "Bootstrap: initializing bots (bot_type=%r)", bot_type)
     initialize_bots(bot_type, config)
+    if election.is_leader(leader_candidate_id, server.election.namespace):
+        from thaum.leader_init import run_registered_post_bots_init_tasks
+
+        logger.log(LogLevel.VERBOSE, "Bootstrap: leader post-bots init tasks")
+        run_registered_post_bots_init_tasks(server, config)
     logger.log(LogLevel.VERBOSE, "Thaum bootstrap complete for config %s", config_path)
     return config
 # -- End Function bootstrap
