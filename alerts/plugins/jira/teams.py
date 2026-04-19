@@ -3,7 +3,9 @@
 # alerts/plugins/jira/teams.py
 from __future__ import annotations
 
+import json
 import logging
+import time
 from typing import Any
 
 import requests
@@ -39,6 +41,37 @@ def refresh_team_cache(
     response = requests.get(url, headers=headers, auth=auth, timeout=timeout_pair(15.0))
     response.raise_for_status()
     payload = response.json()
+
+    # #region agent log
+    try:
+        with open(
+            "/var/log/thaum/debug-ce1c69.log",
+            "a",
+            encoding="utf-8",
+        ) as _f:
+            _ptype = type(payload).__name__
+            _keys = list(payload.keys())[:12] if isinstance(payload, dict) else None
+            _alen = len(payload) if isinstance(payload, list) else None
+            _f.write(
+                json.dumps(
+                    {
+                        "sessionId": "ce1c69",
+                        "hypothesisId": "H4",
+                        "location": "jira/teams.py:refresh_team_cache",
+                        "message": "JSM teams API payload shape",
+                        "data": {
+                            "payload_type": _ptype,
+                            "dict_keys_sample": _keys,
+                            "list_len": _alen,
+                        },
+                        "timestamp": int(time.time() * 1000),
+                    }
+                )
+                + "\n"
+            )
+    except Exception:
+        pass
+    # #endregion
 
     teams = payload.get("platformTeams", [])
     for item in teams:
