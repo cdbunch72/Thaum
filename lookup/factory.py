@@ -8,7 +8,7 @@ import os
 from typing import Any, Dict
 
 from connections.merge import merge_connection_profile
-from lookup.base import BaseLookupPlugin
+from lookup.base import BaseLookupPlugin, BaseLookupPluginConfig
 from plugin_loader import ensure_plugin_loaded
 
 logger = logging.getLogger("lookup.factory")
@@ -28,7 +28,13 @@ def merge_lookup_connection_profile(full_config: Dict[str, Any], merged_lookup: 
 def merged_lookup_plugin_config(lookup_type: str, lookup_raw: Dict[str, Any]) -> Dict[str, Any]:
     """Merge ``[lookup]`` with ``[lookup.<type>]`` the same way bootstrap validates plugins."""
     plugin_cfg = lookup_raw.get(lookup_type, {}) if isinstance(lookup_raw, dict) else {}
-    merged: Dict[str, Any] = dict(lookup_raw or {})
+    # Only copy shared [lookup] keys (BaseLookupPluginConfig), not sibling [lookup.<other>] tables.
+    base_keys = set(BaseLookupPluginConfig.model_fields.keys())
+    merged: Dict[str, Any] = {}
+    if isinstance(lookup_raw, dict):
+        for k in base_keys:
+            if k in lookup_raw:
+                merged[k] = lookup_raw[k]
     if isinstance(plugin_cfg, dict):
         merged.update(plugin_cfg)
     return merged
