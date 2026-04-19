@@ -59,6 +59,18 @@ class ResponderResolutionTest(unittest.TestCase):
         self.assertEqual(responders.teams[0].team_name, "DBA Team")
     # -- End Method test_resolve_responder_refs_supports_team_names_with_spaces
 
+    def test_resolve_responder_refs_fuzzy_team_name_near_miss(self) -> None:
+        """Typo/near-miss display names (e.g. DBA vs DBAs) resolve to the cached team row."""
+        self.lookup.cache_team(
+            ThaumTeam(bot=self.bot, team_name="Gemstone - DBAs", _members=[])
+        )
+        responders = self.lookup.resolve_responder_refs(
+            self.bot, ["team:Gemstone - DBA"]
+        )
+        self.assertEqual(len(responders.teams), 1)
+        self.assertEqual(responders.teams[0].team_name, "Gemstone - DBAs")
+    # -- End Method test_resolve_responder_refs_fuzzy_team_name_near_miss
+
 
 class JiraResponderSourceTest(unittest.TestCase):
     def _make_plugin(self, responders: list[str]) -> JiraPlugin:
