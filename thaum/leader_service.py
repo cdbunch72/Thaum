@@ -69,12 +69,15 @@ def _run_due_tasks(
         prev = last_run.get(t.name, 0.0)
         if now - prev < t.interval_seconds:
             continue
+        logger.log(LogLevel.VERBOSE, "Leader maintenance: task starting: %s", t.name)
         try:
             t.fn(ctx, t.task_data)
         except Exception as e:
             logger.error("Leader task %r failed: %s", t.name, e)
             if logger.isEnabledFor(LogLevel.SPAM):
                 log_debug_blob(logger, f"leader task traceback ({t.name})", traceback.format_exc(), LogLevel.SPAM)
+        finally:
+            logger.log(LogLevel.VERBOSE, "Leader maintenance: task finished: %s", t.name)
         last_run[t.name] = now
 
 
