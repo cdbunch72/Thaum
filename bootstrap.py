@@ -120,6 +120,11 @@ def bootstrap(config_path: str) -> Dict[str, Any]:
     server: ServerConfig = config["server"]
 
     configure_logging(_log_config_with_env_defaults(config["log"]), server)
+    logger.error(
+        "[debug-131a48][H6] bootstrap entered config_path=%s module=%s",
+        config_path,
+        __file__,
+    )
 
     validated_lookup = validate_config_after_load(config)
     lookup_type = server.lookup_plugin
