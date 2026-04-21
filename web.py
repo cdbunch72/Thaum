@@ -3,7 +3,10 @@
 # web.py
 from __future__ import annotations
 
+import json
 import logging
+import os
+import time
 import traceback
 from typing import Any, Dict
 
@@ -20,6 +23,31 @@ from thaum.types import LogLevel
 from log_setup import log_debug_blob
 
 logger = logging.getLogger("thaum.web")
+
+# region agent log
+def _agent_dbg_web(hypothesis_id: str, location: str, message: str, data: Dict[str, Any]) -> None:
+    try:
+        os.makedirs("/var/log/thaum", exist_ok=True)
+        with open("/var/log/thaum/debug-131a48.log", "a", encoding="utf-8") as _f:
+            _f.write(
+                json.dumps(
+                    {
+                        "sessionId": "131a48",
+                        "timestamp": int(time.time() * 1000),
+                        "runId": "http-webhook",
+                        "hypothesisId": hypothesis_id,
+                        "location": location,
+                        "message": message,
+                        "data": data,
+                    }
+                )
+                + "\n"
+            )
+    except Exception:
+        pass
+
+
+# endregion agent log
 
 
 def create_app(config: Dict[str, Any], *, run_leader_loop: bool = True) -> Flask:
@@ -43,6 +71,23 @@ def create_app(config: Dict[str, Any], *, run_leader_loop: bool = True) -> Flask
 
     @app.post("/bot/<bot_key>")
     def bot_webhook(bot_key: str):
+        # region agent log
+        try:
+            clen = request.content_length
+        except Exception:
+            clen = None
+        _agent_dbg_web(
+            "H13",
+            "web.py:bot_webhook:entry",
+            "POST /bot/<bot_key> received",
+            {
+                "bot_key": bot_key,
+                "content_length": clen,
+                "has_x_spark_signature": bool(request.headers.get("X-Spark-Signature")),
+                "registered_bot_keys": sorted(BOTS.keys()),
+            },
+        )
+        # endregion agent log
         bot = BOTS.get(bot_key)
         if bot is None:
             logger.log(
@@ -51,24 +96,84 @@ def create_app(config: Dict[str, Any], *, run_leader_loop: bool = True) -> Flask
                 bot_key,
                 sorted(BOTS.keys()),
             )
+            # region agent log
+            _agent_dbg_web(
+                "H13",
+                "web.py:bot_webhook:unknown_bot",
+                "unknown bot_key",
+                {"bot_key": bot_key, "registered_bot_keys": sorted(BOTS.keys())},
+            )
+            # endregion agent log
             return jsonify({"error": "unknown bot"}), 404
         try:
             if not bot.authenticate_request(request):
+                # region agent log
+                _agent_dbg_web(
+                    "H14",
+                    "web.py:bot_webhook:auth_failed",
+                    "authenticate_request returned False",
+                    {"bot_key": bot_key, "plugin": getattr(bot, "plugin_name", None)},
+                )
+                # endregion agent log
                 return jsonify({"error": "unauthorized"}), 401
         except Exception as e:
             logger.warning("Bot auth error for %s: %s", bot_key, e)
+            # region agent log
+            _agent_dbg_web(
+                "H14",
+                "web.py:bot_webhook:auth_exception",
+                "authenticate_request raised",
+                {"bot_key": bot_key, "error": type(e).__name__},
+            )
+            # endregion agent log
             return jsonify({"error": "unauthorized"}), 401
 
         payload = request.get_json(force=True, silent=True)
         if not isinstance(payload, dict):
+            # region agent log
+            _agent_dbg_web(
+                "H15",
+                "web.py:bot_webhook:bad_json",
+                "request body was not a JSON object",
+                {"bot_key": bot_key, "payload_type": type(payload).__name__},
+            )
+            # endregion agent log
             return jsonify({"error": "expected JSON object"}), 400
+        # region agent log
+        _agent_dbg_web(
+            "H15",
+            "web.py:bot_webhook:before_handle_event",
+            "auth ok, dispatching handle_event",
+            {
+                "bot_key": bot_key,
+                "resource": payload.get("resource"),
+                "has_data": isinstance(payload.get("data"), dict),
+            },
+        )
+        # endregion agent log
         try:
             bot.handle_event(payload)
         except Exception as e:
             logger.error("handle_event failed for bot %s: %s", bot_key, e)
+            # region agent log
+            _agent_dbg_web(
+                "H15",
+                "web.py:bot_webhook:handle_event_exception",
+                "handle_event raised",
+                {"bot_key": bot_key, "error": type(e).__name__},
+            )
+            # endregion agent log
             if logger.isEnabledFor(LogLevel.SPAM):
                 log_debug_blob(logger, f"handle_event traceback (bot={bot_key})", traceback.format_exc(), LogLevel.SPAM)
             return jsonify({"error": "internal error"}), 500
+        # region agent log
+        _agent_dbg_web(
+            "H15",
+            "web.py:bot_webhook:success",
+            "handle_event completed",
+            {"bot_key": bot_key},
+        )
+        # endregion agent log
         return "", 204
 
     server: ServerConfig = config["server"]
