@@ -3,7 +3,9 @@
 # bots/plugins/webex_bot.py
 from __future__ import annotations
 
+import json
 import logging
+import os
 import time
 from typing import TYPE_CHECKING, Any, Dict, List, Literal, Optional
 
@@ -458,7 +460,47 @@ class WebexChatBotConfig(BaseChatBotConfig):
 
 
 def maintenance_tasks_register(registry: Any, *, server_cfg: ServerConfig, config: Dict[str, Any]) -> None:
+    # region agent log
+    def _dbg(hypothesis_id: str, location: str, message: str, data: Dict[str, Any]) -> None:
+        try:
+            p = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "debug-131a48.log"))
+            with open(p, "a", encoding="utf-8") as _f:
+                _f.write(
+                    json.dumps(
+                        {
+                            "sessionId": "131a48",
+                            "timestamp": int(time.time() * 1000),
+                            "hypothesisId": hypothesis_id,
+                            "location": location,
+                            "message": message,
+                            "data": data,
+                        }
+                    )
+                    + "\n"
+                )
+        except Exception:
+            pass
+
+    _dbg(
+        "H1",
+        "webex_bot.py:maintenance_tasks_register:entry",
+        "maintenance_tasks_register entered",
+        {
+            "bot_type": server_cfg.bot_type,
+            "registry_type": type(registry).__name__,
+            "has_register_task": callable(getattr(registry, "register_task", None)),
+        },
+    )
+    # endregion agent log
     if server_cfg.bot_type != "webex":
+        # region agent log
+        _dbg(
+            "H1",
+            "webex_bot.py:maintenance_tasks_register:early_return",
+            "skipped: bot_type != webex",
+            {"bot_type": server_cfg.bot_type},
+        )
+        # endregion agent log
         return
     interval = 3600.0
     for row in (config.get("bots") or {}).values():
@@ -467,7 +509,18 @@ def maintenance_tasks_register(registry: Any, *, server_cfg: ServerConfig, confi
         vb = row.get("_validated_bot")
         probe = getattr(vb, "webhook_probe_interval_seconds", None)
         if probe is not None:
-            interval = min(interval, float(probe))
+            try:
+                interval = min(interval, float(probe))
+            except (TypeError, ValueError) as _e:
+                # region agent log
+                _dbg(
+                    "H5",
+                    "webex_bot.py:maintenance_tasks_register:probe_coerce",
+                    "float(probe) failed",
+                    {"probe_repr": repr(probe), "error": type(_e).__name__},
+                )
+                # endregion agent log
+                raise
 
     def _tick(ctx: Any, _task_data: Any) -> None:
         for bot in ctx["bots"].values():
@@ -481,12 +534,35 @@ def maintenance_tasks_register(registry: Any, *, server_cfg: ServerConfig, confi
         "(run_on_startup=True; leader also runs on tick when ids missing or probe fails)",
         tick_interval,
     )
-    registry.register_task(
-        "webex_webhook_maintenance",
-        tick_interval,
-        _tick,
-        run_on_startup=True,
+    # region agent log
+    _dbg(
+        "H3",
+        "webex_bot.py:maintenance_tasks_register:before_register_task",
+        "about to register_task",
+        {"tick_interval": tick_interval, "raw_interval": interval},
     )
+    try:
+        registry.register_task(
+            "webex_webhook_maintenance",
+            tick_interval,
+            _tick,
+            run_on_startup=True,
+        )
+    except Exception as _e:
+        _dbg(
+            "H2",
+            "webex_bot.py:maintenance_tasks_register:register_task_exc",
+            "register_task raised",
+            {"error": type(_e).__name__, "msg": str(_e)},
+        )
+        raise
+    _dbg(
+        "H2",
+        "webex_bot.py:maintenance_tasks_register:after_register_task",
+        "register_task completed",
+        {},
+    )
+    # endregion agent log
 
 
 def get_config_model():
@@ -494,4 +570,5 @@ def get_config_model():
 
 
 def create_instance_bot(config: WebexChatBotConfig) -> WebexChatBot:
+    return WebexChatBot(config)
     return WebexChatBot(config)

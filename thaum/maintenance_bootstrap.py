@@ -3,7 +3,10 @@
 # thaum/maintenance_bootstrap.py
 from __future__ import annotations
 
+import json
 import logging
+import os
+import time
 from typing import Any, Dict
 
 from plugin_loader import ensure_plugin_loaded
@@ -75,6 +78,27 @@ def register_all_maintenance_tasks(server_cfg: ServerConfig, config: Dict[str, A
                 kind,
                 name,
             )
+            # region agent log
+            if kind == "bots":
+                try:
+                    _p = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "debug-131a48.log"))
+                    with open(_p, "a", encoding="utf-8") as _f:
+                        _f.write(
+                            json.dumps(
+                                {
+                                    "sessionId": "131a48",
+                                    "timestamp": int(time.time() * 1000),
+                                    "hypothesisId": "H4",
+                                    "location": "maintenance_bootstrap.py:register_all_maintenance_tasks",
+                                    "message": "about to call bots maintenance_tasks_register",
+                                    "data": {"plugin_name": name, "bot_type": server_cfg.bot_type},
+                                }
+                            )
+                            + "\n"
+                        )
+                except Exception:
+                    pass
+            # endregion agent log
             reg(leader_service, server_cfg=server_cfg, config=config)
 
     for at in sorted(alert_types):
