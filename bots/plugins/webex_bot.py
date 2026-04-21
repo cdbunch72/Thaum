@@ -346,30 +346,126 @@ class WebexChatBot(BaseChatBot):
         return self._validate_signature(raw_body, signature)
 
     def _process_message(self, message_id: str) -> Optional[str]:
+        # region agent log
+        def _dbg_evt(hypothesis_id: str, location: str, message: str, data: Dict[str, Any]) -> None:
+            try:
+                p = "/var/log/thaum/debug-131a48.log"
+                with open(p, "a", encoding="utf-8") as _f:
+                    _f.write(
+                        json.dumps(
+                            {
+                                "sessionId": "131a48",
+                                "timestamp": int(time.time() * 1000),
+                                "runId": "commands-pre-fix",
+                                "hypothesisId": hypothesis_id,
+                                "location": location,
+                                "message": message,
+                                "data": data,
+                            }
+                        )
+                        + "\n"
+                    )
+            except Exception:
+                pass
+        # endregion agent log
         message = self.api.messages.get(message_id)
         room = self.api.rooms.get(message.roomId)
         is_direct = room.type == "direct"
         is_mentioned = message.mentionedPeople and self.me.id in message.mentionedPeople
+        # region agent log
+        _dbg_evt(
+            "H10",
+            "webex_bot.py:_process_message:classification",
+            "message classification",
+            {
+                "room_type": getattr(room, "type", None),
+                "is_direct": bool(is_direct),
+                "is_mentioned": bool(is_mentioned),
+                "has_text": bool(getattr(message, "text", None)),
+            },
+        )
+        # endregion agent log
 
         if not (is_direct or is_mentioned):
+            # region agent log
+            _dbg_evt(
+                "H10",
+                "webex_bot.py:_process_message:ignored",
+                "ignored message: neither direct nor mentioned",
+                {},
+            )
+            # endregion agent log
             return None
 
         if message.text:
             mention_tag = f"<@personId:{self.me.id}>"
             clean_text = message.text.replace(mention_tag, "").strip()
+            # region agent log
+            _dbg_evt(
+                "H9",
+                "webex_bot.py:_process_message:clean_text",
+                "clean_text generated",
+                {
+                    "text_preview": clean_text[:160],
+                    "mention_tag": mention_tag,
+                },
+            )
+            # endregion agent log
             return clean_text
 
         return None
 # -- End Method process_message
 
     def handle_event(self, event: Dict[str, Any]) -> None:
+        # region agent log
+        def _dbg_evt(hypothesis_id: str, location: str, message: str, data: Dict[str, Any]) -> None:
+            try:
+                p = "/var/log/thaum/debug-131a48.log"
+                with open(p, "a", encoding="utf-8") as _f:
+                    _f.write(
+                        json.dumps(
+                            {
+                                "sessionId": "131a48",
+                                "timestamp": int(time.time() * 1000),
+                                "runId": "commands-pre-fix",
+                                "hypothesisId": hypothesis_id,
+                                "location": location,
+                                "message": message,
+                                "data": data,
+                            }
+                        )
+                        + "\n"
+                    )
+            except Exception:
+                pass
+        # endregion agent log
         resource: Optional[str] = event.get("resource")
         data: Dict[str, Any] = event.get("data", {})
         self.logger.log(LogLevel.SPAM, "handle_event:")
         log_debug_blob(self.logger, "handle_event", data, LogLevel.SPAM)
+        # region agent log
+        _dbg_evt(
+            "H9",
+            "webex_bot.py:handle_event:entry",
+            "handle_event received",
+            {
+                "resource": resource,
+                "has_data_id": bool(data.get("id")),
+                "person_id_present": bool(data.get("personId")),
+            },
+        )
+        # endregion agent log
 
         if resource == "messages":
             if data.get("personId") == self.me.id:
+                # region agent log
+                _dbg_evt(
+                    "H9",
+                    "webex_bot.py:handle_event:self_message_skip",
+                    "skipped self message",
+                    {"person_id": data.get("personId")},
+                )
+                # endregion agent log
                 return
 
             clean_text = self._process_message(data["id"])
@@ -388,8 +484,25 @@ class WebexChatBot(BaseChatBot):
             for _priority, pattern, handler in self._hears_routes:
                 match = pattern.search(clean_text)
                 if match:
+                    # region agent log
+                    _dbg_evt(
+                        "H11",
+                        "webex_bot.py:handle_event:route_match",
+                        "hears route matched",
+                        {"pattern": pattern.pattern, "priority": _priority, "clean_text": clean_text[:160]},
+                    )
+                    # endregion agent log
                     handler(self, message, match)
                     break
+            else:
+                # region agent log
+                _dbg_evt(
+                    "H11",
+                    "webex_bot.py:handle_event:no_route_match",
+                    "no hears route matched",
+                    {"clean_text": clean_text[:160], "route_count": len(self._hears_routes)},
+                )
+                # endregion agent log
 
         elif resource == "attachmentActions":
             action = self.api.attachment_actions.get(data["id"])
