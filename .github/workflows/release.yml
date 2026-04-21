@@ -3,6 +3,8 @@
 name: Release
 
 on:
+  push:
+    branches: [debug]
   release:
     types: [published]
   workflow_dispatch:
@@ -122,6 +124,13 @@ jobs:
               echo "${IMAGE}:${EDGE_TAG}"
               echo '__THAUM_TAGS__'
             } >> "$GITHUB_ENV"
+          elif [ "${{ github.event_name }}" = "push" ] && [ "${{ github.ref_name }}" = "debug" ]; then
+            THAUM_IMAGE_CHANNEL="edge-debug"
+            {
+              echo 'TAGS<<__THAUM_TAGS__'
+              echo "${IMAGE}:edge-debug"
+              echo '__THAUM_TAGS__'
+            } >> "$GITHUB_ENV"
           elif [ "${{ github.event.release.prerelease }}" = "true" ]; then
             THAUM_IMAGE_CHANNEL="devel"
             {
@@ -152,6 +161,17 @@ jobs:
             echo "GEMSTONE_UTILS_REF=${GEMSTONE_REF}"
             echo "PYTHON_VERSION=${PYVER}"
           } >> "$GITHUB_ENV"
+
+      - name: Echo resolved image metadata
+        run: |
+          echo "REGISTRY=${{ env.REGISTRY }}"
+          echo "IMAGE=${{ env.IMAGE }}"
+          echo "VERSION=${{ env.VERSION }}"
+          echo "THAUM_IMAGE_VERSION=${{ env.THAUM_IMAGE_VERSION }}"
+          echo "THAUM_IMAGE_CHANNEL=${{ env.THAUM_IMAGE_CHANNEL }}"
+          echo "PYTHON_VERSION=${{ env.PYTHON_VERSION }}"
+          echo "TAGS:"
+          printf '%s\n' "${{ env.TAGS }}"
 
       - name: Log in to GitHub Container Registry
         if: env.REGISTRY == 'ghcr.io'
