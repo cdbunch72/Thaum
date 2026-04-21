@@ -497,18 +497,26 @@ def maintenance_tasks_register(registry: Any, *, server_cfg: ServerConfig, confi
         __file__,
     )
     # endregion agent log
-    if server_cfg.bot_type != "webex":
+    expected_bot_type = __name__.rsplit(".", 1)[-1]
+    allowed_bot_types = {expected_bot_type, "webex"}
+    if server_cfg.bot_type not in allowed_bot_types:
         # region agent log
         _dbg(
             "H1",
             "webex_bot.py:maintenance_tasks_register:early_return",
-            "skipped: bot_type != webex",
-            {"bot_type": server_cfg.bot_type},
+            "skipped: bot_type is not a webex alias",
+            {
+                "bot_type": server_cfg.bot_type,
+                "expected_bot_type": expected_bot_type,
+                "allowed_bot_types": sorted(allowed_bot_types),
+            },
         )
         # endregion agent log
         logging.getLogger(__name__).warning(
-            "[debug-131a48][H1] early return in webex maintenance_tasks_register bot_type=%r",
+            "[debug-131a48][H1] early return in webex maintenance_tasks_register bot_type=%r expected=%r allowed=%r",
             server_cfg.bot_type,
+            expected_bot_type,
+            sorted(allowed_bot_types),
         )
         return
     interval = 3600.0
