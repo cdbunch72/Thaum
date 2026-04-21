@@ -491,6 +491,11 @@ def maintenance_tasks_register(registry: Any, *, server_cfg: ServerConfig, confi
             "has_register_task": callable(getattr(registry, "register_task", None)),
         },
     )
+    logging.getLogger(__name__).warning(
+        "[debug-131a48][H1] webex maintenance_tasks_register entered bot_type=%r module=%s",
+        server_cfg.bot_type,
+        __file__,
+    )
     # endregion agent log
     if server_cfg.bot_type != "webex":
         # region agent log
@@ -501,6 +506,10 @@ def maintenance_tasks_register(registry: Any, *, server_cfg: ServerConfig, confi
             {"bot_type": server_cfg.bot_type},
         )
         # endregion agent log
+        logging.getLogger(__name__).warning(
+            "[debug-131a48][H1] early return in webex maintenance_tasks_register bot_type=%r",
+            server_cfg.bot_type,
+        )
         return
     interval = 3600.0
     for row in (config.get("bots") or {}).values():

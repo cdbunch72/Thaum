@@ -58,6 +58,11 @@ def register_all_leader_init_tasks(server_cfg: ServerConfig, config: Dict[str, A
 
 def register_all_maintenance_tasks(server_cfg: ServerConfig, config: Dict[str, Any]) -> None:
     """Call ``maintenance_tasks_register`` on lookup, bot, alert plugins, then builtins."""
+    logger.warning(
+        "[debug-131a48][H4] entered register_all_maintenance_tasks bot_type=%r module=%s",
+        server_cfg.bot_type,
+        __file__,
+    )
     lookup_type = server_cfg.lookup_plugin
     bot_type = server_cfg.bot_type
     alert_types: set[str] = {"null"}
@@ -75,6 +80,11 @@ def register_all_maintenance_tasks(server_cfg: ServerConfig, config: Dict[str, A
             logger.log(
                 LogLevel.VERBOSE,
                 "Leader maintenance: invoking %s plugin %r maintenance_tasks_register",
+                kind,
+                name,
+            )
+            logger.warning(
+                "[debug-131a48][H4] invoking maintenance_tasks_register kind=%r name=%r",
                 kind,
                 name,
             )
