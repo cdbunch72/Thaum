@@ -78,8 +78,7 @@ RUN chmod +x \
         /app/docker/entrypoint.sh \
         /app/docker/wait_for_pg.sh \
         /app/docker/run_thaum.sh \
-        /app/docker/pg_bootstrap.py \
-        /app/docker/supervisor_shutdown_on_thaum_fatal.py
+        /app/docker/pg_bootstrap.py
 
 USER root
 VOLUME ["/etc/thaum", "/var/lib/thaum"]
