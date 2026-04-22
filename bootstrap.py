@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import logging
 import os
+import signal
 from typing import Any, Dict
 
 from pydantic import BaseModel
@@ -25,6 +26,21 @@ from thaum.maintenance_bootstrap import register_all_maintenance_tasks
 from thaum.types import DEFAULT_LOG_FILE_PATH, LogLevel, LogConfig, ServerConfig
 
 logger = logging.getLogger("thaum.bootstrap")
+
+
+def _terminate_parent_on_fatal_bootstrap(reason: str) -> None:
+    """Best-effort: stop Gunicorn master so orchestrator restarts container."""
+    try:
+        ppid = os.getppid()
+        if ppid and ppid > 1:
+            logger.critical(
+                "[debug-131a48][H20] fatal bootstrap; sending SIGTERM to parent pid=%s reason=%s",
+                ppid,
+                reason,
+            )
+            os.kill(ppid, signal.SIGTERM)
+    except Exception as e:
+        logger.error("Failed to terminate parent process after fatal bootstrap: %s", e)
 
 
 def _log_config_with_env_defaults(log_cfg: LogConfig) -> LogConfig:
@@ -146,7 +162,13 @@ def bootstrap(config_path: str) -> Dict[str, Any]:
         "Bootstrap: leader election bootstrap phase (namespace=%r)",
         server.election.namespace,
     )
-    leader_candidate_id = run_leader_bootstrap_phase(server, config)
+    try:
+        leader_candidate_id = run_leader_bootstrap_phase(server, config)
+    except Exception as e:
+        # Expired/invalid upstream credentials (for leader init tasks) are fatal at startup:
+        # allow orchestrator to restart the whole container instead of worker respawn loops.
+        _terminate_parent_on_fatal_bootstrap(str(e))
+        raise
     config["_thaum_leader_candidate_id"] = leader_candidate_id
     logger.log(
         LogLevel.VERBOSE,

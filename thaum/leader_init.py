@@ -8,6 +8,7 @@ import json
 import logging
 import time
 import traceback
+from datetime import datetime, timezone
 from typing import Any, Callable, Dict, List, Tuple
 
 from sqlalchemy.orm import Session
@@ -181,6 +182,14 @@ def wait_for_leader_init_barrier(
                 )
                 # endregion agent log
             if row.state != last_observed_state or ticket != last_observed_ticket:
+                row_updated_age_seconds: float | None = None
+                try:
+                    if row.updated_at is not None:
+                        row_updated_age_seconds = (
+                            datetime.now(timezone.utc) - row.updated_at
+                        ).total_seconds()
+                except Exception:
+                    row_updated_age_seconds = None
                 # region agent log
                 _dbg_wait(
                     "H18",
@@ -191,6 +200,8 @@ def wait_for_leader_init_barrier(
                         "ticket": ticket,
                         "baseline": baseline,
                         "saw_running": saw_running,
+                        "updated_at": str(row.updated_at),
+                        "updated_age_seconds": row_updated_age_seconds,
                     },
                 )
                 # endregion agent log
