@@ -118,10 +118,12 @@ def wait_for_leader_init_barrier(
     baseline: int | None = None
     saw_running = False
     failed_seen_at: float | None = None
+    last_observed_state: str | None = None
+    last_observed_ticket: int | None = None
     # region agent log
     def _dbg_wait(hypothesis_id: str, location: str, message: str, data: Dict[str, Any]) -> None:
         try:
-            with open("/var/log/thaum/debug-131a48.log", "a", encoding="utf-8") as _f:
+            with open("debug-131a48.log", "a", encoding="utf-8") as _f:
                 _f.write(
                     json.dumps(
                         {
@@ -141,6 +143,14 @@ def wait_for_leader_init_barrier(
     # endregion agent log
     while True:
         if time.monotonic() > deadline:
+            # region agent log
+            _dbg_wait(
+                "H19",
+                "leader_init.py:wait_for_leader_init_barrier:timeout",
+                "wait_for_leader_init_barrier timed out",
+                {"baseline": baseline, "saw_running": saw_running},
+            )
+            # endregion agent log
             logger.error(
                 "Timed out after %s s waiting for leader init barrier.",
                 server_cfg.election.leader_init_wait_timeout_seconds,
@@ -163,20 +173,36 @@ def wait_for_leader_init_barrier(
                     {"baseline": baseline, "state": row.state},
                 )
                 # endregion agent log
+            if row.state != last_observed_state or ticket != last_observed_ticket:
+                # region agent log
+                _dbg_wait(
+                    "H18",
+                    "leader_init.py:wait_for_leader_init_barrier:state_change",
+                    "observed barrier state change",
+                    {
+                        "state": row.state,
+                        "ticket": ticket,
+                        "baseline": baseline,
+                        "saw_running": saw_running,
+                    },
+                )
+                # endregion agent log
+                last_observed_state = row.state
+                last_observed_ticket = ticket
             if row.state == STATE_RUNNING:
                 saw_running = True
                 failed_seen_at = None
             if row.state == STATE_FAILED:
-                # region agent log
-                _dbg_wait(
-                    "H19",
-                    "leader_init.py:wait_for_leader_init_barrier:failed_seen",
-                    "observed failed barrier state",
-                    {"ticket": ticket, "baseline": baseline, "saw_running": saw_running},
-                )
-                # endregion agent log
                 if ticket > baseline or saw_running:
                     msg = row.error_message or "leader init failed"
+                    # region agent log
+                    _dbg_wait(
+                        "H19",
+                        "leader_init.py:wait_for_leader_init_barrier:raise_failed",
+                        "raising on failed barrier state",
+                        {"ticket": ticket, "baseline": baseline, "saw_running": saw_running},
+                    )
+                    # endregion agent log
                     logger.error("Leader init reported failure: %s", msg)
                     raise RuntimeError(msg)
                 # If the first observed state is FAILED at baseline, give a brief grace
@@ -185,11 +211,35 @@ def wait_for_leader_init_barrier(
                     failed_seen_at = time.monotonic()
                 elif (time.monotonic() - failed_seen_at) >= 2.0:
                     msg = row.error_message or "leader init failed"
+                    # region agent log
+                    _dbg_wait(
+                        "H19",
+                        "leader_init.py:wait_for_leader_init_barrier:raise_failed_baseline",
+                        "raising on stable failed baseline state",
+                        {"ticket": ticket, "baseline": baseline, "saw_running": saw_running},
+                    )
+                    # endregion agent log
                     logger.error("Leader init reported failure at baseline ticket: %s", msg)
                     raise RuntimeError(msg)
             if row.state == STATE_DONE:
                 if ticket > baseline:
+                    # region agent log
+                    _dbg_wait(
+                        "H18",
+                        "leader_init.py:wait_for_leader_init_barrier:return_done_new_ticket",
+                        "returning done on new ticket",
+                        {"ticket": ticket, "baseline": baseline, "saw_running": saw_running},
+                    )
+                    # endregion agent log
                     return
                 if saw_running:
+                    # region agent log
+                    _dbg_wait(
+                        "H18",
+                        "leader_init.py:wait_for_leader_init_barrier:return_done_seen_running",
+                        "returning done after seen running",
+                        {"ticket": ticket, "baseline": baseline, "saw_running": saw_running},
+                    )
+                    # endregion agent log
                     return
         time.sleep(poll_interval_seconds)
