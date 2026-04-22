@@ -122,6 +122,13 @@ def wait_for_leader_init_barrier(
     last_observed_ticket: int | None = None
     # region agent log
     def _dbg_wait(hypothesis_id: str, location: str, message: str, data: Dict[str, Any]) -> None:
+        logger.warning(
+            "[debug-131a48][%s] %s %s data=%s",
+            hypothesis_id,
+            location,
+            message,
+            data,
+        )
         try:
             with open("debug-131a48.log", "a", encoding="utf-8") as _f:
                 _f.write(
