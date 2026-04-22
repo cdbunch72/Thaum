@@ -98,18 +98,72 @@ class WebexChatBot(BaseChatBot):
         return self._effective_hmac_secret()
 
     def register_bot_webhook(self) -> None:
+        # region agent log
+        def _dbg_reg(hypothesis_id: str, location: str, message: str, data: Dict[str, Any]) -> None:
+            try:
+                with open("/var/log/thaum/debug-131a48.log", "a", encoding="utf-8") as _f:
+                    _f.write(
+                        json.dumps(
+                            {
+                                "sessionId": "131a48",
+                                "timestamp": int(time.time() * 1000),
+                                "runId": "webhook-registration",
+                                "hypothesisId": hypothesis_id,
+                                "location": location,
+                                "message": message,
+                                "data": data,
+                            }
+                        )
+                        + "\n"
+                    )
+            except Exception:
+                pass
+        # endregion agent log
         target = (self.endpoint or "").strip()
+        # region agent log
+        _dbg_reg(
+            "H16",
+            "webex_bot.py:register_bot_webhook:entry",
+            "register_bot_webhook called",
+            {"bot_key": self.bot_key, "target": target},
+        )
+        # endregion agent log
         if not target:
             self.logger.error("Cannot register Webex webhooks: bot endpoint is not configured.")
             return
 
         nt = self._normalize_target_url(target)
         try:
-            for wh in list(self.api.webhooks.list()):
+            existing = list(self.api.webhooks.list())
+            # region agent log
+            _dbg_reg(
+                "H16",
+                "webex_bot.py:register_bot_webhook:list_existing",
+                "listed existing webhooks",
+                {"count": len(existing), "target": target},
+            )
+            # endregion agent log
+            for wh in existing:
                 if wh.targetUrl and self._normalize_target_url(wh.targetUrl) == nt:
                     self.api.webhooks.delete(wh.id)
+                    # region agent log
+                    _dbg_reg(
+                        "H16",
+                        "webex_bot.py:register_bot_webhook:delete_matching",
+                        "deleted existing matching webhook",
+                        {"deleted_id": getattr(wh, "id", None), "targetUrl": getattr(wh, "targetUrl", None)},
+                    )
+                    # endregion agent log
         except Exception as e:
             self.logger.warning("While pruning old Webex webhooks: %s", e)
+            # region agent log
+            _dbg_reg(
+                "H16",
+                "webex_bot.py:register_bot_webhook:prune_error",
+                "exception while pruning old webhooks",
+                {"error": type(e).__name__, "msg": str(e)},
+            )
+            # endregion agent log
 
         secret = self._webhook_secret_for_api()
         name_prefix = f"Thaum {self.name}"
@@ -141,6 +195,37 @@ class WebexChatBot(BaseChatBot):
                 secret=secret,
             )
             self._webhook_ids = (w1.id, w2.id, w3.id)
+            # region agent log
+            _dbg_reg(
+                "H17",
+                "webex_bot.py:register_bot_webhook:created",
+                "created webhooks",
+                {
+                    "ids": [w1.id, w2.id, w3.id],
+                    "targets": [
+                        getattr(w1, "targetUrl", None),
+                        getattr(w2, "targetUrl", None),
+                        getattr(w3, "targetUrl", None),
+                    ],
+                    "statuses": [
+                        getattr(w1, "status", None),
+                        getattr(w2, "status", None),
+                        getattr(w3, "status", None),
+                    ],
+                    "resources": [
+                        getattr(w1, "resource", None),
+                        getattr(w2, "resource", None),
+                        getattr(w3, "resource", None),
+                    ],
+                    "events": [
+                        getattr(w1, "event", None),
+                        getattr(w2, "event", None),
+                        getattr(w3, "event", None),
+                    ],
+                    "configured_target": target,
+                },
+            )
+            # endregion agent log
             self.logger.log(
                 LogLevel.VERBOSE,
                 "Ensured Webex webhooks for bot_key=%r -> %s",
@@ -149,6 +234,14 @@ class WebexChatBot(BaseChatBot):
             )
         except Exception as e:
             self.logger.error("Failed to register Webex webhooks: %s", e)
+            # region agent log
+            _dbg_reg(
+                "H17",
+                "webex_bot.py:register_bot_webhook:create_error",
+                "exception creating webhooks",
+                {"error": type(e).__name__, "msg": str(e), "target": target},
+            )
+            # endregion agent log
             raise
 
     def _fetch_webhook(self, wid: str) -> Any:
