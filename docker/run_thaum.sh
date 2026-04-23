@@ -28,17 +28,28 @@ set +e
 rc="$?"
 set -e
 
-if [ "$rc" -eq 0 ]; then
-  rm -f "$RESTART_COUNT_FILE"
-  exit 0
-fi
-
 # region agent log
-echo "[debug-131a48][H21] gunicorn exited rc=${rc} attempt=${current_restarts} max=${MAX_RESTARTS}"
-if [ "$current_restarts" -ge "$MAX_RESTARTS" ]; then
-  echo "[debug-131a48][H21] restart budget exceeded; terminating supervisord pid=${PPID}"
-  kill -TERM "$PPID" 2>/dev/null || true
-fi
+echo "[debug-131a48][H21] gunicorn exited rc=${rc} attempt=${current_restarts} max=${MAX_RESTARTS} ppid=${PPID}"
 # endregion agent log
+
+# Do not clear RESTART_COUNT_FILE on rc=0: gunicorn can exit 0 during flapping and would reset the budget.
+
+if [ "$current_restarts" -ge "$MAX_RESTARTS" ]; then
+  # region agent log
+  parent_name=""
+  if [ -r "/proc/${PPID}/comm" ]; then
+    parent_name="$(tr -d '\0' <"/proc/${PPID}/comm")"
+  fi
+  # In Docker, ``exec supervisord`` makes supervisord PID 1; thaum's parent is then PPID=1 with comm ``supervisord``.
+  # On a host, PPID=1 with comm ``systemd`` must never receive SIGTERM from here.
+  if [ "$parent_name" = "supervisord" ]; then
+    echo "[debug-131a48][H21] restart budget exceeded; sending SIGTERM to supervisord pid=${PPID}"
+    kill -TERM "$PPID" 2>/dev/null || true
+  else
+    echo "[debug-131a48][H21] restart budget exceeded; not signaling parent (ppid=${PPID} comm=${parent_name:-unknown}) — use systemd/orchestrator restart limits"
+  fi
+  # endregion agent log
+  exit 1
+fi
 
 exit "$rc"
