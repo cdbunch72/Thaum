@@ -100,6 +100,13 @@ class WebexChatBot(BaseChatBot):
     def register_bot_webhook(self) -> None:
         # region agent log
         def _dbg_reg(hypothesis_id: str, location: str, message: str, data: Dict[str, Any]) -> None:
+            self.logger.warning(
+                "[debug-131a48][%s] %s: %s data=%s",
+                hypothesis_id,
+                location,
+                message,
+                data,
+            )
             try:
                 with open("/var/log/thaum/debug-131a48.log", "a", encoding="utf-8") as _f:
                     _f.write(
@@ -279,10 +286,20 @@ class WebexChatBot(BaseChatBot):
                 if wh is None:
                     raise ValueError("missing webhook")
                 status = getattr(wh, "status", None)
+                wh_target = getattr(wh, "targetUrl", None)
+                self.logger.warning(
+                    "[debug-131a48][H17] webhook probe id=%s status=%r targetUrl=%r expectedTarget=%r",
+                    wid,
+                    status,
+                    wh_target,
+                    target,
+                )
+                if wh_target and self._normalize_target_url(str(wh_target)) != self._normalize_target_url(target):
+                    raise ValueError("target_mismatch")
                 if status is not None and str(status).lower() != "active":
                     raise ValueError("inactive")
-            except Exception:
-                self.logger.info("Webex webhook probe failed for %s; reconciling.", wid)
+            except Exception as e:
+                self.logger.info("Webex webhook probe failed for %s; reconciling. reason=%s", wid, e)
                 self._webhook_ids = None
                 self.register_bot_webhook()
                 return
