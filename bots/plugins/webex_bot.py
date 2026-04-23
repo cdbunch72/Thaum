@@ -441,6 +441,13 @@ class WebexChatBot(BaseChatBot):
     def _process_message(self, message_id: str) -> Optional[str]:
         # region agent log
         def _dbg_evt(hypothesis_id: str, location: str, message: str, data: Dict[str, Any]) -> None:
+            self.logger.warning(
+                "[debug-131a48][%s] %s: %s data=%s",
+                hypothesis_id,
+                location,
+                message,
+                data,
+            )
             try:
                 p = "/var/log/thaum/debug-131a48.log"
                 with open(p, "a", encoding="utf-8") as _f:
@@ -512,6 +519,13 @@ class WebexChatBot(BaseChatBot):
     def handle_event(self, event: Dict[str, Any]) -> None:
         # region agent log
         def _dbg_evt(hypothesis_id: str, location: str, message: str, data: Dict[str, Any]) -> None:
+            self.logger.warning(
+                "[debug-131a48][%s] %s: %s data=%s",
+                hypothesis_id,
+                location,
+                message,
+                data,
+            )
             try:
                 p = "/var/log/thaum/debug-131a48.log"
                 with open(p, "a", encoding="utf-8") as _f:
@@ -563,7 +577,12 @@ class WebexChatBot(BaseChatBot):
 
             clean_text = self._process_message(data["id"])
             if clean_text is None:
-                self.logger.debug("Message ignored: Not a DM or Mention.")
+                self.logger.warning(
+                    "[debug-131a48][H10] webex message dropped (not DM / not @mention); "
+                    "room_id=%s message_id=%s",
+                    data.get("roomId"),
+                    data.get("id"),
+                )
                 return
 
             person = self.get_person(data["personId"])

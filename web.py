@@ -26,6 +26,13 @@ logger = logging.getLogger("thaum.web")
 
 # region agent log
 def _agent_dbg_web(hypothesis_id: str, location: str, message: str, data: Dict[str, Any]) -> None:
+    logger.warning(
+        "[debug-131a48][%s] %s: %s data=%s",
+        hypothesis_id,
+        location,
+        message,
+        data,
+    )
     try:
         os.makedirs("/var/log/thaum", exist_ok=True)
         with open("/var/log/thaum/debug-131a48.log", "a", encoding="utf-8") as _f:
