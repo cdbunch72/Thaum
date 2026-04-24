@@ -235,7 +235,11 @@ class JiraPlugin(BaseAlertPlugin):
                 },
                 "timestamp": int(time.time() * 1000),
             }
-            _log_path = Path(__file__).resolve().parents[3] / "debug-d2aafe.log"
+            _log_path = Path("/var/log/thaum") / "debug-d2aafe.log"
+            try:
+                _log_path.parent.mkdir(parents=True, exist_ok=True)
+            except Exception:
+                pass
             with open(_log_path, "a", encoding="utf-8") as _dbg:
                 _dbg.write(json.dumps(_log, default=str) + "\n")
         except Exception:
