@@ -168,9 +168,9 @@ class ThaumTeam:
         if not self.is_fresh and lookup is not None:
             try:
                 new_members = lookup.lookup_team_members(self)
-                if new_members:
-                    self._members = new_members
-                    self.last_cached = time.time()
+                # Record first lookup attempt even when team has zero members.
+                self._members = list(new_members)
+                self.last_cached = time.time()
                 # #region agent log
                 try:
                     _log = {

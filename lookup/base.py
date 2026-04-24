@@ -370,7 +370,9 @@ class BaseLookupPlugin(ABC):
         """
         with get_session() as session:
             with session.begin():
-                last_cached = getattr(team, "last_cached", None) or time.time()
+                last_cached = getattr(team, "last_cached", None)
+                if last_cached is None:
+                    last_cached = time.time()
                 ttl = getattr(team, "ttl", None) or self._default_team_ttl_seconds
 
                 session.merge(
