@@ -48,7 +48,7 @@ class WebexChatBot(BaseChatBot):
 
         self._hmac_cache_plain: Optional[str] = None
         self._hmac_cache_monotonic: float = 0.0
-        self._webhook_ids: Optional[tuple[str, str, str]] = None
+        self._webhook_ids: Optional[tuple[str, ...]] = None
         # First probe must not be delayed until `webhook_probe_interval_seconds` elapses; monotonic
         # time 0 is only ~seconds after boot, so initializing to 0 incorrectly throttles registration.
         self._last_probe_monotonic: float = float("-inf")
@@ -179,55 +179,42 @@ class WebexChatBot(BaseChatBot):
 
         try:
             w1 = self.api.webhooks.create(
-                name=f"{name_prefix} messages (direct)",
+                name=f"{name_prefix} messages",
                 targetUrl=target,
                 resource="messages",
                 event="created",
-                filter="roomType=direct",
                 secret=secret,
             )
             w2 = self.api.webhooks.create(
-                name=f"{name_prefix} messages (mentioned)",
-                targetUrl=target,
-                resource="messages",
-                event="created",
-                filter="mentionedPeople=me",
-                secret=secret,
-            )
-            w3 = self.api.webhooks.create(
                 name=f"{name_prefix} attachmentActions",
                 targetUrl=target,
                 resource="attachmentActions",
                 event="created",
                 secret=secret,
             )
-            self._webhook_ids = (w1.id, w2.id, w3.id)
+            self._webhook_ids = (w1.id, w2.id)
             # region agent log
             _dbg_reg(
                 "H17",
                 "webex_bot.py:register_bot_webhook:created",
                 "created webhooks",
                 {
-                    "ids": [w1.id, w2.id, w3.id],
+                    "ids": [w1.id, w2.id],
                     "targets": [
                         getattr(w1, "targetUrl", None),
                         getattr(w2, "targetUrl", None),
-                        getattr(w3, "targetUrl", None),
                     ],
                     "statuses": [
                         getattr(w1, "status", None),
                         getattr(w2, "status", None),
-                        getattr(w3, "status", None),
                     ],
                     "resources": [
                         getattr(w1, "resource", None),
                         getattr(w2, "resource", None),
-                        getattr(w3, "resource", None),
                     ],
                     "events": [
                         getattr(w1, "event", None),
                         getattr(w2, "event", None),
-                        getattr(w3, "event", None),
                     ],
                     "configured_target": target,
                 },
