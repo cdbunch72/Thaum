@@ -53,10 +53,15 @@ class ResponderResolutionTest(unittest.TestCase):
     # -- End Method test_resolve_responder_refs_supports_id_formats
 
     def test_resolve_responder_refs_supports_team_names_with_spaces(self) -> None:
-        self.lookup.cache_team(ThaumTeam(bot=self.bot, team_name="DBA Team", _members=[]))
+        self.lookup.cache_team(
+            ThaumTeam(bot=self.bot, team_name="DBA Team", _members=[]),
+            bot_plugin_name="jira",
+            team_id="team-space-1",
+        )
         responders = self.lookup.resolve_responder_refs(self.bot, ["team:DBA Team"])
         self.assertEqual(len(responders.teams), 1)
         self.assertEqual(responders.teams[0].team_name, "DBA Team")
+        self.assertEqual(responders.teams[0].alert_id, "team-space-1")
     # -- End Method test_resolve_responder_refs_supports_team_names_with_spaces
 
     def test_resolve_responder_refs_fuzzy_team_name_near_miss(self) -> None:
