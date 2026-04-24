@@ -5,7 +5,9 @@ from jinja2 import Template
 from thaum.engine import create_incident_room, acknowledge_incident
 from typing import TYPE_CHECKING, Any, Dict, List
 from thaum.types import ThaumPerson, AlertPriority
+import json
 import re
+import time as _time_mod
 
 if TYPE_CHECKING:
     from bots.base import BaseChatBot, MessageContext
@@ -144,6 +146,30 @@ def bind_thaum_handlers(bot: 'BaseChatBot') -> None:
     
     @bot.hears(r"^\s*(implode).*$", priority=80)
     def handle_implode(bot: 'BaseChatBot', ctx: 'MessageContext', match: re.Match):
+        # #region agent log
+        try:
+            with open(
+                r"c:\Users\Clinton\Documents\git\Thaum\debug-50bffa.log",
+                "a",
+                encoding="utf-8",
+            ) as _lf:
+                _lf.write(
+                    json.dumps(
+                        {
+                            "sessionId": "50bffa",
+                            "hypothesisId": "H3",
+                            "location": "handlers.py:handle_implode",
+                            "message": "implode_handler_entered",
+                            "data": {"ctx_message_repr": repr(ctx.message)},
+                            "timestamp": int(_time_mod.time() * 1000),
+                        },
+                        default=str,
+                    )
+                    + "\n"
+                )
+        except Exception:
+            pass
+        # #endregion
         bot.delete_room(ctx.room_id,ctx.person)
     
     @bot.hears(r"^\s*(usage|commands|\?).*",priority=90)
@@ -154,6 +180,33 @@ def bind_thaum_handlers(bot: 'BaseChatBot') -> None:
     
     @bot.hears(r"^(?P<cmd>\S+)\s+.*$",priority=99)
     def handle_unknown(bot: 'BaseChatBot', ctx: 'MessageContext', match: re.Match):
+        # #region agent log
+        try:
+            with open(
+                r"c:\Users\Clinton\Documents\git\Thaum\debug-50bffa.log",
+                "a",
+                encoding="utf-8",
+            ) as _lf:
+                _lf.write(
+                    json.dumps(
+                        {
+                            "sessionId": "50bffa",
+                            "hypothesisId": "H1",
+                            "location": "handlers.py:handle_unknown",
+                            "message": "unknown_handler_entered",
+                            "data": {
+                                "cmd": match.group("cmd"),
+                                "ctx_message_repr": repr(ctx.message),
+                            },
+                            "timestamp": int(_time_mod.time() * 1000),
+                        },
+                        default=str,
+                    )
+                    + "\n"
+                )
+        except Exception:
+            pass
+        # #endregion
         bot.say(ctx.room_id,f"Unknown command {match.group('cmd')}. Please use @{bot.name} usage to see a list of commands")
 
     

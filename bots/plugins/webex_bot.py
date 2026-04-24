@@ -3,6 +3,7 @@
 # bots/plugins/webex_bot.py
 from __future__ import annotations
 
+import json
 import logging
 import time
 from typing import TYPE_CHECKING, Any, Dict, List, Literal, Optional
@@ -382,11 +383,88 @@ class WebexChatBot(BaseChatBot):
                 message_id=data["id"],
                 raw_event=event,
             )
+            # #region agent log
+            try:
+                _routes = self._hears_routes
+                _dbg = {
+                    "sessionId": "50bffa",
+                    "hypothesisId": "H1-H4",
+                    "location": "webex_bot.py:handle_event",
+                    "message": "dispatch_clean_text",
+                    "data": {
+                        "clean_text_repr": repr(clean_text),
+                        "first_ord": [ord(c) for c in clean_text[:24]],
+                        "route_count": len(_routes),
+                        "routes": [
+                            {
+                                "pri": p,
+                                "pat": pat.pattern[:160],
+                                "handler": getattr(h, "__name__", type(h).__name__),
+                            }
+                            for p, pat, h in _routes
+                        ],
+                    },
+                    "timestamp": int(time.time() * 1000),
+                }
+                with open(
+                    r"c:\Users\Clinton\Documents\git\Thaum\debug-50bffa.log",
+                    "a",
+                    encoding="utf-8",
+                ) as _lf:
+                    _lf.write(json.dumps(_dbg, default=str) + "\n")
+            except Exception:
+                pass
+            # #endregion
             for _priority, pattern, handler in self._hears_routes:
                 match = pattern.search(clean_text)
                 if match:
+                    # #region agent log
+                    try:
+                        _win = {
+                            "sessionId": "50bffa",
+                            "hypothesisId": "H2-H3",
+                            "location": "webex_bot.py:handle_event",
+                            "message": "first_route_match",
+                            "data": {
+                                "priority": _priority,
+                                "pattern": pattern.pattern[:200],
+                                "handler": getattr(handler, "__name__", type(handler).__name__),
+                                "match_span": match.span(),
+                                "groupdict": match.groupdict(),
+                            },
+                            "timestamp": int(time.time() * 1000),
+                        }
+                        with open(
+                            r"c:\Users\Clinton\Documents\git\Thaum\debug-50bffa.log",
+                            "a",
+                            encoding="utf-8",
+                        ) as _lf:
+                            _lf.write(json.dumps(_win, default=str) + "\n")
+                    except Exception:
+                        pass
+                    # #endregion
                     handler(self, message, match)
                     break
+            else:
+                # #region agent log
+                try:
+                    _nm = {
+                        "sessionId": "50bffa",
+                        "hypothesisId": "H3",
+                        "location": "webex_bot.py:handle_event",
+                        "message": "no_route_matched",
+                        "data": {"clean_text_repr": repr(clean_text)},
+                        "timestamp": int(time.time() * 1000),
+                    }
+                    with open(
+                        r"c:\Users\Clinton\Documents\git\Thaum\debug-50bffa.log",
+                        "a",
+                        encoding="utf-8",
+                    ) as _lf:
+                        _lf.write(json.dumps(_nm, default=str) + "\n")
+                except Exception:
+                    pass
+                # #endregion
 
         elif resource == "attachmentActions":
             action = self.api.attachment_actions.get(data["id"])
