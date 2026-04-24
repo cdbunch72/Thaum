@@ -40,8 +40,17 @@ def refresh_team_cache(
     response.raise_for_status()
     payload = response.json()
 
-    teams = payload.get("platformTeams", [])
+    if isinstance(payload, list):
+        teams = payload
+    elif isinstance(payload, dict):
+        raw = payload.get("platformTeams", [])
+        teams = raw if isinstance(raw, list) else []
+    else:
+        teams = []
+
     for item in teams:
+        if not isinstance(item, dict):
+            continue
         team_name = str(item.get("teamName", "")).strip()
         team_id = str(item.get("teamId", "")).strip()
         if not team_name or not team_id:

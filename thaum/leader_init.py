@@ -116,6 +116,7 @@ def wait_for_leader_init_barrier(
     deadline = time.monotonic() + float(server_cfg.election.leader_init_wait_timeout_seconds)
     baseline: int | None = None
     saw_running = False
+    failed_seen_at: float | None = None
     while True:
         if time.monotonic() > deadline:
             logger.error(
@@ -134,10 +135,18 @@ def wait_for_leader_init_barrier(
                 baseline = ticket
             if row.state == STATE_RUNNING:
                 saw_running = True
-            if row.state == STATE_FAILED and (ticket > baseline or saw_running):
-                msg = row.error_message or "leader init failed"
-                logger.error("Leader init reported failure: %s", msg)
-                raise RuntimeError(msg)
+                failed_seen_at = None
+            if row.state == STATE_FAILED:
+                if ticket > baseline or saw_running:
+                    msg = row.error_message or "leader init failed"
+                    logger.error("Leader init reported failure: %s", msg)
+                    raise RuntimeError(msg)
+                if failed_seen_at is None:
+                    failed_seen_at = time.monotonic()
+                elif (time.monotonic() - failed_seen_at) >= 2.0:
+                    msg = row.error_message or "leader init failed"
+                    logger.error("Leader init reported failure at baseline ticket: %s", msg)
+                    raise RuntimeError(msg)
             if row.state == STATE_DONE:
                 if ticket > baseline:
                     return

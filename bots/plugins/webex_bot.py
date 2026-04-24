@@ -46,8 +46,10 @@ class WebexChatBot(BaseChatBot):
 
         self._hmac_cache_plain: Optional[str] = None
         self._hmac_cache_monotonic: float = 0.0
-        self._webhook_ids: Optional[tuple[str, str, str]] = None
-        self._last_probe_monotonic: float = 0.0
+        self._webhook_ids: Optional[tuple[str, ...]] = None
+        # First probe must not be delayed until `webhook_probe_interval_seconds` elapses; monotonic
+        # time 0 is only ~seconds after boot, so initializing to 0 incorrectly throttles registration.
+        self._last_probe_monotonic: float = float("-inf")
         self._hears_routes = []
 
     def complete_runtime_init(self, server_cfg: ServerConfig) -> None:
@@ -101,7 +103,8 @@ class WebexChatBot(BaseChatBot):
 
         nt = self._normalize_target_url(target)
         try:
-            for wh in list(self.api.webhooks.list()):
+            existing = list(self.api.webhooks.list())
+            for wh in existing:
                 if wh.targetUrl and self._normalize_target_url(wh.targetUrl) == nt:
                     self.api.webhooks.delete(wh.id)
         except Exception as e:
@@ -114,29 +117,20 @@ class WebexChatBot(BaseChatBot):
 
         try:
             w1 = self.api.webhooks.create(
-                name=f"{name_prefix} messages (direct)",
+                name=f"{name_prefix} messages",
                 targetUrl=target,
                 resource="messages",
                 event="created",
-                filter="roomType=direct",
                 secret=secret,
             )
             w2 = self.api.webhooks.create(
-                name=f"{name_prefix} messages (mentioned)",
-                targetUrl=target,
-                resource="messages",
-                event="created",
-                filter="mentionedPeople=me",
-                secret=secret,
-            )
-            w3 = self.api.webhooks.create(
                 name=f"{name_prefix} attachmentActions",
                 targetUrl=target,
                 resource="attachmentActions",
                 event="created",
                 secret=secret,
             )
-            self._webhook_ids = (w1.id, w2.id, w3.id)
+            self._webhook_ids = (w1.id, w2.id)
             self.logger.log(
                 LogLevel.VERBOSE,
                 "Ensured Webex webhooks for bot_key=%r -> %s",
@@ -161,9 +155,9 @@ class WebexChatBot(BaseChatBot):
 
     def _probe_webhook_status(self) -> None:
         now = time.monotonic()
-        if (now - self._last_probe_monotonic) < float(
-            self._web_cfg.webhook_probe_interval_seconds
-        ):
+        _interval = float(self._web_cfg.webhook_probe_interval_seconds)
+        _elapsed = now - self._last_probe_monotonic
+        if _elapsed < _interval:
             return
         self._last_probe_monotonic = now
 
@@ -182,10 +176,13 @@ class WebexChatBot(BaseChatBot):
                 if wh is None:
                     raise ValueError("missing webhook")
                 status = getattr(wh, "status", None)
+                wh_target = getattr(wh, "targetUrl", None)
+                if wh_target and self._normalize_target_url(str(wh_target)) != self._normalize_target_url(target):
+                    raise ValueError("target_mismatch")
                 if status is not None and str(status).lower() != "active":
                     raise ValueError("inactive")
-            except Exception:
-                self.logger.info("Webex webhook probe failed for %s; reconciling.", wid)
+            except Exception as e:
+                self.logger.info("Webex webhook probe failed for %s; reconciling. reason=%s", wid, e)
                 self._webhook_ids = None
                 self.register_bot_webhook()
                 return
@@ -370,7 +367,11 @@ class WebexChatBot(BaseChatBot):
 
             clean_text = self._process_message(data["id"])
             if clean_text is None:
-                self.logger.debug("Message ignored: Not a DM or Mention.")
+                self.logger.debug(
+                    "Ignoring Webex message (not a DM and bot not @mentioned); room_id=%s message_id=%s",
+                    data.get("roomId"),
+                    data.get("id"),
+                )
                 return
 
             person = self.get_person(data["personId"])
@@ -456,7 +457,9 @@ class WebexChatBotConfig(BaseChatBotConfig):
 
 
 def maintenance_tasks_register(registry: Any, *, server_cfg: ServerConfig, config: Dict[str, Any]) -> None:
-    if server_cfg.bot_type != "webex":
+    expected_bot_type = __name__.rsplit(".", 1)[-1]
+    allowed_bot_types = {expected_bot_type, "webex"}
+    if server_cfg.bot_type not in allowed_bot_types:
         return
     interval = 3600.0
     for row in (config.get("bots") or {}).values():
@@ -465,7 +468,10 @@ def maintenance_tasks_register(registry: Any, *, server_cfg: ServerConfig, confi
         vb = row.get("_validated_bot")
         probe = getattr(vb, "webhook_probe_interval_seconds", None)
         if probe is not None:
-            interval = min(interval, float(probe))
+            try:
+                interval = min(interval, float(probe))
+            except (TypeError, ValueError):
+                raise
 
     def _tick(ctx: Any, _task_data: Any) -> None:
         for bot in ctx["bots"].values():
@@ -476,10 +482,15 @@ def maintenance_tasks_register(registry: Any, *, server_cfg: ServerConfig, confi
     logging.getLogger(__name__).log(
         LogLevel.VERBOSE,
         "Leader maintenance: registered webex_webhook_maintenance every %.1f s "
-        "(leader runs webhook ensure/register on tick when ids missing or probe fails)",
+        "(run_on_startup=True; leader also runs on tick when ids missing or probe fails)",
         tick_interval,
     )
-    registry.register_task("webex_webhook_maintenance", tick_interval, _tick)
+    registry.register_task(
+        "webex_webhook_maintenance",
+        tick_interval,
+        _tick,
+        run_on_startup=True,
+    )
 
 
 def get_config_model():

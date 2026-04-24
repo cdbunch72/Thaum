@@ -2,7 +2,7 @@
 # Copyright 2026 Clinton Bunch
 # thaum/engine.py
 import logging
-import datetime
+from datetime import datetime, timezone
 from typing import Optional,List, TYPE_CHECKING
 from thaum.types import AlertPriority, LogLevel, ThaumPerson
 from jinja2 import Environment, StrictUndefined
@@ -25,7 +25,7 @@ def create_incident_room(bot: 'BaseChatBot', summary: str, speaker: ThaumPerson,
             "summary": summary[:30],
             "requester_name": speaker.for_display,
             "team_description": bot.team_description,
-            "date": datetime.now().strftime("%Y-%m-%d"),
+            "date": datetime.now(timezone.utc).strftime("%Y-%m-%d"),
         }
         room_title = template.render(**context)
         room_id = bot.create_room(room_title)

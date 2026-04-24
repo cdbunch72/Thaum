@@ -131,10 +131,9 @@ def bind_thaum_handlers(bot: 'BaseChatBot') -> None:
                 bot.say(
                     ctx.room_id,
                     f"Alert sent. Tracking ID: **{short_id}**",
-                    markdown=True,
                 )
             else:
-                bot.say(ctx.room_id, "Alert sent.", markdown=True)
+                bot.say(ctx.room_id, "Alert sent.")
 
         if plugin_cls.supports_acknowledge:
 
@@ -151,7 +150,7 @@ def bind_thaum_handlers(bot: 'BaseChatBot') -> None:
     def handle_usage(bot, ctx, match):
         supports_acknowledge = type(bot.alert_plugin).supports_acknowledge
         rendered = Template(USAGE_TEMPLATE).render(bot=bot, supports_acknowledge=supports_acknowledge)
-        bot.say(ctx.room_id, rendered, markdown=True)
+        bot.say(ctx.room_id, rendered)
     
     @bot.hears(r"^(?P<cmd>\S+)\s+.*$",priority=99)
     def handle_unknown(bot: 'BaseChatBot', ctx: 'MessageContext', match: re.Match):
