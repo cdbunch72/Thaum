@@ -3,6 +3,8 @@
 # thaum/types.py
 import time
 import os
+import json
+from pathlib import Path
 from contextlib import contextmanager
 from contextvars import ContextVar
 from pydantic import ConfigDict, Field, model_validator, BaseModel, SecretStr, BeforeValidator
@@ -127,6 +129,41 @@ class ThaumTeam:
     def get_members(self) -> list[ThaumPerson]:
         """Return members, refreshing from lookup plugin if stale."""
         lookup = self.bot.lookup_plugin
+        # #region agent log
+        try:
+            _log = {
+                "sessionId": "d2aafe",
+                "runId": "pre-fix",
+                "hypothesisId": "W1-W4",
+                "location": "thaum/types.py:ThaumTeam.get_members:entry",
+                "message": "Team member expansion entry",
+                "data": {
+                    "team_name": str(self.team_name or ""),
+                    "is_fresh": bool(self.is_fresh),
+                    "cached_member_count": len(self._members),
+                    "has_lookup_plugin": lookup is not None,
+                    "lookup_id": str(self.lookup_id or ""),
+                    "alert_id": str(self.alert_id or ""),
+                },
+                "timestamp": int(time.time() * 1000),
+            }
+            _log_paths = [
+                Path(__file__).resolve().parents[1] / "debug-d2aafe.log",
+                Path("/var/log/thaum") / "debug-d2aafe.log",
+            ]
+            for _log_path in _log_paths:
+                try:
+                    _log_path.parent.mkdir(parents=True, exist_ok=True)
+                except Exception:
+                    pass
+                try:
+                    with open(_log_path, "a", encoding="utf-8") as _dbg:
+                        _dbg.write(json.dumps(_log, default=str) + "\n")
+                except Exception:
+                    pass
+        except Exception:
+            pass
+        # #endregion
 
         if not self.is_fresh and lookup is not None:
             try:
@@ -134,6 +171,38 @@ class ThaumTeam:
                 if new_members:
                     self._members = new_members
                     self.last_cached = time.time()
+                # #region agent log
+                try:
+                    _log = {
+                        "sessionId": "d2aafe",
+                        "runId": "pre-fix",
+                        "hypothesisId": "W1-W4",
+                        "location": "thaum/types.py:ThaumTeam.get_members:refresh",
+                        "message": "Team member refresh attempt result",
+                        "data": {
+                            "team_name": str(self.team_name or ""),
+                            "new_members_count": len(new_members),
+                            "post_cached_member_count": len(self._members),
+                        },
+                        "timestamp": int(time.time() * 1000),
+                    }
+                    _log_paths = [
+                        Path(__file__).resolve().parents[1] / "debug-d2aafe.log",
+                        Path("/var/log/thaum") / "debug-d2aafe.log",
+                    ]
+                    for _log_path in _log_paths:
+                        try:
+                            _log_path.parent.mkdir(parents=True, exist_ok=True)
+                        except Exception:
+                            pass
+                        try:
+                            with open(_log_path, "a", encoding="utf-8") as _dbg:
+                                _dbg.write(json.dumps(_log, default=str) + "\n")
+                        except Exception:
+                            pass
+                except Exception:
+                    pass
+                # #endregion
             except Exception as e:
                 # Log through the bot
                 self.bot.log.warning(f"Failed to refresh membership for team '{self.team_name}': {e}")
