@@ -30,7 +30,7 @@ def responders_list_to_jira_payload(
     seen: set[tuple[str, str]] = set()
 
     for team in responders.teams:
-        tid = (team.alert_id or "").strip()
+        tid = (team.alert_id or team.lookup_id or "").strip()
         if not tid:
             continue
         key = ("team", tid)
