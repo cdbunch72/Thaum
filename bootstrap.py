@@ -34,7 +34,7 @@ def _terminate_parent_on_fatal_bootstrap(reason: str) -> None:
         ppid = os.getppid()
         if ppid and ppid > 1:
             logger.critical(
-                "[debug-131a48][H20] fatal bootstrap; sending SIGTERM to parent pid=%s reason=%s",
+                "Fatal bootstrap after leader election phase; sending SIGTERM to parent pid=%s: %s",
                 ppid,
                 reason,
             )
@@ -136,11 +136,6 @@ def bootstrap(config_path: str) -> Dict[str, Any]:
     server: ServerConfig = config["server"]
 
     configure_logging(_log_config_with_env_defaults(config["log"]), server)
-    logger.error(
-        "[debug-131a48][H6] bootstrap entered config_path=%s module=%s",
-        config_path,
-        __file__,
-    )
 
     validated_lookup = validate_config_after_load(config)
     lookup_type = server.lookup_plugin

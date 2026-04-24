@@ -4,11 +4,9 @@
 """Registry and execution of one-shot leader-only tasks during process bootstrap."""
 from __future__ import annotations
 
-import json
 import logging
 import time
 import traceback
-from datetime import datetime, timezone
 from typing import Any, Callable, Dict, List, Tuple
 
 from sqlalchemy.orm import Session
@@ -119,46 +117,8 @@ def wait_for_leader_init_barrier(
     baseline: int | None = None
     saw_running = False
     failed_seen_at: float | None = None
-    last_observed_state: str | None = None
-    last_observed_ticket: int | None = None
-    # region agent log
-    def _dbg_wait(hypothesis_id: str, location: str, message: str, data: Dict[str, Any]) -> None:
-        logger.warning(
-            "[debug-131a48][%s] %s %s data=%s",
-            hypothesis_id,
-            location,
-            message,
-            data,
-        )
-        try:
-            with open("debug-131a48.log", "a", encoding="utf-8") as _f:
-                _f.write(
-                    json.dumps(
-                        {
-                            "sessionId": "131a48",
-                            "timestamp": int(time.time() * 1000),
-                            "runId": "leader-init-barrier",
-                            "hypothesisId": hypothesis_id,
-                            "location": location,
-                            "message": message,
-                            "data": data,
-                        }
-                    )
-                    + "\n"
-                )
-        except Exception:
-            pass
-    # endregion agent log
     while True:
         if time.monotonic() > deadline:
-            # region agent log
-            _dbg_wait(
-                "H19",
-                "leader_init.py:wait_for_leader_init_barrier:timeout",
-                "wait_for_leader_init_barrier timed out",
-                {"baseline": baseline, "saw_running": saw_running},
-            )
-            # endregion agent log
             logger.error(
                 "Timed out after %s s waiting for leader init barrier.",
                 server_cfg.election.leader_init_wait_timeout_seconds,
@@ -173,91 +133,23 @@ def wait_for_leader_init_barrier(
             ticket = int(row.barrier_ticket)
             if baseline is None:
                 baseline = ticket
-                # region agent log
-                _dbg_wait(
-                    "H18",
-                    "leader_init.py:wait_for_leader_init_barrier:baseline",
-                    "captured baseline ticket/state",
-                    {"baseline": baseline, "state": row.state},
-                )
-                # endregion agent log
-            if row.state != last_observed_state or ticket != last_observed_ticket:
-                row_updated_age_seconds: float | None = None
-                try:
-                    if row.updated_at is not None:
-                        row_updated_age_seconds = (
-                            datetime.now(timezone.utc) - row.updated_at
-                        ).total_seconds()
-                except Exception:
-                    row_updated_age_seconds = None
-                # region agent log
-                _dbg_wait(
-                    "H18",
-                    "leader_init.py:wait_for_leader_init_barrier:state_change",
-                    "observed barrier state change",
-                    {
-                        "state": row.state,
-                        "ticket": ticket,
-                        "baseline": baseline,
-                        "saw_running": saw_running,
-                        "updated_at": str(row.updated_at),
-                        "updated_age_seconds": row_updated_age_seconds,
-                    },
-                )
-                # endregion agent log
-                last_observed_state = row.state
-                last_observed_ticket = ticket
             if row.state == STATE_RUNNING:
                 saw_running = True
                 failed_seen_at = None
             if row.state == STATE_FAILED:
                 if ticket > baseline or saw_running:
                     msg = row.error_message or "leader init failed"
-                    # region agent log
-                    _dbg_wait(
-                        "H19",
-                        "leader_init.py:wait_for_leader_init_barrier:raise_failed",
-                        "raising on failed barrier state",
-                        {"ticket": ticket, "baseline": baseline, "saw_running": saw_running},
-                    )
-                    # endregion agent log
                     logger.error("Leader init reported failure: %s", msg)
                     raise RuntimeError(msg)
-                # If the first observed state is FAILED at baseline, give a brief grace
-                # window for a concurrent fresh RUNNING ticket bump before failing.
                 if failed_seen_at is None:
                     failed_seen_at = time.monotonic()
                 elif (time.monotonic() - failed_seen_at) >= 2.0:
                     msg = row.error_message or "leader init failed"
-                    # region agent log
-                    _dbg_wait(
-                        "H19",
-                        "leader_init.py:wait_for_leader_init_barrier:raise_failed_baseline",
-                        "raising on stable failed baseline state",
-                        {"ticket": ticket, "baseline": baseline, "saw_running": saw_running},
-                    )
-                    # endregion agent log
                     logger.error("Leader init reported failure at baseline ticket: %s", msg)
                     raise RuntimeError(msg)
             if row.state == STATE_DONE:
                 if ticket > baseline:
-                    # region agent log
-                    _dbg_wait(
-                        "H18",
-                        "leader_init.py:wait_for_leader_init_barrier:return_done_new_ticket",
-                        "returning done on new ticket",
-                        {"ticket": ticket, "baseline": baseline, "saw_running": saw_running},
-                    )
-                    # endregion agent log
                     return
                 if saw_running:
-                    # region agent log
-                    _dbg_wait(
-                        "H18",
-                        "leader_init.py:wait_for_leader_init_barrier:return_done_seen_running",
-                        "returning done after seen running",
-                        {"ticket": ticket, "baseline": baseline, "saw_running": saw_running},
-                    )
-                    # endregion agent log
                     return
         time.sleep(poll_interval_seconds)

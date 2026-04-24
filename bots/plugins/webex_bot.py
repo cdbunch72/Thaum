@@ -3,9 +3,7 @@
 # bots/plugins/webex_bot.py
 from __future__ import annotations
 
-import json
 import logging
-import os
 import time
 from typing import TYPE_CHECKING, Any, Dict, List, Literal, Optional
 
@@ -98,43 +96,7 @@ class WebexChatBot(BaseChatBot):
         return self._effective_hmac_secret()
 
     def register_bot_webhook(self) -> None:
-        # region agent log
-        def _dbg_reg(hypothesis_id: str, location: str, message: str, data: Dict[str, Any]) -> None:
-            self.logger.warning(
-                "[debug-131a48][%s] %s: %s data=%s",
-                hypothesis_id,
-                location,
-                message,
-                data,
-            )
-            try:
-                with open("/var/log/thaum/debug-131a48.log", "a", encoding="utf-8") as _f:
-                    _f.write(
-                        json.dumps(
-                            {
-                                "sessionId": "131a48",
-                                "timestamp": int(time.time() * 1000),
-                                "runId": "webhook-registration",
-                                "hypothesisId": hypothesis_id,
-                                "location": location,
-                                "message": message,
-                                "data": data,
-                            }
-                        )
-                        + "\n"
-                    )
-            except Exception:
-                pass
-        # endregion agent log
         target = (self.endpoint or "").strip()
-        # region agent log
-        _dbg_reg(
-            "H16",
-            "webex_bot.py:register_bot_webhook:entry",
-            "register_bot_webhook called",
-            {"bot_key": self.bot_key, "target": target},
-        )
-        # endregion agent log
         if not target:
             self.logger.error("Cannot register Webex webhooks: bot endpoint is not configured.")
             return
@@ -142,35 +104,11 @@ class WebexChatBot(BaseChatBot):
         nt = self._normalize_target_url(target)
         try:
             existing = list(self.api.webhooks.list())
-            # region agent log
-            _dbg_reg(
-                "H16",
-                "webex_bot.py:register_bot_webhook:list_existing",
-                "listed existing webhooks",
-                {"count": len(existing), "target": target},
-            )
-            # endregion agent log
             for wh in existing:
                 if wh.targetUrl and self._normalize_target_url(wh.targetUrl) == nt:
                     self.api.webhooks.delete(wh.id)
-                    # region agent log
-                    _dbg_reg(
-                        "H16",
-                        "webex_bot.py:register_bot_webhook:delete_matching",
-                        "deleted existing matching webhook",
-                        {"deleted_id": getattr(wh, "id", None), "targetUrl": getattr(wh, "targetUrl", None)},
-                    )
-                    # endregion agent log
         except Exception as e:
             self.logger.warning("While pruning old Webex webhooks: %s", e)
-            # region agent log
-            _dbg_reg(
-                "H16",
-                "webex_bot.py:register_bot_webhook:prune_error",
-                "exception while pruning old webhooks",
-                {"error": type(e).__name__, "msg": str(e)},
-            )
-            # endregion agent log
 
         secret = self._webhook_secret_for_api()
         name_prefix = f"Thaum {self.name}"
@@ -193,33 +131,6 @@ class WebexChatBot(BaseChatBot):
                 secret=secret,
             )
             self._webhook_ids = (w1.id, w2.id)
-            # region agent log
-            _dbg_reg(
-                "H17",
-                "webex_bot.py:register_bot_webhook:created",
-                "created webhooks",
-                {
-                    "ids": [w1.id, w2.id],
-                    "targets": [
-                        getattr(w1, "targetUrl", None),
-                        getattr(w2, "targetUrl", None),
-                    ],
-                    "statuses": [
-                        getattr(w1, "status", None),
-                        getattr(w2, "status", None),
-                    ],
-                    "resources": [
-                        getattr(w1, "resource", None),
-                        getattr(w2, "resource", None),
-                    ],
-                    "events": [
-                        getattr(w1, "event", None),
-                        getattr(w2, "event", None),
-                    ],
-                    "configured_target": target,
-                },
-            )
-            # endregion agent log
             self.logger.log(
                 LogLevel.VERBOSE,
                 "Ensured Webex webhooks for bot_key=%r -> %s",
@@ -228,14 +139,6 @@ class WebexChatBot(BaseChatBot):
             )
         except Exception as e:
             self.logger.error("Failed to register Webex webhooks: %s", e)
-            # region agent log
-            _dbg_reg(
-                "H17",
-                "webex_bot.py:register_bot_webhook:create_error",
-                "exception creating webhooks",
-                {"error": type(e).__name__, "msg": str(e), "target": target},
-            )
-            # endregion agent log
             raise
 
     def _fetch_webhook(self, wid: str) -> Any:
@@ -274,13 +177,6 @@ class WebexChatBot(BaseChatBot):
                     raise ValueError("missing webhook")
                 status = getattr(wh, "status", None)
                 wh_target = getattr(wh, "targetUrl", None)
-                self.logger.warning(
-                    "[debug-131a48][H17] webhook probe id=%s status=%r targetUrl=%r expectedTarget=%r",
-                    wid,
-                    status,
-                    wh_target,
-                    target,
-                )
                 if wh_target and self._normalize_target_url(str(wh_target)) != self._normalize_target_url(target):
                     raise ValueError("target_mismatch")
                 if status is not None and str(status).lower() != "active":
@@ -443,147 +339,36 @@ class WebexChatBot(BaseChatBot):
         return self._validate_signature(raw_body, signature)
 
     def _process_message(self, message_id: str) -> Optional[str]:
-        # region agent log
-        def _dbg_evt(hypothesis_id: str, location: str, message: str, data: Dict[str, Any]) -> None:
-            self.logger.warning(
-                "[debug-131a48][%s] %s: %s data=%s",
-                hypothesis_id,
-                location,
-                message,
-                data,
-            )
-            try:
-                p = "/var/log/thaum/debug-131a48.log"
-                with open(p, "a", encoding="utf-8") as _f:
-                    _f.write(
-                        json.dumps(
-                            {
-                                "sessionId": "131a48",
-                                "timestamp": int(time.time() * 1000),
-                                "runId": "commands-pre-fix",
-                                "hypothesisId": hypothesis_id,
-                                "location": location,
-                                "message": message,
-                                "data": data,
-                            }
-                        )
-                        + "\n"
-                    )
-            except Exception:
-                pass
-        # endregion agent log
         message = self.api.messages.get(message_id)
         room = self.api.rooms.get(message.roomId)
         is_direct = room.type == "direct"
         is_mentioned = message.mentionedPeople and self.me.id in message.mentionedPeople
-        # region agent log
-        _dbg_evt(
-            "H10",
-            "webex_bot.py:_process_message:classification",
-            "message classification",
-            {
-                "room_type": getattr(room, "type", None),
-                "is_direct": bool(is_direct),
-                "is_mentioned": bool(is_mentioned),
-                "has_text": bool(getattr(message, "text", None)),
-            },
-        )
-        # endregion agent log
 
         if not (is_direct or is_mentioned):
-            # region agent log
-            _dbg_evt(
-                "H10",
-                "webex_bot.py:_process_message:ignored",
-                "ignored message: neither direct nor mentioned",
-                {},
-            )
-            # endregion agent log
             return None
 
         if message.text:
             mention_tag = f"<@personId:{self.me.id}>"
             clean_text = message.text.replace(mention_tag, "").strip()
-            # region agent log
-            _dbg_evt(
-                "H9",
-                "webex_bot.py:_process_message:clean_text",
-                "clean_text generated",
-                {
-                    "text_preview": clean_text[:160],
-                    "mention_tag": mention_tag,
-                },
-            )
-            # endregion agent log
             return clean_text
 
         return None
 # -- End Method process_message
 
     def handle_event(self, event: Dict[str, Any]) -> None:
-        # region agent log
-        def _dbg_evt(hypothesis_id: str, location: str, message: str, data: Dict[str, Any]) -> None:
-            self.logger.warning(
-                "[debug-131a48][%s] %s: %s data=%s",
-                hypothesis_id,
-                location,
-                message,
-                data,
-            )
-            try:
-                p = "/var/log/thaum/debug-131a48.log"
-                with open(p, "a", encoding="utf-8") as _f:
-                    _f.write(
-                        json.dumps(
-                            {
-                                "sessionId": "131a48",
-                                "timestamp": int(time.time() * 1000),
-                                "runId": "commands-pre-fix",
-                                "hypothesisId": hypothesis_id,
-                                "location": location,
-                                "message": message,
-                                "data": data,
-                            }
-                        )
-                        + "\n"
-                    )
-            except Exception:
-                pass
-        # endregion agent log
         resource: Optional[str] = event.get("resource")
         data: Dict[str, Any] = event.get("data", {})
         self.logger.log(LogLevel.SPAM, "handle_event:")
         log_debug_blob(self.logger, "handle_event", data, LogLevel.SPAM)
-        # region agent log
-        _dbg_evt(
-            "H9",
-            "webex_bot.py:handle_event:entry",
-            "handle_event received",
-            {
-                "resource": resource,
-                "has_data_id": bool(data.get("id")),
-                "person_id_present": bool(data.get("personId")),
-            },
-        )
-        # endregion agent log
 
         if resource == "messages":
             if data.get("personId") == self.me.id:
-                # region agent log
-                _dbg_evt(
-                    "H9",
-                    "webex_bot.py:handle_event:self_message_skip",
-                    "skipped self message",
-                    {"person_id": data.get("personId")},
-                )
-                # endregion agent log
                 return
 
             clean_text = self._process_message(data["id"])
             if clean_text is None:
-                self.logger.warning(
-                    "[debug-131a48][H10] webex message dropped (not DM / not @mention); "
-                    "room_id=%s message_id=%s",
+                self.logger.debug(
+                    "Ignoring Webex message (not a DM and bot not @mentioned); room_id=%s message_id=%s",
                     data.get("roomId"),
                     data.get("id"),
                 )
@@ -600,25 +385,8 @@ class WebexChatBot(BaseChatBot):
             for _priority, pattern, handler in self._hears_routes:
                 match = pattern.search(clean_text)
                 if match:
-                    # region agent log
-                    _dbg_evt(
-                        "H11",
-                        "webex_bot.py:handle_event:route_match",
-                        "hears route matched",
-                        {"pattern": pattern.pattern, "priority": _priority, "clean_text": clean_text[:160]},
-                    )
-                    # endregion agent log
                     handler(self, message, match)
                     break
-            else:
-                # region agent log
-                _dbg_evt(
-                    "H11",
-                    "webex_bot.py:handle_event:no_route_match",
-                    "no hears route matched",
-                    {"clean_text": clean_text[:160], "route_count": len(self._hears_routes)},
-                )
-                # endregion agent log
 
         elif resource == "attachmentActions":
             action = self.api.attachment_actions.get(data["id"])
@@ -689,64 +457,9 @@ class WebexChatBotConfig(BaseChatBotConfig):
 
 
 def maintenance_tasks_register(registry: Any, *, server_cfg: ServerConfig, config: Dict[str, Any]) -> None:
-    # region agent log
-    def _dbg(hypothesis_id: str, location: str, message: str, data: Dict[str, Any]) -> None:
-        try:
-            p = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "debug-131a48.log"))
-            with open(p, "a", encoding="utf-8") as _f:
-                _f.write(
-                    json.dumps(
-                        {
-                            "sessionId": "131a48",
-                            "timestamp": int(time.time() * 1000),
-                            "hypothesisId": hypothesis_id,
-                            "location": location,
-                            "message": message,
-                            "data": data,
-                        }
-                    )
-                    + "\n"
-                )
-        except Exception:
-            pass
-
-    _dbg(
-        "H1",
-        "webex_bot.py:maintenance_tasks_register:entry",
-        "maintenance_tasks_register entered",
-        {
-            "bot_type": server_cfg.bot_type,
-            "registry_type": type(registry).__name__,
-            "has_register_task": callable(getattr(registry, "register_task", None)),
-        },
-    )
-    logging.getLogger(__name__).warning(
-        "[debug-131a48][H1] webex maintenance_tasks_register entered bot_type=%r module=%s",
-        server_cfg.bot_type,
-        __file__,
-    )
-    # endregion agent log
     expected_bot_type = __name__.rsplit(".", 1)[-1]
     allowed_bot_types = {expected_bot_type, "webex"}
     if server_cfg.bot_type not in allowed_bot_types:
-        # region agent log
-        _dbg(
-            "H1",
-            "webex_bot.py:maintenance_tasks_register:early_return",
-            "skipped: bot_type is not a webex alias",
-            {
-                "bot_type": server_cfg.bot_type,
-                "expected_bot_type": expected_bot_type,
-                "allowed_bot_types": sorted(allowed_bot_types),
-            },
-        )
-        # endregion agent log
-        logging.getLogger(__name__).warning(
-            "[debug-131a48][H1] early return in webex maintenance_tasks_register bot_type=%r expected=%r allowed=%r",
-            server_cfg.bot_type,
-            expected_bot_type,
-            sorted(allowed_bot_types),
-        )
         return
     interval = 3600.0
     for row in (config.get("bots") or {}).values():
@@ -757,15 +470,7 @@ def maintenance_tasks_register(registry: Any, *, server_cfg: ServerConfig, confi
         if probe is not None:
             try:
                 interval = min(interval, float(probe))
-            except (TypeError, ValueError) as _e:
-                # region agent log
-                _dbg(
-                    "H5",
-                    "webex_bot.py:maintenance_tasks_register:probe_coerce",
-                    "float(probe) failed",
-                    {"probe_repr": repr(probe), "error": type(_e).__name__},
-                )
-                # endregion agent log
+            except (TypeError, ValueError):
                 raise
 
     def _tick(ctx: Any, _task_data: Any) -> None:
@@ -780,35 +485,12 @@ def maintenance_tasks_register(registry: Any, *, server_cfg: ServerConfig, confi
         "(run_on_startup=True; leader also runs on tick when ids missing or probe fails)",
         tick_interval,
     )
-    # region agent log
-    _dbg(
-        "H3",
-        "webex_bot.py:maintenance_tasks_register:before_register_task",
-        "about to register_task",
-        {"tick_interval": tick_interval, "raw_interval": interval},
+    registry.register_task(
+        "webex_webhook_maintenance",
+        tick_interval,
+        _tick,
+        run_on_startup=True,
     )
-    try:
-        registry.register_task(
-            "webex_webhook_maintenance",
-            tick_interval,
-            _tick,
-            run_on_startup=True,
-        )
-    except Exception as _e:
-        _dbg(
-            "H2",
-            "webex_bot.py:maintenance_tasks_register:register_task_exc",
-            "register_task raised",
-            {"error": type(_e).__name__, "msg": str(_e)},
-        )
-        raise
-    _dbg(
-        "H2",
-        "webex_bot.py:maintenance_tasks_register:after_register_task",
-        "register_task completed",
-        {},
-    )
-    # endregion agent log
 
 
 def get_config_model():
@@ -816,5 +498,4 @@ def get_config_model():
 
 
 def create_instance_bot(config: WebexChatBotConfig) -> WebexChatBot:
-    return WebexChatBot(config)
     return WebexChatBot(config)

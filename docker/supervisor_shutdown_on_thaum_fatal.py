@@ -24,13 +24,13 @@ def _shutdown_supervisord() -> None:
         with open(pidfile, encoding="utf-8") as f:
             pid = int(f.read().strip())
     except Exception as e:
-        _write_stderr(f"[debug-131a48][H22] fatal listener: could not read {pidfile}: {e}\n")
+        _write_stderr(f"thaum fatal listener: could not read {pidfile}: {e}\n")
         return
-    _write_stderr(f"[debug-131a48][H22] fatal listener: sending SIGTERM to supervisord pid={pid}\n")
+    _write_stderr(f"thaum fatal listener: sending SIGTERM to supervisord pid={pid}\n")
     try:
         os.kill(pid, signal.SIGTERM)
     except Exception as e:
-        _write_stderr(f"[debug-131a48][H22] fatal listener: kill failed: {e}\n")
+        _write_stderr(f"thaum fatal listener: kill failed: {e}\n")
 
 
 def main() -> None:
