@@ -3,7 +3,10 @@
 # alerts/plugins/jira/plugin.py
 from __future__ import annotations
 
+import json
+import time
 import traceback
+from pathlib import Path
 from typing import Any, Callable, Dict, Optional
 
 from requests.auth import HTTPBasicAuth
@@ -209,6 +212,35 @@ class JiraPlugin(BaseAlertPlugin):
         )
 
         response = post_alert(url, alert, self.headers, self.auth)
+        # #region agent log
+        try:
+            _req_body = json.dumps(alert, default=str)
+            _parsed: Any = None
+            try:
+                _parsed = response.json()
+            except Exception:
+                pass
+            _log = {
+                "sessionId": "d2aafe",
+                "runId": "pre-fix",
+                "hypothesisId": "A-E",
+                "location": "alerts/plugins/jira/plugin.py:trigger_alert",
+                "message": "Jira POST /v1/alerts request and response",
+                "data": {
+                    "url": url,
+                    "http_status": response.status_code,
+                    "request_body": _req_body[:50000],
+                    "response_json": _parsed,
+                    "response_text": (response.text or "")[:50000] if _parsed is None else None,
+                },
+                "timestamp": int(time.time() * 1000),
+            }
+            _log_path = Path(__file__).resolve().parents[3] / "debug-d2aafe.log"
+            with open(_log_path, "a", encoding="utf-8") as _dbg:
+                _dbg.write(json.dumps(_log, default=str) + "\n")
+        except Exception:
+            pass
+        # #endregion
         response.raise_for_status()
 
         alias = str(alert.get("alias") or "")
