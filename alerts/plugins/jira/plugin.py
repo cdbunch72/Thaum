@@ -3,10 +3,7 @@
 # alerts/plugins/jira/plugin.py
 from __future__ import annotations
 
-import json
-import time
 import traceback
-from pathlib import Path
 from typing import Any, Callable, Dict, Optional
 
 from requests.auth import HTTPBasicAuth
@@ -212,62 +209,6 @@ class JiraPlugin(BaseAlertPlugin):
         )
 
         response = post_alert(url, alert, self.headers, self.auth)
-        # #region agent log
-        try:
-            _req_body = json.dumps(alert, default=str)
-            _parsed: Any = None
-            try:
-                _parsed = response.json()
-            except Exception:
-                pass
-            _log = {
-                "sessionId": "d2aafe",
-                "runId": "pre-fix",
-                "hypothesisId": "A-E",
-                "location": "alerts/plugins/jira/plugin.py:trigger_alert",
-                "message": "Jira POST /v1/alerts request and response",
-                "data": {
-                    "url": url,
-                    "http_status": response.status_code,
-                    "cfg_responders_count": len(list(getattr(self.cfg, "responders", []))),
-                    "cfg_nonempty_responders_count": len(
-                        [r for r in list(getattr(self.cfg, "responders", [])) if str(r).strip()]
-                    ),
-                    "typed_people_count": len(getattr(responders_typed, "people", [])),
-                    "typed_teams_count": len(getattr(responders_typed, "teams", [])),
-                    "typed_teams": [
-                        {
-                            "team_name": str(getattr(t, "team_name", "") or ""),
-                            "alert_id": str(getattr(t, "alert_id", "") or ""),
-                            "lookup_id": str(getattr(t, "lookup_id", "") or ""),
-                        }
-                        for t in list(getattr(responders_typed, "teams", []))
-                    ],
-                    "responders_payload_count": len(responders_payload),
-                    "responders_payload": responders_payload,
-                    "request_body": _req_body[:50000],
-                    "response_json": _parsed,
-                    "response_text": (response.text or "")[:50000] if _parsed is None else None,
-                },
-                "timestamp": int(time.time() * 1000),
-            }
-            _log_paths = [
-                Path(__file__).resolve().parents[3] / "debug-d2aafe.log",
-                Path("/var/log/thaum") / "debug-d2aafe.log",
-            ]
-            for _log_path in _log_paths:
-                try:
-                    _log_path.parent.mkdir(parents=True, exist_ok=True)
-                except Exception:
-                    pass
-                try:
-                    with open(_log_path, "a", encoding="utf-8") as _dbg:
-                        _dbg.write(json.dumps(_log, default=str) + "\n")
-                except Exception:
-                    pass
-        except Exception:
-            pass
-        # #endregion
         response.raise_for_status()
 
         alias = str(alert.get("alias") or "")

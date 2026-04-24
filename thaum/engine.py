@@ -2,10 +2,8 @@
 # Copyright 2026 Clinton Bunch
 # thaum/engine.py
 import logging
-import json
 from datetime import datetime, timezone
 from typing import Optional,List, TYPE_CHECKING
-from pathlib import Path
 from thaum.types import AlertPriority, LogLevel, ThaumPerson
 from jinja2 import Environment, StrictUndefined
 
@@ -31,69 +29,7 @@ def create_incident_room(bot: 'BaseChatBot', summary: str, speaker: ThaumPerson,
         }
         room_title = template.render(**context)
         room_id = bot.create_room(room_title)
-        # #region agent log
-        try:
-            _typed = getattr(bot, "responders", None)
-            _log = {
-                "sessionId": "d2aafe",
-                "runId": "pre-fix",
-                "hypothesisId": "W1-W4",
-                "location": "thaum/engine.py:create_incident_room:before_expand",
-                "message": "Room responder expansion input",
-                "data": {
-                    "typed_people_count": len(getattr(_typed, "people", [])) if _typed is not None else 0,
-                    "typed_teams_count": len(getattr(_typed, "teams", [])) if _typed is not None else 0,
-                },
-                "timestamp": int(datetime.now(timezone.utc).timestamp() * 1000),
-            }
-            _log_paths = [
-                Path(__file__).resolve().parents[1] / "debug-d2aafe.log",
-                Path("/var/log/thaum") / "debug-d2aafe.log",
-            ]
-            for _log_path in _log_paths:
-                try:
-                    _log_path.parent.mkdir(parents=True, exist_ok=True)
-                except Exception:
-                    pass
-                try:
-                    with open(_log_path, "a", encoding="utf-8") as _dbg:
-                        _dbg.write(json.dumps(_log, default=str) + "\n")
-                except Exception:
-                    pass
-        except Exception:
-            pass
-        # #endregion
         responders = bot.responders.get_responders()
-        # #region agent log
-        try:
-            _log = {
-                "sessionId": "d2aafe",
-                "runId": "pre-fix",
-                "hypothesisId": "W1-W4",
-                "location": "thaum/engine.py:create_incident_room:after_expand",
-                "message": "Room responder expansion output",
-                "data": {
-                    "expanded_responder_count": len(responders),
-                },
-                "timestamp": int(datetime.now(timezone.utc).timestamp() * 1000),
-            }
-            _log_paths = [
-                Path(__file__).resolve().parents[1] / "debug-d2aafe.log",
-                Path("/var/log/thaum") / "debug-d2aafe.log",
-            ]
-            for _log_path in _log_paths:
-                try:
-                    _log_path.parent.mkdir(parents=True, exist_ok=True)
-                except Exception:
-                    pass
-                try:
-                    with open(_log_path, "a", encoding="utf-8") as _dbg:
-                        _dbg.write(json.dumps(_log, default=str) + "\n")
-                except Exception:
-                    pass
-        except Exception:
-            pass
-        # #endregion
         bot.add_members(room_id, [speaker, *responders])
         bot.say(room_id, f"**Summary:** {summary}")
         short_id, alert_id = bot.alert_plugin.trigger_alert(summary, room_id, speaker, priority)
