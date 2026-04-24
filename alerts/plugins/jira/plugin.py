@@ -229,6 +229,13 @@ class JiraPlugin(BaseAlertPlugin):
                 "data": {
                     "url": url,
                     "http_status": response.status_code,
+                    "cfg_responders_count": len(list(getattr(self.cfg, "responders", []))),
+                    "cfg_nonempty_responders_count": len(
+                        [r for r in list(getattr(self.cfg, "responders", [])) if str(r).strip()]
+                    ),
+                    "typed_people_count": len(getattr(responders_typed, "people", [])),
+                    "typed_teams_count": len(getattr(responders_typed, "teams", [])),
+                    "responders_payload_count": len(responders_payload),
                     "request_body": _req_body[:50000],
                     "response_json": _parsed,
                     "response_text": (response.text or "")[:50000] if _parsed is None else None,
