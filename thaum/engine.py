@@ -29,7 +29,6 @@ def create_incident_room(bot: 'BaseChatBot', summary: str, speaker: ThaumPerson,
         }
         room_title = template.render(**context)
         room_id = bot.create_room(room_title)
-        
         responders = bot.responders.get_responders()
         bot.add_members(room_id, [speaker, *responders])
         bot.say(room_id, f"**Summary:** {summary}")

@@ -171,6 +171,8 @@ class AtlassianLookupPlugin(BaseLookupPlugin):
                     team_name=display,
                     alert_id=team_id,
                     lookup_id=team_id,
+                    # Lazy member loading: force first real member lookup on use.
+                    last_cached=0.0,
                     _members=[],
                 )
                 try:

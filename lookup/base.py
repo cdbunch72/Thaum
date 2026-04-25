@@ -300,6 +300,24 @@ class BaseLookupPlugin(ABC):
             if row is None:
                 return None
 
+            platform_rows = session.scalars(
+                select(SchemaTeamPlatformId).where(
+                    SchemaTeamPlatformId.team_name == resolved_key
+                )
+            ).all()
+            jira_team_id = ""
+            fallback_platform_id = ""
+            for prow in platform_rows:
+                pid = str(getattr(prow, "platform_id", "") or "").strip()
+                if not pid:
+                    continue
+                if not fallback_platform_id:
+                    fallback_platform_id = pid
+                pkey = str(getattr(prow, "platform_key", "") or "").strip().casefold()
+                if pkey == "jira":
+                    jira_team_id = pid
+                    break
+
             email_rows = session.scalars(
                 select(SchemaTeamMember.email).where(
                     SchemaTeamMember.team_name == resolved_key
@@ -315,6 +333,8 @@ class BaseLookupPlugin(ABC):
         return ThaumTeam(
             bot=bot,
             team_name=resolved_key,
+            lookup_id=jira_team_id or fallback_platform_id or None,
+            alert_id=jira_team_id or None,
             last_cached=row.last_cached,
             ttl=row.ttl,
             _members=members,
@@ -350,7 +370,9 @@ class BaseLookupPlugin(ABC):
         """
         with get_session() as session:
             with session.begin():
-                last_cached = getattr(team, "last_cached", None) or time.time()
+                last_cached = getattr(team, "last_cached", None)
+                if last_cached is None:
+                    last_cached = time.time()
                 ttl = getattr(team, "ttl", None) or self._default_team_ttl_seconds
 
                 session.merge(

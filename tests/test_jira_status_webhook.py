@@ -78,17 +78,16 @@ class JiraPayloadTest(unittest.TestCase):
             platform_ids={"webex": "webex-person-1"},
         )
         d = build_sender_extra_properties(p, "webex")
-        self.assertEqual(d["name"], "Alice")
-        self.assertEqual(d["bot_person_id"], "webex-person-1")
-        self.assertNotIn("email", d)
+        self.assertEqual(d[0], "Alice")
+        self.assertEqual(d[1], "webex-person-1")
 
         bare = ThaumPerson(email="b@example.com", platform_ids={})
         d2 = build_sender_extra_properties(bare, "webex")
-        self.assertEqual(d2["name"], "Someone")
-        self.assertEqual(d2["bot_person_id"], "")
+        self.assertEqual(d2[0], "Someone")
+        self.assertEqual(d2[1], "")
     # -- End Method test_build_sender_extra_properties
 
-    def test_build_trigger_alert_body_includes_structured_sender(self) -> None:
+    def test_build_trigger_alert_body_includes_string_sender(self) -> None:
         sender = ThaumPerson(
             email="r@example.com",
             display_name="Requester",
@@ -108,10 +107,9 @@ class JiraPayloadTest(unittest.TestCase):
             plugin_name="webex",
         )
         ep = body["extraProperties"]
-        self.assertIsInstance(ep["sender"], dict)
-        self.assertEqual(ep["sender"]["name"], "Requester")
-        self.assertEqual(ep["sender"]["bot_person_id"], "pid-r")
-    # -- End Method test_build_trigger_alert_body_includes_structured_sender
+        self.assertEqual(ep["sender"], "Requester")
+        self.assertEqual(ep["sender_bot_person_id"], "pid-r")
+    # -- End Method test_build_trigger_alert_body_includes_string_sender
 # -- End Class JiraPayloadTest
 
 

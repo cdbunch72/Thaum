@@ -4,8 +4,9 @@
 from __future__ import annotations
 
 import logging
+import re
 import time
-from typing import TYPE_CHECKING, Any, Dict, List, Literal, Optional
+from typing import TYPE_CHECKING, Any, Dict, List, Literal, Optional, Tuple
 
 from pydantic import Field, model_validator
 
@@ -21,6 +22,69 @@ if TYPE_CHECKING:
 MIN_HMAC_SECRET_CHARS: int = 16
 
 WebexHmacMode = Literal["shared_db", "pinned", "disabled"]
+
+
+def _me_email_addresses(me: Any) -> Tuple[str, ...]:
+    """Normalize Webex Person ``emails`` into plain address strings."""
+    raw = getattr(me, "emails", None) or []
+    addrs: List[str] = []
+    for item in raw:
+        if isinstance(item, str):
+            s = item.strip()
+        elif isinstance(item, dict):
+            s = str(item.get("value") or "").strip()
+        else:
+            v = getattr(item, "value", None)
+            s = str(v).strip() if v is not None else ""
+        if s and "@" in s:
+            addrs.append(s)
+    return tuple(addrs)
+
+
+def strip_webex_self_mentions(text: str, person_id: str, emails: Tuple[str, ...]) -> str:
+    """
+    Remove @-mention markup for this bot from Webex message text.
+
+    Webex uses ``<@personId:ID>`` and often ``<@personId:ID|Display Name>``; the
+    plain ``replace`` of the short form leaves ``|Name>`` and breaks command regexes.
+    """
+    cleaned = text
+    if person_id:
+        cleaned = re.sub(
+            rf"<@personId:{re.escape(person_id)}(?:\|[^>]*)?>",
+            "",
+            cleaned,
+        )
+    for em in emails:
+        cleaned = re.sub(
+            rf"(?i)<@personEmail:{re.escape(em)}(?:\|[^>]*)?>",
+            "",
+            cleaned,
+        )
+    return cleaned.strip()
+
+
+def strip_leading_bot_labels(text: str, *labels: str) -> str:
+    """
+    Remove a leading plaintext bot label left after Webex expands @mentions in ``text``.
+
+    ``message.text`` often begins with the bot display name (e.g. ``askDBA``) while
+    ``markdown`` carries ``<@personId:…>``; if only ``text`` is used, command regexes
+    never see ``implode`` / ``usage`` at ``^`` and the unknown handler treats the name
+    as the command token.
+    """
+    s = text.strip()
+    seen_lower: set[str] = set()
+    for label in labels:
+        label = (label or "").strip()
+        if len(label) < 2:
+            continue
+        low = label.lower()
+        if low in seen_lower:
+            continue
+        seen_lower.add(low)
+        s = re.sub(rf"(?i)^{re.escape(label)}\s+", "", s)
+    return s.strip()
 
 
 class WebexChatBot(BaseChatBot):
@@ -347,12 +411,24 @@ class WebexChatBot(BaseChatBot):
         if not (is_direct or is_mentioned):
             return None
 
-        if message.text:
-            mention_tag = f"<@personId:{self.me.id}>"
-            clean_text = message.text.replace(mention_tag, "").strip()
-            return clean_text
+        md = getattr(message, "markdown", None)
+        tx = (message.text or "").strip()
+        raw = (md.strip() if isinstance(md, str) and md.strip() else "") or tx
+        if not raw:
+            return None
 
-        return None
+        clean_text = strip_webex_self_mentions(
+            raw,
+            self.me.id,
+            _me_email_addresses(self.me),
+        )
+        clean_text = strip_leading_bot_labels(
+            clean_text,
+            self.name,
+            (getattr(self.me, "displayName", None) or "").strip(),
+            (getattr(self, "bot_key", None) or "").strip(),
+        )
+        return clean_text if clean_text else None
 # -- End Method process_message
 
     def handle_event(self, event: Dict[str, Any]) -> None:

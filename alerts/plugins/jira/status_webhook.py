@@ -31,10 +31,11 @@ def _sender_name_and_bot_person_id(
     logger: logging.Logger,
     extras: dict[str, Any],
 ) -> tuple[str, str]:
+    pid_fallback = str(extras.get("sender_bot_person_id") or "").strip()
     raw = extras.get("sender")
     if isinstance(raw, dict):
         name = str(raw.get("name") or "").strip() or "Someone"
-        pid = str(raw.get("bot_person_id") or "").strip()
+        pid = str(raw.get("bot_person_id") or "").strip() or pid_fallback
         return name, pid
     if isinstance(raw, str) and raw.strip():
         u = raw.strip()
@@ -48,8 +49,8 @@ def _sender_name_and_bot_person_id(
                 except Exception as e:
                     logger.debug("legacy sender email lookup failed: %s", e)
             return "Someone", ""
-        return u, ""
-    return "Someone", ""
+        return u, pid_fallback
+    return "Someone", pid_fallback
 # -- End Function _sender_name_and_bot_person_id
 
 
