@@ -5,13 +5,15 @@ from __future__ import annotations
 
 import json
 import logging
+import re
 import time
-from typing import TYPE_CHECKING, Any, Dict, List, Literal, Optional
+from typing import TYPE_CHECKING, Any, Dict, List, Literal, Optional, Tuple
 
 from pydantic import Field, model_validator
 
 from bots.base import BaseChatBot, BaseChatBotConfig, MessageContext
 from log_setup import log_debug_blob
+from thaum.debug_agent_log import NDJSON_LOG_PATH
 from thaum.types import LogLevel, ResolvedSecret, ServerConfig, ThaumPerson
 from webexpythonsdk import WebexAPI
 
@@ -22,6 +24,46 @@ if TYPE_CHECKING:
 MIN_HMAC_SECRET_CHARS: int = 16
 
 WebexHmacMode = Literal["shared_db", "pinned", "disabled"]
+
+
+def _me_email_addresses(me: Any) -> Tuple[str, ...]:
+    """Normalize Webex Person ``emails`` into plain address strings."""
+    raw = getattr(me, "emails", None) or []
+    addrs: List[str] = []
+    for item in raw:
+        if isinstance(item, str):
+            s = item.strip()
+        elif isinstance(item, dict):
+            s = str(item.get("value") or "").strip()
+        else:
+            v = getattr(item, "value", None)
+            s = str(v).strip() if v is not None else ""
+        if s and "@" in s:
+            addrs.append(s)
+    return tuple(addrs)
+
+
+def strip_webex_self_mentions(text: str, person_id: str, emails: Tuple[str, ...]) -> str:
+    """
+    Remove @-mention markup for this bot from Webex message text.
+
+    Webex uses ``<@personId:ID>`` and often ``<@personId:ID|Display Name>``; the
+    plain ``replace`` of the short form leaves ``|Name>`` and breaks command regexes.
+    """
+    cleaned = text
+    if person_id:
+        cleaned = re.sub(
+            rf"<@personId:{re.escape(person_id)}(?:\|[^>]*)?>",
+            "",
+            cleaned,
+        )
+    for em in emails:
+        cleaned = re.sub(
+            rf"(?i)<@personEmail:{re.escape(em)}(?:\|[^>]*)?>",
+            "",
+            cleaned,
+        )
+    return cleaned.strip()
 
 
 class WebexChatBot(BaseChatBot):
@@ -349,8 +391,11 @@ class WebexChatBot(BaseChatBot):
             return None
 
         if message.text:
-            mention_tag = f"<@personId:{self.me.id}>"
-            clean_text = message.text.replace(mention_tag, "").strip()
+            clean_text = strip_webex_self_mentions(
+                message.text,
+                self.me.id,
+                _me_email_addresses(self.me),
+            )
             return clean_text
 
         return None
@@ -406,11 +451,7 @@ class WebexChatBot(BaseChatBot):
                     },
                     "timestamp": int(time.time() * 1000),
                 }
-                with open(
-                    r"c:\Users\Clinton\Documents\git\Thaum\debug-50bffa.log",
-                    "a",
-                    encoding="utf-8",
-                ) as _lf:
+                with open(NDJSON_LOG_PATH, "a", encoding="utf-8") as _lf:
                     _lf.write(json.dumps(_dbg, default=str) + "\n")
             except Exception:
                 pass
@@ -434,11 +475,7 @@ class WebexChatBot(BaseChatBot):
                             },
                             "timestamp": int(time.time() * 1000),
                         }
-                        with open(
-                            r"c:\Users\Clinton\Documents\git\Thaum\debug-50bffa.log",
-                            "a",
-                            encoding="utf-8",
-                        ) as _lf:
+                        with open(NDJSON_LOG_PATH, "a", encoding="utf-8") as _lf:
                             _lf.write(json.dumps(_win, default=str) + "\n")
                     except Exception:
                         pass
@@ -456,11 +493,7 @@ class WebexChatBot(BaseChatBot):
                         "data": {"clean_text_repr": repr(clean_text)},
                         "timestamp": int(time.time() * 1000),
                     }
-                    with open(
-                        r"c:\Users\Clinton\Documents\git\Thaum\debug-50bffa.log",
-                        "a",
-                        encoding="utf-8",
-                    ) as _lf:
+                    with open(NDJSON_LOG_PATH, "a", encoding="utf-8") as _lf:
                         _lf.write(json.dumps(_nm, default=str) + "\n")
                 except Exception:
                     pass

@@ -2,6 +2,7 @@
 # Copyright 2026 Clinton Bunch
 # thaum/handlers.py
 from jinja2 import Template
+from thaum.debug_agent_log import NDJSON_LOG_PATH
 from thaum.engine import create_incident_room, acknowledge_incident
 from typing import TYPE_CHECKING, Any, Dict, List
 from thaum.types import ThaumPerson, AlertPriority
@@ -148,11 +149,7 @@ def bind_thaum_handlers(bot: 'BaseChatBot') -> None:
     def handle_implode(bot: 'BaseChatBot', ctx: 'MessageContext', match: re.Match):
         # #region agent log
         try:
-            with open(
-                r"c:\Users\Clinton\Documents\git\Thaum\debug-50bffa.log",
-                "a",
-                encoding="utf-8",
-            ) as _lf:
+            with open(NDJSON_LOG_PATH, "a", encoding="utf-8") as _lf:
                 _lf.write(
                     json.dumps(
                         {
@@ -182,11 +179,7 @@ def bind_thaum_handlers(bot: 'BaseChatBot') -> None:
     def handle_unknown(bot: 'BaseChatBot', ctx: 'MessageContext', match: re.Match):
         # #region agent log
         try:
-            with open(
-                r"c:\Users\Clinton\Documents\git\Thaum\debug-50bffa.log",
-                "a",
-                encoding="utf-8",
-            ) as _lf:
+            with open(NDJSON_LOG_PATH, "a", encoding="utf-8") as _lf:
                 _lf.write(
                     json.dumps(
                         {
