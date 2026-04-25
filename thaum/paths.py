@@ -39,10 +39,3 @@ def resolve_config_path() -> str:
             return str(candidate)
 
     return "thaum.toml"
-
-
-# NDJSON agent instrumentation (Cursor debug); container default under /var/log/thaum.
-AGENT_DEBUG_NDJSON_LOG_PATH = os.environ.get(
-    "THAUM_DEBUG_LOG_PATH",
-    "/var/log/thaum/debug-50bffa.log",
-)
