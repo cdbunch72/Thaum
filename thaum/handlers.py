@@ -9,6 +9,7 @@ from thaum.engine import create_incident_room, acknowledge_incident
 from typing import TYPE_CHECKING, Any, Dict, List
 from thaum.types import ThaumPerson, AlertPriority
 import re
+import time
 
 if TYPE_CHECKING:
     from bots.base import BaseChatBot, MessageContext
@@ -16,6 +17,26 @@ if TYPE_CHECKING:
 
 _log = logging.getLogger(__name__)
 _jinja_env = Environment(undefined=StrictUndefined)
+
+_DEBUG_LOG_PATH = "/var/log/thaum/debug-a6c406.log"
+_DEBUG_SESSION_ID = "a6c406"
+
+
+def _debug_log(hypothesis_id: str, location: str, message: str, data: Dict[str, Any]) -> None:
+    payload = {
+        "sessionId": _DEBUG_SESSION_ID,
+        "runId": "initial",
+        "hypothesisId": hypothesis_id,
+        "location": location,
+        "message": message,
+        "data": data,
+        "timestamp": int(time.time() * 1000),
+    }
+    try:
+        with open(_DEBUG_LOG_PATH, "a", encoding="utf-8") as f:
+            f.write(json.dumps(payload, separators=(",", ":")) + "\n")
+    except Exception:
+        pass
 
 DEFAULT_INCIDENT_PROMPT_CARD_TEMPLATE = """
 {
@@ -194,6 +215,18 @@ usage|commands|?
 
 def bind_thaum_handlers(bot: 'BaseChatBot') -> None:
     """Connects Bot events to Engine business logic."""
+    # region agent log
+    _debug_log(
+        "H3",
+        "thaum/handlers.py:bind_thaum_handlers",
+        "binding handlers",
+        {
+            "send_alerts": bool(getattr(bot, "send_alerts", False)),
+            "high_pri_on": bool(getattr(bot, "high_pri_on", False)),
+            "alert_plugin": type(getattr(bot, "alert_plugin", None)).__name__,
+        },
+    )
+    # endregion
     
     # Handles the Help or conditionally the emergency command
     def handle_help_emergency(bot: 'BaseChatBot', message: 'MessageContext', match: re.Match):
@@ -232,7 +265,30 @@ def bind_thaum_handlers(bot: 'BaseChatBot') -> None:
             msg = (match.group("msg") or "").strip()
             title = bot.room_title(ctx.room_id)
             alert_msg = f"{ctx.person.for_display} needs you in {title}: {msg}"
+            # region agent log
+            _debug_log(
+                "H1",
+                "thaum/handlers.py:handle_alert:entry",
+                "alert handler matched",
+                {
+                    "room_id": ctx.room_id,
+                    "msg_len": len(msg),
+                    "raw_has_group": match.group("msg") is not None,
+                },
+            )
+            # endregion
             short_id, _alert_id = bot.alert_plugin.trigger_alert(alert_msg, ctx.room_id, ctx.person)
+            # region agent log
+            _debug_log(
+                "H2",
+                "thaum/handlers.py:handle_alert:post_trigger",
+                "trigger_alert returned",
+                {
+                    "short_id_present": bool(short_id),
+                    "alert_id_present": bool(_alert_id),
+                },
+            )
+            # endregion
             if short_id:
                 bot.say(
                     ctx.room_id,
@@ -260,6 +316,14 @@ def bind_thaum_handlers(bot: 'BaseChatBot') -> None:
     
     @bot.hears(r"^(?P<cmd>\S+)\s+.*$",priority=99)
     def handle_unknown(bot: 'BaseChatBot', ctx: 'MessageContext', match: re.Match):
+        # region agent log
+        _debug_log(
+            "H4",
+            "thaum/handlers.py:handle_unknown",
+            "unknown command fallback",
+            {"cmd": match.group("cmd"), "room_id": ctx.room_id},
+        )
+        # endregion
         bot.say(ctx.room_id,f"Unknown command {match.group('cmd')}. Please use @{bot.name} usage to see a list of commands")
 
     
