@@ -231,7 +231,7 @@ def bind_thaum_handlers(bot: 'BaseChatBot') -> None:
         def handle_alert(bot: 'BaseChatBot', ctx: 'MessageContext', match: re.Match):
             msg = match.group("msg")
             short_id, _alert_id = bot.alert_plugin.trigger_alert(msg, ctx.room_id, ctx.person)
-            if plugin_cls.supports_acknowledge:
+            if short_id:
                 bot.say(
                     ctx.room_id,
                     f"Alert sent. Tracking ID: **{short_id}**",

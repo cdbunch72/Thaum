@@ -92,6 +92,22 @@ def room_id_for_jira_alert(jira_alert_id: str, bot_key: str) -> Optional[str]:
 # -- End Function room_id_for_jira_alert
 
 
+def mapping_for_short_id(short_id: str, bot_key: str) -> Optional[tuple[Optional[str], str, Optional[str]]]:
+    sid = (short_id or "").strip()
+    if not sid:
+        return None
+    with get_session() as session:
+        q = select(JiraAlertMap).where(
+            JiraAlertMap.short_id == sid,
+            JiraAlertMap.bot_key == bot_key,
+        )
+        row = session.scalars(q).first()
+        if row is None:
+            return None
+        return row.jira_alert_id, row.room_id, row.alias
+# -- End Function mapping_for_short_id
+
+
 def apply_create_webhook(
     *,
     jira_alert_id: str,

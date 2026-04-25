@@ -82,8 +82,7 @@ def create_incident_room(bot: 'BaseChatBot', summary: str, speaker: ThaumPerson,
 def acknowledge_incident(bot: 'BaseChatBot', alias: str, person: ThaumPerson) -> None:
     """Coordinates alert acknowledgment via the plugin."""
     try:
-        person_name = person.for_display
-        bot.alert_plugin.acknowledge_alert(alias, person_name)
+        bot.alert_plugin.acknowledge_alert(alias, person)
     except Exception as e:
         logger.error(f"Engine failure in acknowledge_incident: {e}")
 # -- End Function acknowledge_incident
