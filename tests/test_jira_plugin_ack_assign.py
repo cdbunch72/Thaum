@@ -26,6 +26,17 @@ class _FailResponse:
         raise RuntimeError("assign failed")
 
 
+class _LookupResponse:
+    def __init__(self, body):
+        self._body = body
+
+    def raise_for_status(self) -> None:
+        return None
+
+    def json(self):
+        return self._body
+
+
 class JiraPluginAckAssignTest(unittest.TestCase):
     def setUp(self) -> None:
         init_app_db("sqlite:///:memory:")
@@ -75,18 +86,23 @@ class JiraPluginAckAssignTest(unittest.TestCase):
         upsert_pending_row("WXYZ", "room-2", "bk1", "THAUM-20260425-WXYZ", logging.getLogger("t2"))
         person = ThaumPerson(email="b@example.com", display_name="Bob", platform_ids={"jira": "acct-2"})
 
-        with patch("alerts.plugins.jira.plugin.requests.post", return_value=_OkResponse()) as post_mock:
+        with patch(
+            "alerts.plugins.jira.plugin.requests.get",
+            return_value=_LookupResponse({"id": "jira-2"}),
+        ) as get_mock, patch(
+            "alerts.plugins.jira.plugin.requests.post",
+            return_value=_OkResponse(),
+        ) as post_mock:
             self.plugin.acknowledge_alert("WXYZ", person)
 
         self.assertEqual(post_mock.call_count, 2)
-        self.assertEqual(
-            post_mock.call_args_list[0].kwargs.get("params"),
-            {"identifierType": "alias"},
-        )
-        self.assertEqual(
-            post_mock.call_args_list[1].kwargs.get("params"),
-            {"identifierType": "alias"},
-        )
+        get_url = get_mock.call_args.args[0]
+        self.assertTrue(get_url.endswith("/v1/alerts/alias"))
+        self.assertEqual(get_mock.call_args.kwargs.get("params"), {"alias": "THAUM-20260425-WXYZ"})
+        first_url = post_mock.call_args_list[0].args[0]
+        second_url = post_mock.call_args_list[1].args[0]
+        self.assertTrue(first_url.endswith("/v1/alerts/jira-2/acknowledge"))
+        self.assertTrue(second_url.endswith("/v1/alerts/jira-2/assign"))
 
     def test_assign_unresolved_logs_and_warns_room(self) -> None:
         upsert_pending_row("QWER", "room-3", "bk1", "THAUM-20260425-QWER", logging.getLogger("t3"))

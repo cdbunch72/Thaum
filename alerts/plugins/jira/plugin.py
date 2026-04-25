@@ -249,6 +249,25 @@ class JiraPlugin(BaseAlertPlugin):
         )
     # -- End Method _post_alert_action
 
+    def _lookup_alert_id_by_alias(self, alias: str, read_timeout: float = 15.0) -> str:
+        alias_key = (alias or "").strip()
+        if not alias_key:
+            return ""
+        url = f"{self.api_prefix}/v1/alerts/alias"
+        resp = requests.get(
+            url,
+            params={"alias": alias_key},
+            headers=self.headers,
+            auth=self.auth,
+            timeout=timeout_pair(read_timeout),
+        )
+        resp.raise_for_status()
+        body = resp.json()
+        if not isinstance(body, dict):
+            return ""
+        return str(body.get("id") or "").strip()
+    # -- End Method _lookup_alert_id_by_alias
+
     def acknowledge_alert(self, alias: str, person: ThaumPerson) -> None:
         short_id = (alias or "").strip().upper()
         bot_key = str(getattr(self.bot, "bot_key", None) or "")
@@ -257,16 +276,12 @@ class JiraPlugin(BaseAlertPlugin):
         room_id = (mapping[1] or "").strip() if mapping else ""
         alert_alias = (mapping[2] or "").strip() if mapping else ""
 
-        if jira_alert_id:
-            ack_resp = self._post_alert_action(action="acknowledge", identifier=jira_alert_id)
-        elif alert_alias:
-            ack_resp = self._post_alert_action(
-                action="acknowledge",
-                identifier=alert_alias,
-                identifier_type="alias",
-            )
-        else:
+        if not jira_alert_id and alert_alias:
+            jira_alert_id = self._lookup_alert_id_by_alias(alert_alias)
+
+        if not jira_alert_id:
             raise ValueError(f"Could not resolve Jira alert for short_id={short_id}")
+        ack_resp = self._post_alert_action(action="acknowledge", identifier=jira_alert_id)
         ack_resp.raise_for_status()
 
         jira_account_id = (person.platform_ids.get("jira") or "").strip()
@@ -286,21 +301,11 @@ class JiraPlugin(BaseAlertPlugin):
             return
 
         try:
-            if jira_alert_id:
-                assign_resp = self._post_alert_action(
-                    action="assign",
-                    identifier=jira_alert_id,
-                    payload={"accountId": jira_account_id},
-                )
-            elif alert_alias:
-                assign_resp = self._post_alert_action(
-                    action="assign",
-                    identifier=alert_alias,
-                    identifier_type="alias",
-                    payload={"accountId": jira_account_id},
-                )
-            else:
-                raise ValueError("No Jira alert identifier available for assign call")
+            assign_resp = self._post_alert_action(
+                action="assign",
+                identifier=jira_alert_id,
+                payload={"accountId": jira_account_id},
+            )
             assign_resp.raise_for_status()
         except Exception as e:
             self.logger.warning(

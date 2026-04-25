@@ -95,6 +95,8 @@ class AlertCommandShortIdOutputTest(unittest.TestCase):
 
     @staticmethod
     def _build_bot(alert_plugin):
+        trigger = MagicMock(side_effect=alert_plugin.trigger_alert)
+        alert_plugin.trigger_alert = trigger
         routes = []
 
         def _hears(pattern, priority=50):
@@ -120,6 +122,7 @@ class AlertCommandShortIdOutputTest(unittest.TestCase):
             send_card=MagicMock(),
             get_person=MagicMock(),
             delete_message=MagicMock(),
+            room_title=MagicMock(return_value="Room A"),
         ), routes
 
     def test_alert_command_shows_tracking_id_when_present_even_without_ack_support(self) -> None:
@@ -130,6 +133,11 @@ class AlertCommandShortIdOutputTest(unittest.TestCase):
         match = re.search(r"^alert(?:\s*:\s*(?P<msg>.*))", "alert: test issue")
         self.assertIsNotNone(match)
         alert_handler(bot, ctx, match)
+        bot.alert_plugin.trigger_alert.assert_called_once_with(
+            "X Person needs you in Room A: test issue",
+            "room-1",
+            ctx.person,
+        )
         bot.say.assert_called_once_with("room-1", "Alert sent. Tracking ID: **ZXCV**")
 
     def test_alert_command_falls_back_when_no_short_id(self) -> None:
@@ -140,6 +148,11 @@ class AlertCommandShortIdOutputTest(unittest.TestCase):
         match = re.search(r"^alert(?:\s*:\s*(?P<msg>.*))", "alert: test issue")
         self.assertIsNotNone(match)
         alert_handler(bot, ctx, match)
+        bot.alert_plugin.trigger_alert.assert_called_once_with(
+            "X Person needs you in Room A: test issue",
+            "room-2",
+            ctx.person,
+        )
         bot.say.assert_called_once_with("room-2", "Alert sent.")
 
 

@@ -296,6 +296,16 @@ class WebexChatBot(BaseChatBot):
         return room.id
     # -- End Method create_room
 
+    def room_title(self, room_id: str) -> str:
+        try:
+            room = self.api.rooms.get(room_id)
+            title = (getattr(room, "title", None) or "").strip()
+            return title if title else room_id
+        except Exception as e:
+            self.logger.warning("Failed to resolve room title for %s: %s", room_id, e)
+            return room_id
+    # -- End Method room_title
+
     def add_members(self, room_id: str, members: List[ThaumPerson]) -> None:
         for m in members:
             pid = m.platform_ids.get(self.plugin_name)

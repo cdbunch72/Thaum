@@ -78,6 +78,11 @@ class BaseChatBot(ABC):
         pass
     # -- End Method create_room
 
+    def room_title(self, room_id: str) -> str:
+        """Returns a room's title for display; falls back to room_id."""
+        return room_id
+    # -- End Method room_title
+
     @abstractmethod
     def add_members(self, room_id: str, members: List[ThaumPerson]) -> None:
         """Adds a list of ThaumPeople to the room."""
