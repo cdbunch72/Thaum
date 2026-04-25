@@ -94,6 +94,30 @@ sudo systemctl status thaum.service
 sudo journalctl -u thaum.service -n 100 --no-pager
 ```
 
+Restart policy in the example is fail-fast for show-stoppers and retry for transient failures:
+
+- `Restart=on-failure` (not `always`)
+- `RestartPreventExitStatus=10 11 12 40` (reserved permanent-failure codes)
+- `StartLimitIntervalSec=300` + `StartLimitBurst=5` (rate-limit rapid loops)
+
+This is important for multi-worker Gunicorn: restart decisions happen at the service/master process boundary, not per worker.
+
+Inspect effective restart settings:
+
+```bash
+sudo systemctl show thaum.service \
+  -p Restart \
+  -p RestartPreventExitStatus \
+  -p StartLimitIntervalUSec \
+  -p StartLimitBurst
+```
+
+Validate unit syntax after changes:
+
+```bash
+sudo systemd-analyze verify /etc/containers/systemd/thaum.container
+```
+
 Verify staged credentials inside the running container:
 
 ```bash

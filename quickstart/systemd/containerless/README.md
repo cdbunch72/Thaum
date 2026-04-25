@@ -48,10 +48,34 @@ sudo systemctl enable --now thaum.service
 sudo systemctl status thaum.service
 ```
 
+The example service uses a fail-fast restart policy:
+
+- `Restart=on-failure` (not `always`)
+- `RestartPreventExitStatus=10 11 12 40` (reserved permanent-failure codes)
+- `StartLimitIntervalSec=300` + `StartLimitBurst=5` (limits rapid restart churn)
+
+This keeps retries for transient failures while preventing infinite loops for known show-stoppers.
+
 Confirm the socket exists:
 
 ```bash
 ls -l /run/thaum/thaum.sock
+```
+
+Check effective restart settings:
+
+```bash
+sudo systemctl show thaum.service \
+  -p Restart \
+  -p RestartPreventExitStatus \
+  -p StartLimitIntervalUSec \
+  -p StartLimitBurst
+```
+
+Validate unit syntax after edits:
+
+```bash
+sudo systemd-analyze verify /etc/systemd/system/thaum.service
 ```
 
 ## 4) nginx

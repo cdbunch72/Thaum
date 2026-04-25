@@ -46,6 +46,9 @@ class BaseChatBot(ABC):
         self.responders = RespondersList()
         self.team_description = config.team_description
         self.room_title_template = config.room_title_template
+        self.customer_service_message_template = config.customer_service_message_template
+        self.incident_prompt_card_template = config.incident_prompt_card_template
+        self.incident_prompt_card_template_path = config.incident_prompt_card_template_path
         self.emergency_warning_message = config.emergency_warning_message
         # Set by the server bootstrap code; shared by all bots on a server.
         self.lookup_plugin: Optional[Any] = None
@@ -86,7 +89,12 @@ class BaseChatBot(ABC):
         """Permanently removes/implodes the room."""
         pass
     # -- End Method delete_room
-    
+
+    def delete_message(self, message_id: str) -> None:
+        """Remove a chat message by platform id (e.g. delete an Adaptive Card message). Default no-op."""
+        return
+    # -- End Method delete_message
+
     @abstractmethod
     def get_person(self, person_id: str) -> ThaumPerson:
         """Takes a bot_type-specific person_id and returns a ThaumPerson"""
@@ -165,6 +173,12 @@ class BaseChatBotConfig(BaseModel):
     send_alerts: Optional[bool] = True
     responders: List[str]
     room_title_template: Optional[str] = '{{requester_name}} - {{team_description}} {{date}}'
+    customer_service_message_template: Optional[str] = (
+        "Thank you for your patience.  The next available person from "
+        "{{ team_description }} will be with you shortlly."
+    )
+    incident_prompt_card_template: Optional[str] = None
+    incident_prompt_card_template_path: Optional[str] = None
     # Alert plugin module name under ``alerts.plugins``; use ``null`` when send_alerts is False.
     alert_type: str = "null"
     team_description: str

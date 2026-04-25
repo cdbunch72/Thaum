@@ -6,12 +6,13 @@ from __future__ import annotations
 import traceback
 from typing import Any, Callable, Dict, Optional
 
+import requests
 from requests.auth import HTTPBasicAuth
 
 from log_setup import log_debug_blob
 from alerts.base import BaseAlertPlugin
 from alerts.plugins.jira.config import JiraAlertPluginConfig
-from alerts.plugins.jira.mapping_store import upsert_pending_row
+from alerts.plugins.jira.mapping_store import mapping_for_short_id, upsert_pending_row
 from alerts.plugins.jira.payload import (
     build_trigger_alert_body,
     post_alert,
@@ -20,12 +21,13 @@ from alerts.plugins.jira.payload import (
 from alerts.plugins.jira.status_webhook import handle_jira_status_webhook
 from alerts.plugins.jira.teams import canonical_team_ref, refresh_team_cache
 from alerts.plugins.jira.users import resolve_email_to_account_id as resolve_email_to_account_id_impl
+from thaum.http_timeouts import timeout_pair
 from thaum.types import AlertPriority, LogLevel, RespondersList, ThaumPerson
 
 
 class JiraPlugin(BaseAlertPlugin):
     supports_status_webhooks: bool = True
-    supports_acknowledge: bool = False
+    supports_acknowledge: bool = True
 
     def __init__(self, config: JiraAlertPluginConfig):
         super().__init__(config)
@@ -223,4 +225,93 @@ class JiraPlugin(BaseAlertPlugin):
         )
         return short_id, alias or None
     # -- End Method trigger_alert
+
+    def _post_alert_action(
+        self,
+        *,
+        action: str,
+        identifier: str,
+        identifier_type: Optional[str] = None,
+        payload: Optional[dict[str, str]] = None,
+        read_timeout: float = 15.0,
+    ) -> requests.Response:
+        params: Optional[dict[str, str]] = None
+        if identifier_type:
+            params = {"identifierType": identifier_type}
+        url = f"{self.api_prefix}/v1/alerts/{identifier}/{action}"
+        return requests.post(
+            url,
+            json=payload,
+            headers=self.headers,
+            auth=self.auth,
+            params=params,
+            timeout=timeout_pair(read_timeout),
+        )
+    # -- End Method _post_alert_action
+
+    def acknowledge_alert(self, alias: str, person: ThaumPerson) -> None:
+        short_id = (alias or "").strip().upper()
+        bot_key = str(getattr(self.bot, "bot_key", None) or "")
+        mapping = mapping_for_short_id(short_id, bot_key) if bot_key else None
+        jira_alert_id = (mapping[0] or "").strip() if mapping else ""
+        room_id = (mapping[1] or "").strip() if mapping else ""
+        alert_alias = (mapping[2] or "").strip() if mapping else ""
+
+        if jira_alert_id:
+            ack_resp = self._post_alert_action(action="acknowledge", identifier=jira_alert_id)
+        elif alert_alias:
+            ack_resp = self._post_alert_action(
+                action="acknowledge",
+                identifier=alert_alias,
+                identifier_type="alias",
+            )
+        else:
+            raise ValueError(f"Could not resolve Jira alert for short_id={short_id}")
+        ack_resp.raise_for_status()
+
+        jira_account_id = (person.platform_ids.get("jira") or "").strip()
+        if not jira_account_id:
+            jira_account_id = (self._resolve_email_to_account_id(person.email) or "").strip()
+        if not jira_account_id:
+            self.logger.warning(
+                "Jira assign skipped after ack for short_id=%s: no Jira accountId for %s",
+                short_id,
+                person.email,
+            )
+            if room_id:
+                self.bot.say(
+                    room_id,
+                    f"Alert **{short_id}** acknowledged, but I could not assign it to {person.for_display}.",
+                )
+            return
+
+        try:
+            if jira_alert_id:
+                assign_resp = self._post_alert_action(
+                    action="assign",
+                    identifier=jira_alert_id,
+                    payload={"accountId": jira_account_id},
+                )
+            elif alert_alias:
+                assign_resp = self._post_alert_action(
+                    action="assign",
+                    identifier=alert_alias,
+                    identifier_type="alias",
+                    payload={"accountId": jira_account_id},
+                )
+            else:
+                raise ValueError("No Jira alert identifier available for assign call")
+            assign_resp.raise_for_status()
+        except Exception as e:
+            self.logger.warning(
+                "Jira assign failed after ack for short_id=%s account_id=%s: %s",
+                short_id,
+                jira_account_id,
+                e,
+            )
+            if room_id:
+                self.bot.say(
+                    room_id,
+                    f"Alert **{short_id}** acknowledged, but assignment to {person.for_display} failed.",
+                )
 # -- End Class JiraPlugin
