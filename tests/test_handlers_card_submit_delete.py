@@ -122,6 +122,26 @@ class SubmitIncidentDeletesCardTest(unittest.TestCase):
         mock_create_room.assert_called_once()
         self.assertEqual(bot.deleted_messages, [])
 
+    @patch("thaum.handlers.create_incident_room")
+    def test_submit_incident_converts_plus_to_spaces(self, mock_create_room) -> None:
+        mock_create_room.return_value = "room-1"
+        bot = _StubBotForActions()
+        bind_thaum_handlers(bot)
+        handle_actions = bot._action_callbacks[0]
+        action = SimpleNamespace(
+            inputs={
+                "action": "submit_incident",
+                "summary": "need+help+now",
+                "is_emergency": "false",
+            },
+            personId="person-1",
+            messageId="message-plus",
+        )
+        handle_actions(bot, action)
+        args = mock_create_room.call_args.args
+        self.assertEqual(args[1], "need help now")
+        self.assertEqual(bot.deleted_messages, ["message-plus"])
+
 
 if __name__ == "__main__":
     unittest.main()

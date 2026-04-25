@@ -5,7 +5,6 @@ import json
 import logging
 from pathlib import Path
 from jinja2 import Environment, StrictUndefined, Template
-from thaum.agent_debug_log import append_agent_debug_log
 from thaum.engine import create_incident_room, acknowledge_incident
 from typing import TYPE_CHECKING, Any, Dict, List
 from thaum.types import ThaumPerson, AlertPriority
@@ -17,18 +16,6 @@ if TYPE_CHECKING:
 
 _log = logging.getLogger(__name__)
 _jinja_env = Environment(undefined=StrictUndefined)
-
-def _summary_input_props(card: Dict[str, Any]) -> Dict[str, Any]:
-    for el in card.get("body") or []:
-        if isinstance(el, dict) and el.get("type") == "Input.Text" and el.get("id") == "summary":
-            return {
-                "found": True,
-                "isMultiline": el.get("isMultiline"),
-                "regex": el.get("regex"),
-                "style": el.get("style"),
-                "keys": sorted(el.keys()),
-            }
-    return {"found": False}
 
 DEFAULT_INCIDENT_PROMPT_CARD_TEMPLATE = """
 {
@@ -45,7 +32,7 @@ DEFAULT_INCIDENT_PROMPT_CARD_TEMPLATE = """
       "type": "Input.Text",
       "id": "summary",
       "label": "Summary",
-      "placeholder": "Briefly describe what you need",
+      "placeholder": "Briefly describe what you need (if spaces fail in Webex, use +)",
       "isMultiline": true,
       "isRequired": true
     }
@@ -89,7 +76,7 @@ def _incident_prompt_card_fallback(
             "type": "Input.Text",
             "id": "summary",
             "label": "Summary",
-            "placeholder": "Briefly describe what you need",
+            "placeholder": "Briefly describe what you need (if spaces fail in Webex, use +)",
             "isMultiline": True,
             "isRequired": True,
         },
@@ -163,14 +150,6 @@ def _incident_prompt_card(
         rendered = _jinja_env.from_string(source).render(**context)
         parsed = json.loads(rendered)
         if _is_valid_incident_card(parsed):
-            # #region agent log
-            append_agent_debug_log(
-                "handlers.py:_incident_prompt_card",
-                "incident card summary Input.Text props (rendered)",
-                {"props": _summary_input_props(parsed), "template_source": "jinja_inline_or_path"},
-                "H1,H2",
-            )
-            # #endregion
             return parsed
         raise ValueError("Rendered incident prompt card is not a valid Adaptive Card object")
     except Exception as exc:
@@ -180,14 +159,6 @@ def _incident_prompt_card(
             default_high_priority=default_high_priority,
             show_priority_toggle=show_priority_toggle,
         )
-        # #region agent log
-        append_agent_debug_log(
-            "handlers.py:_incident_prompt_card",
-            "incident card summary Input.Text props (fallback)",
-            {"props": _summary_input_props(fb), "template_source": "fallback", "error": str(exc)},
-            "H1,H2",
-        )
-        # #endregion
         return fb
 
 
@@ -300,19 +271,9 @@ def bind_thaum_handlers(bot: 'BaseChatBot') -> None:
 
         # 2. Extract inputs: summary from Input.Text; is_emergency from Toggle or submit data ("true"/"false").
         summary = action.inputs.get("summary", "No summary provided")
-        # #region agent log
-        append_agent_debug_log(
-            "handlers.py:handle_actions",
-            "card submit summary received",
-            {
-                "summary_len": len(summary),
-                "summary_space_count": summary.count(" "),
-                "summary_repr": repr(summary)[:200],
-                "inputs_keys": sorted(action.inputs.keys()) if isinstance(action.inputs, dict) else str(type(action.inputs)),
-            },
-            "H3,H4,H5",
-        )
-        # #endregion
+        if " " not in summary and "+" in summary:
+            normalized_summary = summary.replace("+", " ")
+            summary = normalized_summary
         is_emergency = action.inputs.get("is_emergency") == "true"
         priority = AlertPriority.HIGH if is_emergency else AlertPriority.NORMAL
         
