@@ -51,35 +51,39 @@ chown postgres:postgres /var/log/thaum/postgresql
 
 ensure_pgdata_tree() {
   target="$1"
-  current=""
 
-  case "$target" in
-    /*) current="/" ;;
-    *) current="." ;;
-  esac
+  if [ -d "$target" ]; then
+    return 0
+  fi
 
-  old_ifs="$IFS"
-  IFS='/'
-  set -f
-  for segment in $target; do
-    [ -n "$segment" ] || continue
+  parent="$(dirname "$target")"
+  if [ "$parent" != "$target" ]; then
+    ensure_pgdata_tree "$parent"
+  fi
 
-    case "$current" in
-      /) next="/$segment" ;;
-      .) next="./$segment" ;;
-      *) next="$current/$segment" ;;
-    esac
+  install -d -m 0750 -o postgres -g postgres "$target"
+}
 
-    if [ ! -d "$next" ]; then
-      install -d -m 0750 -o postgres -g postgres "$next"
+ensure_pgdata_parent_traverse() {
+  target="$1"
+  pg_uid="$(id -u postgres)"
+  pg_gid="$(id -g postgres)"
+  current="$(dirname "$target")"
+
+  while [ "$current" != "/" ] && [ "$current" != "." ] && [ "$current" != "$target" ]; do
+    owner_uid="$(stat -c '%u' "$current")"
+    owner_gid="$(stat -c '%g' "$current")"
+    if [ "$owner_uid" -ne "$pg_uid" ] && [ "$owner_gid" -ne "$pg_gid" ]; then
+      chmod o+x "$current"
     fi
+    next="$(dirname "$current")"
+    [ "$next" = "$current" ] && break
     current="$next"
   done
-  set +f
-  IFS="$old_ifs"
 }
 
 ensure_pgdata_tree "$PGDATA"
+ensure_pgdata_parent_traverse "$PGDATA"
 chown postgres:postgres "$PGDATA"
 chmod 0750 "$PGDATA"
 
