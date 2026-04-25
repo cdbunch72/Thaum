@@ -229,8 +229,10 @@ def bind_thaum_handlers(bot: 'BaseChatBot') -> None:
 
         @bot.hears(r"^alert(?:\s*:\s*(?P<msg>.*))",priority=10)
         def handle_alert(bot: 'BaseChatBot', ctx: 'MessageContext', match: re.Match):
-            msg = match.group("msg")
-            short_id, _alert_id = bot.alert_plugin.trigger_alert(msg, ctx.room_id, ctx.person)
+            msg = (match.group("msg") or "").strip()
+            title = bot.room_title(ctx.room_id)
+            alert_msg = f"{ctx.person.for_display} needs you in {title}: {msg}"
+            short_id, _alert_id = bot.alert_plugin.trigger_alert(alert_msg, ctx.room_id, ctx.person)
             if short_id:
                 bot.say(
                     ctx.room_id,
