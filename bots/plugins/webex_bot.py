@@ -13,7 +13,7 @@ from pydantic import Field, model_validator
 
 from bots.base import BaseChatBot, BaseChatBotConfig, MessageContext
 from log_setup import log_debug_blob
-from thaum.debug_agent_log import NDJSON_LOG_PATH
+from thaum.paths import AGENT_DEBUG_NDJSON_LOG_PATH
 from thaum.types import LogLevel, ResolvedSecret, ServerConfig, ThaumPerson
 from webexpythonsdk import WebexAPI
 
@@ -451,7 +451,7 @@ class WebexChatBot(BaseChatBot):
                     },
                     "timestamp": int(time.time() * 1000),
                 }
-                with open(NDJSON_LOG_PATH, "a", encoding="utf-8") as _lf:
+                with open(AGENT_DEBUG_NDJSON_LOG_PATH, "a", encoding="utf-8") as _lf:
                     _lf.write(json.dumps(_dbg, default=str) + "\n")
             except Exception:
                 pass
@@ -475,7 +475,7 @@ class WebexChatBot(BaseChatBot):
                             },
                             "timestamp": int(time.time() * 1000),
                         }
-                        with open(NDJSON_LOG_PATH, "a", encoding="utf-8") as _lf:
+                        with open(AGENT_DEBUG_NDJSON_LOG_PATH, "a", encoding="utf-8") as _lf:
                             _lf.write(json.dumps(_win, default=str) + "\n")
                     except Exception:
                         pass
@@ -493,7 +493,7 @@ class WebexChatBot(BaseChatBot):
                         "data": {"clean_text_repr": repr(clean_text)},
                         "timestamp": int(time.time() * 1000),
                     }
-                    with open(NDJSON_LOG_PATH, "a", encoding="utf-8") as _lf:
+                    with open(AGENT_DEBUG_NDJSON_LOG_PATH, "a", encoding="utf-8") as _lf:
                         _lf.write(json.dumps(_nm, default=str) + "\n")
                 except Exception:
                     pass
