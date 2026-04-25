@@ -263,7 +263,7 @@ def bind_thaum_handlers(bot: 'BaseChatBot') -> None:
                 },
             )
             # endregion
-            if not msg:
+            
                 # region agent log
                 _debug_log(
                     "H2",
@@ -272,10 +272,7 @@ def bind_thaum_handlers(bot: 'BaseChatBot') -> None:
                     {"room_id": ctx.room_id},
                 )
                 # endregion
-                bot.say(
-                    ctx.room_id,
-                    f"Please include a message, e.g. `alert: service is down`.",
-                )
+
                 return
             title = bot.room_title(ctx.room_id)
             alert_msg = f"{ctx.person.for_display} needs you in {title}: {msg}"
