@@ -48,8 +48,40 @@ export PGDATA="${PGDATA:-/var/lib/thaum/postgresql/data}"
 mkdir -p /var/log/thaum/postgresql /var/log/supervisor
 install -d -m 0750 -o postgres -g postgres /tmp/postgres
 chown postgres:postgres /var/log/thaum/postgresql
-mkdir -p "$PGDATA"
+
+ensure_pgdata_tree() {
+  target="$1"
+  current=""
+
+  case "$target" in
+    /*) current="/" ;;
+    *) current="." ;;
+  esac
+
+  old_ifs="$IFS"
+  IFS='/'
+  set -f
+  for segment in $target; do
+    [ -n "$segment" ] || continue
+
+    case "$current" in
+      /) next="/$segment" ;;
+      .) next="./$segment" ;;
+      *) next="$current/$segment" ;;
+    esac
+
+    if [ ! -d "$next" ]; then
+      install -d -m 0750 -o postgres -g postgres "$next"
+    fi
+    current="$next"
+  done
+  set +f
+  IFS="$old_ifs"
+}
+
+ensure_pgdata_tree "$PGDATA"
 chown postgres:postgres "$PGDATA"
+chmod 0750 "$PGDATA"
 
 if [ ! -s "$PGDATA/PG_VERSION" ]; then
   gosu postgres initdb -D "$PGDATA"
