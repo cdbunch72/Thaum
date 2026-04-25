@@ -9,7 +9,6 @@ from thaum.engine import create_incident_room, acknowledge_incident
 from typing import TYPE_CHECKING, Any, Dict, List
 from thaum.types import ThaumPerson, AlertPriority
 import re
-import time
 
 if TYPE_CHECKING:
     from bots.base import BaseChatBot, MessageContext
@@ -17,26 +16,6 @@ if TYPE_CHECKING:
 
 _log = logging.getLogger(__name__)
 _jinja_env = Environment(undefined=StrictUndefined)
-
-_DEBUG_LOG_PATH = "/var/log/thaum/debug-a6c406.log"
-_DEBUG_SESSION_ID = "a6c406"
-
-
-def _debug_log(hypothesis_id: str, location: str, message: str, data: Dict[str, Any]) -> None:
-    payload = {
-        "sessionId": _DEBUG_SESSION_ID,
-        "runId": "format-check",
-        "hypothesisId": hypothesis_id,
-        "location": location,
-        "message": message,
-        "data": data,
-        "timestamp": int(time.time() * 1000),
-    }
-    try:
-        with open(_DEBUG_LOG_PATH, "a", encoding="utf-8") as f:
-            f.write(json.dumps(payload, separators=(",", ":")) + "\n")
-    except Exception:
-        pass
 
 DEFAULT_INCIDENT_PROMPT_CARD_TEMPLATE = """
 {
@@ -251,48 +230,12 @@ def bind_thaum_handlers(bot: 'BaseChatBot') -> None:
         @bot.hears(r"^alert(?:\s*:\s*(?P<msg>.*))?$",priority=10)
         def handle_alert(bot: 'BaseChatBot', ctx: 'MessageContext', match: re.Match):
             msg = (match.group("msg") or "").strip()
-            # region agent log
-            _debug_log(
-                "H1",
-                "thaum/handlers.py:handle_alert:entry",
-                "alert command received",
-                {
-                    "msg_len": len(msg),
-                    "msg_empty": (msg == ""),
-                    "has_colon_group": match.group("msg") is not None,
-                },
-            )
-            # endregion
-            
-                # region agent log
-                _debug_log(
-                    "H2",
-                    "thaum/handlers.py:handle_alert:missing_msg",
-                    "empty message path",
-                    {"room_id": ctx.room_id},
-                )
-                # endregion
-
-                return
             title = bot.room_title(ctx.room_id)
-            alert_msg = f"{ctx.person.for_display} needs you in {title}: {msg}"
-            # region agent log
-            _debug_log(
-                "H3",
-                "thaum/handlers.py:handle_alert:summary",
-                "constructed alert summary",
-                {"summary": alert_msg, "ends_with_colon_space": alert_msg.endswith(': ')},
-            )
-            # endregion
+            if msg:
+                alert_msg = f"{ctx.person.for_display} needs you in {title}: {msg}"
+            else:
+                alert_msg = f"{ctx.person.for_display} needs you in {title}"
             short_id, _alert_id = bot.alert_plugin.trigger_alert(alert_msg, ctx.room_id, ctx.person)
-            # region agent log
-            _debug_log(
-                "H4",
-                "thaum/handlers.py:handle_alert:trigger_result",
-                "trigger_alert completed",
-                {"short_id_present": bool(short_id), "alert_id_present": bool(_alert_id)},
-            )
-            # endregion
             if short_id:
                 bot.say(
                     ctx.room_id,
