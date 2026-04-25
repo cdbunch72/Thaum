@@ -4,6 +4,8 @@
 from __future__ import annotations
 
 import logging
+import json
+import time
 from typing import Any, Optional
 
 from jinja2 import Environment, StrictUndefined
@@ -19,6 +21,33 @@ from bots.base import BaseChatBot
 from thaum.types import ThaumPerson
 
 _jinja_env = Environment(undefined=StrictUndefined)
+_DEBUG_LOG_PATH = "/var/log/thaum/debug-d09bdd.log"
+
+
+def _debug_log(
+    run_id: str,
+    hypothesis_id: str,
+    location: str,
+    message: str,
+    data: dict[str, Any],
+) -> None:
+    # region agent log
+    payload = {
+        "sessionId": "d09bdd",
+        "runId": run_id,
+        "hypothesisId": hypothesis_id,
+        "location": location,
+        "message": message,
+        "data": data,
+        "timestamp": int(time.time() * 1000),
+    }
+    try:
+        with open(_DEBUG_LOG_PATH, "a", encoding="utf-8") as fh:
+            fh.write(json.dumps(payload, ensure_ascii=True) + "\n")
+    except Exception:
+        pass
+    # endregion agent log
+# -- End Function _debug_log
 
 
 def _bot_key_str(bot: BaseChatBot) -> str:
@@ -114,12 +143,38 @@ def _render_status_template(template_str: str, context: dict[str, Any]) -> str:
 
 def _resolve_room_id(*, bot_key: str, jira_alert_id: str, extras: dict[str, Any]) -> str:
     rid = room_id_for_jira_alert(jira_alert_id, bot_key)
+    _debug_log(
+        run_id="initial",
+        hypothesis_id="H2",
+        location="alerts/plugins/jira/status_webhook.py:_resolve_room_id",
+        message="room lookup primary result",
+        data={
+            "jira_alert_id": jira_alert_id,
+            "bot_key": bot_key,
+            "resolved_from_mapping": bool(rid),
+            "extras_keys": sorted([str(k) for k in extras.keys()]),
+        },
+    )
     if rid:
         return rid
-    for k in ("roomid", "room_id"):
+    for k in ("roomid", "room_id", "roomId"):
         v = extras.get(k)
         if isinstance(v, str) and v.strip():
+            _debug_log(
+                run_id="initial",
+                hypothesis_id="H3",
+                location="alerts/plugins/jira/status_webhook.py:_resolve_room_id",
+                message="room fallback from extras",
+                data={"fallback_key": k, "room_present": True},
+            )
             return v.strip()
+    _debug_log(
+        run_id="initial",
+        hypothesis_id="H1",
+        location="alerts/plugins/jira/status_webhook.py:_resolve_room_id",
+        message="room unresolved after all fallbacks",
+        data={"jira_alert_id": jira_alert_id, "bot_key": bot_key},
+    )
     return ""
 # -- End Function _resolve_room_id
 
@@ -137,8 +192,27 @@ def handle_jira_status_webhook(
         alert = {}
     bot_key = _bot_key_str(bot)
     extras = extra_properties_from_alert(alert)
+    _debug_log(
+        run_id="initial",
+        hypothesis_id="H4",
+        location="alerts/plugins/jira/status_webhook.py:handle_jira_status_webhook",
+        message="webhook entry",
+        data={
+            "action": action,
+            "alert_id": str(alert.get("alertId") or ""),
+            "has_extras": bool(extras),
+            "bot_key": bot_key,
+        },
+    )
     props_bk = str(extras.get("bot_key") or "").strip()
     if props_bk and bot_key and props_bk != bot_key:
+        _debug_log(
+            run_id="initial",
+            hypothesis_id="H4",
+            location="alerts/plugins/jira/status_webhook.py:handle_jira_status_webhook",
+            message="bot_key mismatch prevents processing",
+            data={"props_bot_key": props_bk, "bot_key": bot_key, "action": action},
+        )
         logger.warning("Jira status webhook bot_key mismatch (url vs extraProperties)")
         return
 
@@ -177,6 +251,18 @@ def handle_jira_status_webhook(
 
     if action == "Acknowledge":
         text = _render_status_template(cfg.status_ack_template, ctx)
+        _debug_log(
+            run_id="initial",
+            hypothesis_id="H5",
+            location="alerts/plugins/jira/status_webhook.py:handle_jira_status_webhook",
+            message="sending acknowledge status message",
+            data={
+                "room_id_present": bool(room_id),
+                "text_len": len(text),
+                "status_mentions": bool(cfg.status_mentions),
+                "markdown_value_type": str(type(use_markdown).__name__),
+            },
+        )
         bot.say(room_id, text, markdown=use_markdown)
         return
 
