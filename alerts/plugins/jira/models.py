@@ -5,7 +5,7 @@ from __future__ import annotations
 
 from typing import Optional
 
-from sqlalchemy import String
+from sqlalchemy import Index, String
 from sqlalchemy.orm import Mapped, mapped_column
 
 from gemstone_utils.db import GemstoneDB
@@ -13,16 +13,21 @@ from gemstone_utils.db import GemstoneDB
 
 class JiraAlertMap(GemstoneDB):
     """
-    Correlates Thaum short_id (primary key) with Jira Ops alert UUID once the Create webhook arrives.
+    Correlates Jira alert alias to local routing context and Jira alert UUID.
 
     ``jira_alert_id`` is null after ``trigger_alert`` POST until JSM delivers the Create action.
     """
 
     __tablename__ = "jira_alert_map"
 
-    short_id: Mapped[str] = mapped_column(String(8), primary_key=True)
+    bot_key: Mapped[str] = mapped_column(String(64), primary_key=True)
+    alias: Mapped[str] = mapped_column(String(128), primary_key=True)
+    short_id: Mapped[str] = mapped_column(String(8), nullable=False)
     room_id: Mapped[str] = mapped_column(String, nullable=False)
-    bot_key: Mapped[str] = mapped_column(String, nullable=False)
-    alias: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     jira_alert_id: Mapped[Optional[str]] = mapped_column(String, nullable=True, unique=True)
+    sender_name: Mapped[str] = mapped_column(String(256), nullable=False, default="Someone")
+
+    __table_args__ = (
+        Index("ix_jira_alert_map_bot_short_id", "bot_key", "short_id"),
+    )
 # -- End Class JiraAlertMap

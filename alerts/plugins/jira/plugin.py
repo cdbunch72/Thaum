@@ -214,7 +214,14 @@ class JiraPlugin(BaseAlertPlugin):
         response.raise_for_status()
 
         alias = str(alert.get("alias") or "")
-        upsert_pending_row(short_id, room_id, bk, alias, self.logger)
+        upsert_pending_row(
+            bot_key=bk,
+            alias=alias,
+            short_id=short_id,
+            room_id=room_id,
+            sender_name=sender.for_display,
+            logger=self.logger,
+        )
 
         self.logger.log(
             LogLevel.VERBOSE,

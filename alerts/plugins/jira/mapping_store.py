@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import logging
 import re
-from typing import Any, Optional
+from typing import Optional
 
 from gemstone_utils.db import get_session
 from sqlalchemy import select
@@ -35,71 +35,93 @@ def parse_short_id_from_alias(alias: Optional[str]) -> str:
 # -- End Function parse_short_id_from_alias
 
 
-def extra_properties_from_alert(alert: dict[str, Any]) -> dict[str, Any]:
-    raw = alert.get("extraProperties")
-    if isinstance(raw, dict):
-        return raw
-    details = alert.get("details")
-    if isinstance(details, dict):
-        ep = details.get("extraProperties")
-        if isinstance(ep, dict):
-            return ep
-    return {}
-# -- End Function extra_properties_from_alert
-
-
 def upsert_pending_row(
-    short_id: str,
-    room_id: str,
     bot_key: str,
     alias: str,
+    short_id: str,
+    room_id: str,
+    sender_name: str,
     logger: logging.Logger,
 ) -> None:
+    bk = (bot_key or "").strip()
+    al = (alias or "").strip()
+    sid = (short_id or "").strip()
+    rid = (room_id or "").strip()
+    snd = (sender_name or "").strip() or "Someone"
+    if not bk or not al or not sid or not rid:
+        logger.warning("Jira alert map pending skipped: missing bot_key/alias/short_id/room_id")
+        return
     with get_session() as session:
         with session.begin():
-            row = session.get(JiraAlertMap, short_id)
+            row = session.get(JiraAlertMap, {"bot_key": bk, "alias": al})
             if row is None:
                 session.add(
                     JiraAlertMap(
-                        short_id=short_id,
-                        room_id=room_id,
-                        bot_key=bot_key,
-                        alias=alias or None,
+                        bot_key=bk,
+                        alias=al,
+                        short_id=sid,
+                        room_id=rid,
+                        sender_name=snd,
                         jira_alert_id=None,
                     )
                 )
             else:
-                row.room_id = room_id
-                row.bot_key = bot_key
-                row.alias = alias or None
-    _verbose(logger, "Jira alert map pending short_id=%s bot_key=%s", short_id, bot_key)
+                row.short_id = sid
+                row.room_id = rid
+                row.sender_name = snd
+    _verbose(logger, "Jira alert map pending alias=%s short_id=%s bot_key=%s", al, sid, bk)
 # -- End Function upsert_pending_row
 
 
-def room_id_for_jira_alert(jira_alert_id: str, bot_key: str) -> Optional[str]:
+def mapping_for_jira_alert_id(
+    jira_alert_id: str, bot_key: str
+) -> Optional[tuple[str, str, Optional[str], str]]:
     jid = (jira_alert_id or "").strip()
-    if not jid:
+    bk = (bot_key or "").strip()
+    if not jid or not bk:
         return None
     with get_session() as session:
         q = select(JiraAlertMap).where(
             JiraAlertMap.jira_alert_id == jid,
-            JiraAlertMap.bot_key == bot_key,
+            JiraAlertMap.bot_key == bk,
         )
         row = session.scalars(q).first()
         if row is None:
             return None
-        return row.room_id
+        return row.alias, row.room_id, row.jira_alert_id, row.sender_name
+# -- End Function mapping_for_jira_alert_id
+
+
+def room_id_for_jira_alert(jira_alert_id: str, bot_key: str) -> Optional[str]:
+    m = mapping_for_jira_alert_id(jira_alert_id, bot_key)
+    if m is None:
+        return None
+    return m[1]
 # -- End Function room_id_for_jira_alert
 
 
-def mapping_for_short_id(short_id: str, bot_key: str) -> Optional[tuple[Optional[str], str, Optional[str]]]:
+def mapping_for_alias(alias: str, bot_key: str) -> Optional[tuple[Optional[str], str, str]]:
+    al = (alias or "").strip()
+    bk = (bot_key or "").strip()
+    if not al or not bk:
+        return None
+    with get_session() as session:
+        row = session.get(JiraAlertMap, {"bot_key": bk, "alias": al})
+        if row is None:
+            return None
+        return row.jira_alert_id, row.room_id, row.sender_name
+# -- End Function mapping_for_alias
+
+
+def mapping_for_short_id(short_id: str, bot_key: str) -> Optional[tuple[Optional[str], str, str]]:
     sid = (short_id or "").strip()
-    if not sid:
+    bk = (bot_key or "").strip()
+    if not sid or not bk:
         return None
     with get_session() as session:
         q = select(JiraAlertMap).where(
             JiraAlertMap.short_id == sid,
-            JiraAlertMap.bot_key == bot_key,
+            JiraAlertMap.bot_key == bk,
         )
         row = session.scalars(q).first()
         if row is None:
@@ -111,44 +133,47 @@ def mapping_for_short_id(short_id: str, bot_key: str) -> Optional[tuple[Optional
 def apply_create_webhook(
     *,
     jira_alert_id: str,
-    short_id: str,
     bot_key: str,
+    alias: str,
+    short_id_fallback: str,
     room_id_fallback: str,
-    alias_fallback: Optional[str],
+    sender_name_fallback: str,
     logger: logging.Logger,
 ) -> None:
     jid = jira_alert_id.strip()
-    sid = short_id.strip()
-    if not jid or not sid:
-        logger.warning("Jira Create webhook: missing alertId or short_id")
+    bk = (bot_key or "").strip()
+    al = (alias or "").strip()
+    sid_fb = (short_id_fallback or "").strip()
+    if not jid or not bk or not al:
+        logger.warning("Jira Create webhook: missing alertId, bot_key, or alias")
         return
     with get_session() as session:
         with session.begin():
-            row = session.get(JiraAlertMap, sid)
+            row = session.get(JiraAlertMap, {"bot_key": bk, "alias": al})
             if row is None:
                 rf = (room_id_fallback or "").strip()
                 if not rf:
                     logger.warning(
-                        "Jira Create webhook: no existing row and no room_id for short_id=%s", sid
+                        "Jira Create webhook: no existing row and no room_id for alias=%s", al
+                    )
+                    return
+                sid = sid_fb or parse_short_id_from_alias(al)
+                if not sid:
+                    logger.warning(
+                        "Jira Create webhook: no existing row and no short_id for alias=%s", al
                     )
                     return
                 session.add(
                     JiraAlertMap(
+                        bot_key=bk,
+                        alias=al,
                         short_id=sid,
                         room_id=rf,
-                        bot_key=bot_key,
-                        alias=alias_fallback,
+                        sender_name=(sender_name_fallback or "").strip() or "Someone",
                         jira_alert_id=jid,
                     )
                 )
             else:
-                if row.bot_key != bot_key:
-                    logger.warning(
-                        "Jira Create webhook: short_id %s belongs to another bot_key", sid
-                    )
-                    return
                 row.jira_alert_id = jid
-                if alias_fallback and not row.alias:
-                    row.alias = alias_fallback
-    _verbose(logger, "Jira alert map linked short_id=%s jira_alert_id=%s", sid, jid)
+    _verbose(logger, "Jira alert map linked alias=%s jira_alert_id=%s", al, jid)
 # -- End Function apply_create_webhook

@@ -48,8 +48,44 @@ export PGDATA="${PGDATA:-/var/lib/thaum/postgresql/data}"
 mkdir -p /var/log/thaum/postgresql /var/log/supervisor
 install -d -m 0750 -o postgres -g postgres /tmp/postgres
 chown postgres:postgres /var/log/thaum/postgresql
-mkdir -p "$PGDATA"
+
+ensure_pgdata_tree() {
+  target="$1"
+
+  if [ -d "$target" ]; then
+    return 0
+  fi
+
+  parent="$(dirname "$target")"
+  if [ "$parent" != "$target" ]; then
+    ensure_pgdata_tree "$parent"
+  fi
+
+  install -d -m 0750 -o postgres -g postgres "$target"
+}
+
+ensure_pgdata_parent_traverse() {
+  target="$1"
+  pg_uid="$(id -u postgres)"
+  pg_gid="$(id -g postgres)"
+  current="$(dirname "$target")"
+
+  while [ "$current" != "/" ] && [ "$current" != "." ] && [ "$current" != "$target" ]; do
+    owner_uid="$(stat -c '%u' "$current")"
+    owner_gid="$(stat -c '%g' "$current")"
+    if [ "$owner_uid" -ne "$pg_uid" ] && [ "$owner_gid" -ne "$pg_gid" ]; then
+      chmod o+x "$current"
+    fi
+    next="$(dirname "$current")"
+    [ "$next" = "$current" ] && break
+    current="$next"
+  done
+}
+
+ensure_pgdata_tree "$PGDATA"
+ensure_pgdata_parent_traverse "$PGDATA"
 chown postgres:postgres "$PGDATA"
+chmod 0750 "$PGDATA"
 
 if [ ! -s "$PGDATA/PG_VERSION" ]; then
   gosu postgres initdb -D "$PGDATA"
