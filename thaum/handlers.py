@@ -279,5 +279,9 @@ def bind_thaum_handlers(bot: 'BaseChatBot') -> None:
         
         # 4. Engine Call
         create_incident_room(bot, summary, speaker, priority)
+
+        mid = getattr(action, "messageId", None) or getattr(action, "message_id", None)
+        if mid:
+            bot.delete_message(mid)
     # -- End Function handle_actions
 # -- End Function bind_thaum_handlers

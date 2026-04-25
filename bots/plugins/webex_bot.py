@@ -271,6 +271,12 @@ class WebexChatBot(BaseChatBot):
             roomId=room_id, text=fallback_text, attachments=[attachment]
         )
 
+    def delete_message(self, message_id: str) -> None:
+        try:
+            self.api.messages.delete(message_id)
+        except Exception as e:
+            self.logger.error("Failed to delete message %s: %s", message_id, e)
+
     def create_room(self, title: str) -> str:
         room = self.api.rooms.create(title=title)
         return room.id

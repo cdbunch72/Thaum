@@ -89,7 +89,12 @@ class BaseChatBot(ABC):
         """Permanently removes/implodes the room."""
         pass
     # -- End Method delete_room
-    
+
+    def delete_message(self, message_id: str) -> None:
+        """Remove a chat message by platform id (e.g. delete an Adaptive Card message). Default no-op."""
+        return
+    # -- End Method delete_message
+
     @abstractmethod
     def get_person(self, person_id: str) -> ThaumPerson:
         """Takes a bot_type-specific person_id and returns a ThaumPerson"""
