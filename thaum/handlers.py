@@ -25,7 +25,7 @@ _DEBUG_SESSION_ID = "a6c406"
 def _debug_log(hypothesis_id: str, location: str, message: str, data: Dict[str, Any]) -> None:
     payload = {
         "sessionId": _DEBUG_SESSION_ID,
-        "runId": "initial",
+        "runId": "post-fix",
         "hypothesisId": hypothesis_id,
         "location": location,
         "message": message,
@@ -260,9 +260,23 @@ def bind_thaum_handlers(bot: 'BaseChatBot') -> None:
     if bot.send_alerts:
         plugin_cls = type(bot.alert_plugin)
 
-        @bot.hears(r"^alert(?:\s*:\s*(?P<msg>.*))",priority=10)
+        @bot.hears(r"^alert(?:\s*:\s*(?P<msg>.*))?$",priority=10)
         def handle_alert(bot: 'BaseChatBot', ctx: 'MessageContext', match: re.Match):
             msg = (match.group("msg") or "").strip()
+            if not msg:
+                # region agent log
+                _debug_log(
+                    "H1",
+                    "thaum/handlers.py:handle_alert:missing_msg",
+                    "alert invoked without message",
+                    {"room_id": ctx.room_id},
+                )
+                # endregion
+                bot.say(
+                    ctx.room_id,
+                    f"Please include a message, e.g. `alert: service is down`.",
+                )
+                return
             title = bot.room_title(ctx.room_id)
             alert_msg = f"{ctx.person.for_display} needs you in {title}: {msg}"
             # region agent log
