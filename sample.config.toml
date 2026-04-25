@@ -121,6 +121,9 @@ alert_type = "jira"
 # incident_prompt_card_template_path = "./incident_prompt_card.sample.j2"
 # Optional inline override. If both are set, inline wins.
 # incident_prompt_card_template = """{ "$schema": "http://adaptivecards.io/schemas/adaptive-card.json", "type": "AdaptiveCard", "version": "1.3", "body": [], "actions": [] }"""
+# Optional customer service message posted when a new incident room is created.
+# Set to an empty string ("") to disable sending this message.
+# customer_service_message_template = "Thank you for your patience.  The next available person from {{ team_description }} will be with you shortlly."
 # Who is invited into new incident rooms (lookup resolves team:/person: / email).
 responders = ["team:DBA"]
 emergency_warning_message = ""

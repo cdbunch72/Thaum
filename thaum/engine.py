@@ -15,6 +15,23 @@ logger = logging.getLogger("thaum.engine")
 jinja_env = Environment(undefined=StrictUndefined)
 
 
+def _render_customer_service_message(bot: "BaseChatBot", context: dict) -> str:
+    template_raw = getattr(bot, "customer_service_message_template", None)
+    if template_raw is None:
+        template_raw = (
+            "Thank you for your patience.  The next available person from "
+            "{{ team_description }} will be with you shortlly."
+        )
+    template_text = str(template_raw)
+    if not template_text.strip():
+        return ""
+    try:
+        return jinja_env.from_string(template_text).render(**context).strip()
+    except Exception as e:
+        bot.logger.warning("Could not render customer service message template: %s", e)
+        return ""
+
+
 def create_incident_room(bot: 'BaseChatBot', summary: str, speaker: ThaumPerson, priority=AlertPriority.NORMAL) -> Optional[str]:
     """Orchestrates room creation and plugin triggering."""
     try:
@@ -31,8 +48,14 @@ def create_incident_room(bot: 'BaseChatBot', summary: str, speaker: ThaumPerson,
         room_id = bot.create_room(room_title)
         responders = bot.responders.get_responders()
         bot.add_members(room_id, [speaker, *responders])
+        customer_service_message = _render_customer_service_message(bot, context)
+        if customer_service_message:
+            bot.say(room_id, customer_service_message)
         bot.say(room_id, f"**Summary:** {summary}")
         short_id, alert_id = bot.alert_plugin.trigger_alert(summary, room_id, speaker, priority)
+        if short_id:
+            bot.say(room_id, f"Alert sent: {short_id}")
+        
         if alert_id:
             bot.logger.log(
                 LogLevel.VERBOSE,
