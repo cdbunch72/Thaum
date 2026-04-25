@@ -25,7 +25,7 @@ _DEBUG_SESSION_ID = "a6c406"
 def _debug_log(hypothesis_id: str, location: str, message: str, data: Dict[str, Any]) -> None:
     payload = {
         "sessionId": _DEBUG_SESSION_ID,
-        "runId": "post-fix",
+        "runId": "format-check",
         "hypothesisId": hypothesis_id,
         "location": location,
         "message": message,
@@ -215,18 +215,6 @@ usage|commands|?
 
 def bind_thaum_handlers(bot: 'BaseChatBot') -> None:
     """Connects Bot events to Engine business logic."""
-    # region agent log
-    _debug_log(
-        "H3",
-        "thaum/handlers.py:bind_thaum_handlers",
-        "binding handlers",
-        {
-            "send_alerts": bool(getattr(bot, "send_alerts", False)),
-            "high_pri_on": bool(getattr(bot, "high_pri_on", False)),
-            "alert_plugin": type(getattr(bot, "alert_plugin", None)).__name__,
-        },
-    )
-    # endregion
     
     # Handles the Help or conditionally the emergency command
     def handle_help_emergency(bot: 'BaseChatBot', message: 'MessageContext', match: re.Match):
@@ -263,12 +251,24 @@ def bind_thaum_handlers(bot: 'BaseChatBot') -> None:
         @bot.hears(r"^alert(?:\s*:\s*(?P<msg>.*))?$",priority=10)
         def handle_alert(bot: 'BaseChatBot', ctx: 'MessageContext', match: re.Match):
             msg = (match.group("msg") or "").strip()
+            # region agent log
+            _debug_log(
+                "H1",
+                "thaum/handlers.py:handle_alert:entry",
+                "alert command received",
+                {
+                    "msg_len": len(msg),
+                    "msg_empty": (msg == ""),
+                    "has_colon_group": match.group("msg") is not None,
+                },
+            )
+            # endregion
             if not msg:
                 # region agent log
                 _debug_log(
-                    "H1",
+                    "H2",
                     "thaum/handlers.py:handle_alert:missing_msg",
-                    "alert invoked without message",
+                    "empty message path",
                     {"room_id": ctx.room_id},
                 )
                 # endregion
@@ -281,26 +281,19 @@ def bind_thaum_handlers(bot: 'BaseChatBot') -> None:
             alert_msg = f"{ctx.person.for_display} needs you in {title}: {msg}"
             # region agent log
             _debug_log(
-                "H1",
-                "thaum/handlers.py:handle_alert:entry",
-                "alert handler matched",
-                {
-                    "room_id": ctx.room_id,
-                    "msg_len": len(msg),
-                    "raw_has_group": match.group("msg") is not None,
-                },
+                "H3",
+                "thaum/handlers.py:handle_alert:summary",
+                "constructed alert summary",
+                {"summary": alert_msg, "ends_with_colon_space": alert_msg.endswith(': ')},
             )
             # endregion
             short_id, _alert_id = bot.alert_plugin.trigger_alert(alert_msg, ctx.room_id, ctx.person)
             # region agent log
             _debug_log(
-                "H2",
-                "thaum/handlers.py:handle_alert:post_trigger",
-                "trigger_alert returned",
-                {
-                    "short_id_present": bool(short_id),
-                    "alert_id_present": bool(_alert_id),
-                },
+                "H4",
+                "thaum/handlers.py:handle_alert:trigger_result",
+                "trigger_alert completed",
+                {"short_id_present": bool(short_id), "alert_id_present": bool(_alert_id)},
             )
             # endregion
             if short_id:
@@ -330,14 +323,6 @@ def bind_thaum_handlers(bot: 'BaseChatBot') -> None:
     
     @bot.hears(r"^(?P<cmd>\S+)\s+.*$",priority=99)
     def handle_unknown(bot: 'BaseChatBot', ctx: 'MessageContext', match: re.Match):
-        # region agent log
-        _debug_log(
-            "H4",
-            "thaum/handlers.py:handle_unknown",
-            "unknown command fallback",
-            {"cmd": match.group("cmd"), "room_id": ctx.room_id},
-        )
-        # endregion
         bot.say(ctx.room_id,f"Unknown command {match.group('cmd')}. Please use @{bot.name} usage to see a list of commands")
 
     
