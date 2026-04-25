@@ -475,9 +475,14 @@ class WebexChatBot(BaseChatBot):
             action = self.api.attachment_actions.get(data["id"])
             # #region agent log
             raw_in = getattr(action, "inputs", None)
+            raw_json = getattr(action, "json_data", None)
+            if raw_json is None:
+                raw_json = getattr(action, "_json_data", None)
+            json_inputs = raw_json.get("inputs") if isinstance(raw_json, dict) else None
             summ = None
             if isinstance(raw_in, dict):
                 summ = raw_in.get("summary")
+            json_summ = json_inputs.get("summary") if isinstance(json_inputs, dict) else None
             append_agent_debug_log(
                 "webex_bot.py:handle_event",
                 "attachmentAction before on_action callbacks",
@@ -487,8 +492,13 @@ class WebexChatBot(BaseChatBot):
                     "summary_len": len(summ) if isinstance(summ, str) else None,
                     "summary_space_count": summ.count(" ") if isinstance(summ, str) else None,
                     "summary_repr": repr(summ)[:200] if summ is not None else None,
+                    "json_inputs_type": str(type(json_inputs)),
+                    "json_summary_type": str(type(json_summ)),
+                    "json_summary_len": len(json_summ) if isinstance(json_summ, str) else None,
+                    "json_summary_space_count": json_summ.count(" ") if isinstance(json_summ, str) else None,
+                    "json_summary_repr": repr(json_summ)[:200] if json_summ is not None else None,
                 },
-                "H3,H4",
+                "H3,H4,H6,H7",
             )
             # #endregion
             for callback in self._action_callbacks:

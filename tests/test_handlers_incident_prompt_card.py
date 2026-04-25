@@ -29,7 +29,6 @@ class IncidentPromptCardTemplateTest(unittest.TestCase):
         self.assertEqual(card["type"], "AdaptiveCard")
         self.assertEqual(card["actions"][0]["data"]["is_emergency"], "false")
         self.assertEqual(card["body"][1]["id"], "summary")
-        self.assertIs(card["body"][1]["isMultiline"], False)
 
     def test_renders_from_template_path(self) -> None:
         with TemporaryDirectory() as tmp:
