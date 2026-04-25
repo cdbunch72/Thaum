@@ -11,10 +11,9 @@ from jinja2 import Environment, StrictUndefined
 from alerts.plugins.jira.config import JiraAlertPluginConfig
 from alerts.plugins.jira.mapping_store import (
     apply_create_webhook,
-    extra_properties_from_alert,
-    mapping_for_short_id,
+    mapping_for_alias,
+    mapping_for_jira_alert_id,
     parse_short_id_from_alias,
-    room_id_for_jira_alert,
 )
 from bots.base import BaseChatBot
 from thaum.types import ThaumPerson
@@ -27,32 +26,11 @@ def _bot_key_str(bot: BaseChatBot) -> str:
 # -- End Function _bot_key_str
 
 
-def _sender_name_and_bot_person_id(
-    bot: BaseChatBot,
-    logger: logging.Logger,
-    extras: dict[str, Any],
-) -> tuple[str, str]:
-    pid_fallback = str(extras.get("sender_bot_person_id") or "").strip()
-    raw = extras.get("sender")
-    if isinstance(raw, dict):
-        name = str(raw.get("name") or "").strip() or "Someone"
-        pid = str(raw.get("bot_person_id") or "").strip() or pid_fallback
-        return name, pid
-    if isinstance(raw, str) and raw.strip():
-        u = raw.strip()
-        if "@" in u:
-            lookup = getattr(bot, "lookup_plugin", None)
-            if lookup is not None:
-                try:
-                    person = lookup.get_person_by_email(u)
-                    if person is not None:
-                        return person.for_display, ""
-                except Exception as e:
-                    logger.debug("legacy sender email lookup failed: %s", e)
-            return "Someone", ""
-        return u, pid_fallback
-    return "Someone", pid_fallback
-# -- End Function _sender_name_and_bot_person_id
+def _sender_name_or_default(
+    sender_name: Optional[str],
+) -> str:
+    return (sender_name or "").strip() or "Someone"
+# -- End Function _sender_name_or_default
 
 
 def _responder_name_and_person(
@@ -81,14 +59,11 @@ def _status_message_context(
     bot: BaseChatBot,
     cfg: JiraAlertPluginConfig,
     logger: logging.Logger,
-    extras: dict[str, Any],
+    sender_name: Optional[str],
     alert: dict[str, Any],
 ) -> dict[str, Any]:
-    sender_name, sender_pid = _sender_name_and_bot_person_id(bot, logger, extras)
-    if cfg.status_mentions and sender_pid:
-        sender_mention = bot.format_mention(sender_pid)
-    else:
-        sender_mention = sender_name
+    sender_name = _sender_name_or_default(sender_name)
+    sender_mention = sender_name
 
     responder_name, responder_person = _responder_name_and_person(
         bot, logger, alert.get("username")
@@ -113,25 +88,6 @@ def _render_status_template(template_str: str, context: dict[str, Any]) -> str:
 # -- End Function _render_status_template
 
 
-def _resolve_room_id(*, bot_key: str, jira_alert_id: str, extras: dict[str, Any]) -> str:
-    rid = room_id_for_jira_alert(jira_alert_id, bot_key)
-    if rid:
-        return rid
-    for k in ("roomid", "room_id", "roomId"):
-        v = extras.get(k)
-        if isinstance(v, str) and v.strip():
-            return v.strip()
-    alias = str(extras.get("alias") or "").strip()
-    sid = parse_short_id_from_alias(alias)
-    if sid and bot_key:
-        short_map = mapping_for_short_id(sid, bot_key)
-        short_room = (short_map[1] or "").strip() if short_map else ""
-        if short_room:
-            return short_room
-    return ""
-# -- End Function _resolve_room_id
-
-
 def handle_jira_status_webhook(
     *,
     bot: BaseChatBot,
@@ -144,28 +100,24 @@ def handle_jira_status_webhook(
     if not isinstance(alert, dict):
         alert = {}
     bot_key = _bot_key_str(bot)
-    extras = extra_properties_from_alert(alert)
-    props_bk = str(extras.get("bot_key") or "").strip()
-    if props_bk and bot_key and props_bk != bot_key:
-        logger.warning("Jira status webhook bot_key mismatch (url vs extraProperties)")
-        return
 
     if action == "Create":
         jid = str(alert.get("alertId") or "").strip()
-        short_id = str(extras.get("short_id") or "").strip()
-        if not short_id:
-            short_id = parse_short_id_from_alias(str(alert.get("alias") or ""))
-        alias_fb = str(alert.get("alias") or "").strip() or None
-        room_fb = str(extras.get("roomid") or extras.get("room_id") or "").strip()
+        alias = str(alert.get("alias") or "").strip()
+        short_id = parse_short_id_from_alias(alias)
+        existing = mapping_for_alias(alias, bot_key) if alias and bot_key else None
+        room_fb = (existing[1] if existing else "").strip()
+        sender_fb = (existing[2] if existing else "").strip()
         if not bot_key:
             logger.warning("Jira Create webhook: bot has no bot_key")
             return
         apply_create_webhook(
             jira_alert_id=jid,
-            short_id=short_id,
             bot_key=bot_key,
+            alias=alias,
+            short_id_fallback=short_id,
             room_id_fallback=room_fb,
-            alias_fallback=alias_fb,
+            sender_name_fallback=sender_fb,
             logger=logger,
         )
         return
@@ -176,17 +128,24 @@ def handle_jira_status_webhook(
         return
 
     alias = str(alert.get("alias") or "").strip()
-    short_from_alias = parse_short_id_from_alias(alias)
-    short_map = mapping_for_short_id(short_from_alias, bot_key) if short_from_alias and bot_key else None
+    room_id = ""
+    sender_name = "Someone"
 
-    room_id = _resolve_room_id(bot_key=bot_key, jira_alert_id=jid, extras=extras)
-    if not room_id and short_map:
-        room_id = (short_map[1] or "").strip()
+    mapping_by_alert = mapping_for_jira_alert_id(jid, bot_key)
+    if mapping_by_alert is not None:
+        room_id = (mapping_by_alert[1] or "").strip()
+        sender_name = (mapping_by_alert[3] or "").strip() or "Someone"
+
+    if not room_id and alias and bot_key:
+        mapping_by_alias = mapping_for_alias(alias, bot_key)
+        if mapping_by_alias is not None:
+            room_id = (mapping_by_alias[1] or "").strip()
+            sender_name = (mapping_by_alias[2] or "").strip() or "Someone"
     if not room_id:
         logger.warning("Jira status webhook action=%s could not resolve room for alertId=%s", action, jid)
         return
 
-    ctx = _status_message_context(bot, cfg, logger, extras, alert)
+    ctx = _status_message_context(bot, cfg, logger, sender_name, alert)
 
     if action == "Acknowledge":
         text = _render_status_template(cfg.status_ack_template, ctx)

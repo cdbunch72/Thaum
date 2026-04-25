@@ -12,6 +12,7 @@ from pydantic import SecretStr
 from thaum.db_bootstrap import init_app_db
 from alerts.plugins.jira.mapping_store import (
     apply_create_webhook,
+    mapping_for_alias,
     parse_short_id_from_alias,
     room_id_for_jira_alert,
     upsert_pending_row,
@@ -43,26 +44,31 @@ class JiraMappingDbTest(unittest.TestCase):
 
     def test_pending_then_create_links_jira_id(self) -> None:
         log = logging.getLogger("test.jira")
-        upsert_pending_row("WXYZ", "room-1", "bot-a", "THAUM-20260328-WXYZ", log)
+        upsert_pending_row("bot-a", "THAUM-20260328-WXYZ", "WXYZ", "room-1", "Alice", log)
         apply_create_webhook(
             jira_alert_id="uuid-one",
-            short_id="WXYZ",
             bot_key="bot-a",
+            alias="THAUM-20260328-WXYZ",
+            short_id_fallback="WXYZ",
             room_id_fallback="",
-            alias_fallback="THAUM-20260328-WXYZ",
+            sender_name_fallback="Alice",
             logger=log,
         )
         self.assertEqual(room_id_for_jira_alert("uuid-one", "bot-a"), "room-1")
+        alias_map = mapping_for_alias("THAUM-20260328-WXYZ", "bot-a")
+        self.assertIsNotNone(alias_map)
+        self.assertEqual(alias_map[2], "Alice")
     # -- End Method test_pending_then_create_links_jira_id
 
     def test_create_without_pending_requires_room(self) -> None:
         log = logging.getLogger("test.jira2")
         apply_create_webhook(
             jira_alert_id="uuid-two",
-            short_id="ABCD",
             bot_key="bot-b",
+            alias="THAUM-20260328-ABCD",
+            short_id_fallback="ABCD",
             room_id_fallback="room-x",
-            alias_fallback="THAUM-20260328-ABCD",
+            sender_name_fallback="Someone",
             logger=log,
         )
         self.assertEqual(room_id_for_jira_alert("uuid-two", "bot-b"), "room-x")
@@ -108,7 +114,8 @@ class JiraPayloadTest(unittest.TestCase):
         )
         ep = body["extraProperties"]
         self.assertEqual(ep["sender"], "Requester")
-        self.assertEqual(ep["sender_bot_person_id"], "pid-r")
+        self.assertEqual(ep["short_id"], "ABCD")
+        self.assertEqual(set(ep.keys()), {"sender", "short_id"})
     # -- End Method test_build_trigger_alert_body_includes_string_sender
 # -- End Class JiraPayloadTest
 
@@ -117,13 +124,14 @@ class JiraStatusWebhookSayTest(unittest.TestCase):
     def setUp(self) -> None:
         init_app_db("sqlite:///:memory:")
         log = logging.getLogger("test.jira3")
-        upsert_pending_row("QWER", "space-9", "bk1", "THAUM-20260328-QWER", log)
+        upsert_pending_row("bk1", "THAUM-20260328-QWER", "QWER", "space-9", "Sam Sender", log)
         apply_create_webhook(
             jira_alert_id="alert-uuid-99",
-            short_id="QWER",
             bot_key="bk1",
+            alias="THAUM-20260328-QWER",
+            short_id_fallback="QWER",
             room_id_fallback="",
-            alias_fallback=None,
+            sender_name_fallback="Sam Sender",
             logger=log,
         )
     # -- End Method setUp
@@ -187,9 +195,6 @@ class JiraStatusWebhookSayTest(unittest.TestCase):
                 "alert": {
                     "alertId": "alert-uuid-99",
                     "username": "responder@example.com",
-                    "extraProperties": {
-                        "sender": {"name": "Sam", "bot_person_id": "p1"},
-                    },
                 },
             },
         )
@@ -222,7 +227,7 @@ class JiraStatusWebhookSayTest(unittest.TestCase):
 
     def test_acknowledge_falls_back_to_alias_short_mapping_when_alert_id_unmapped(self) -> None:
         log = logging.getLogger("test.alias.fallback")
-        upsert_pending_row("ZXCV", "space-77", "bk1", "THAUM-20260328-ZXCV", log)
+        upsert_pending_row("bk1", "THAUM-20260328-ZXCV", "ZXCV", "space-77", "Zed", log)
 
         bot = MagicMock()
         bot.bot_key = "bk1"
@@ -237,6 +242,7 @@ class JiraStatusWebhookSayTest(unittest.TestCase):
             responders=[],
             status_webhook_bearer="",
             send_escalate_msg=False,
+            status_ack_template="Sender: {{ sender_mention }}",
         )
 
         handle_jira_status_webhook(
@@ -256,6 +262,46 @@ class JiraStatusWebhookSayTest(unittest.TestCase):
         bot.say.assert_called_once()
         args, _kwargs = bot.say.call_args
         self.assertEqual(args[0], "space-77")
+
+    def test_acknowledge_uses_cached_sender_name(self) -> None:
+        log = logging.getLogger("test.sender.cache")
+        upsert_pending_row("bk1", "THAUM-20260328-PLMN", "PLMN", "space-21", "Casey", log)
+        apply_create_webhook(
+            jira_alert_id="alert-uuid-21",
+            bot_key="bk1",
+            alias="THAUM-20260328-PLMN",
+            short_id_fallback="PLMN",
+            room_id_fallback="",
+            sender_name_fallback="Casey",
+            logger=log,
+        )
+
+        bot = MagicMock()
+        bot.bot_key = "bk1"
+        bot.team_description = "Platform"
+        bot.lookup_plugin = None
+        cfg = JiraAlertPluginConfig.model_construct(
+            plugin="jira",
+            site_url="https://example.atlassian.net",
+            cloud_id="c",
+            user="u",
+            api_token=SecretStr("t"),
+            responders=[],
+            status_webhook_bearer="",
+            send_escalate_msg=False,
+            status_ack_template="Sender: {{ sender_mention }}",
+        )
+        handle_jira_status_webhook(
+            bot=bot,
+            cfg=cfg,
+            logger=log,
+            payload={
+                "action": "Acknowledge",
+                "alert": {"alertId": "alert-uuid-21", "username": "responder@example.com"},
+            },
+        )
+        args, _kwargs = bot.say.call_args
+        self.assertIn("Casey", args[1])
     # -- End Method test_acknowledge_falls_back_to_alias_short_mapping_when_alert_id_unmapped
 # -- End Class JiraStatusWebhookSayTest
 

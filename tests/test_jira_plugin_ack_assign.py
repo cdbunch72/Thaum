@@ -60,13 +60,16 @@ class JiraPluginAckAssignTest(unittest.TestCase):
         )
 
     def test_ack_and_assign_use_alert_id_when_mapped(self) -> None:
-        upsert_pending_row("ABCD", "room-1", "bk1", "THAUM-20260425-ABCD", logging.getLogger("t1"))
+        upsert_pending_row(
+            "bk1", "THAUM-20260425-ABCD", "ABCD", "room-1", "Alice", logging.getLogger("t1")
+        )
         apply_create_webhook(
             jira_alert_id="jira-1",
-            short_id="ABCD",
             bot_key="bk1",
+            alias="THAUM-20260425-ABCD",
+            short_id_fallback="ABCD",
             room_id_fallback="",
-            alias_fallback="THAUM-20260425-ABCD",
+            sender_name_fallback="Alice",
             logger=logging.getLogger("t1"),
         )
         person = ThaumPerson(email="a@example.com", display_name="Alice", platform_ids={"jira": "acct-1"})
@@ -83,7 +86,9 @@ class JiraPluginAckAssignTest(unittest.TestCase):
         self.plugin.bot.say.assert_not_called()
 
     def test_ack_uses_alias_fallback_when_alert_id_pending(self) -> None:
-        upsert_pending_row("WXYZ", "room-2", "bk1", "THAUM-20260425-WXYZ", logging.getLogger("t2"))
+        upsert_pending_row(
+            "bk1", "THAUM-20260425-WXYZ", "WXYZ", "room-2", "Bob", logging.getLogger("t2")
+        )
         person = ThaumPerson(email="b@example.com", display_name="Bob", platform_ids={"jira": "acct-2"})
 
         with patch(
@@ -105,13 +110,16 @@ class JiraPluginAckAssignTest(unittest.TestCase):
         self.assertTrue(second_url.endswith("/v1/alerts/jira-2/assign"))
 
     def test_assign_unresolved_logs_and_warns_room(self) -> None:
-        upsert_pending_row("QWER", "room-3", "bk1", "THAUM-20260425-QWER", logging.getLogger("t3"))
+        upsert_pending_row(
+            "bk1", "THAUM-20260425-QWER", "QWER", "room-3", "Unknown", logging.getLogger("t3")
+        )
         apply_create_webhook(
             jira_alert_id="jira-3",
-            short_id="QWER",
             bot_key="bk1",
+            alias="THAUM-20260425-QWER",
+            short_id_fallback="QWER",
             room_id_fallback="",
-            alias_fallback="THAUM-20260425-QWER",
+            sender_name_fallback="Unknown",
             logger=logging.getLogger("t3"),
         )
         person = ThaumPerson(email="unknown@example.com", display_name="Unknown", platform_ids={})
@@ -127,13 +135,16 @@ class JiraPluginAckAssignTest(unittest.TestCase):
         self.assertIn("could not assign", msg.lower())
 
     def test_assign_api_failure_logs_and_warns_room(self) -> None:
-        upsert_pending_row("TYUI", "room-4", "bk1", "THAUM-20260425-TYUI", logging.getLogger("t4"))
+        upsert_pending_row(
+            "bk1", "THAUM-20260425-TYUI", "TYUI", "room-4", "Chris", logging.getLogger("t4")
+        )
         apply_create_webhook(
             jira_alert_id="jira-4",
-            short_id="TYUI",
             bot_key="bk1",
+            alias="THAUM-20260425-TYUI",
+            short_id_fallback="TYUI",
             room_id_fallback="",
-            alias_fallback="THAUM-20260425-TYUI",
+            sender_name_fallback="Chris",
             logger=logging.getLogger("t4"),
         )
         person = ThaumPerson(email="c@example.com", display_name="Chris", platform_ids={"jira": "acct-4"})
