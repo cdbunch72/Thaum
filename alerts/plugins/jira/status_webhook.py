@@ -14,6 +14,7 @@ from alerts.plugins.jira.config import JiraAlertPluginConfig
 from alerts.plugins.jira.mapping_store import (
     apply_create_webhook,
     extra_properties_from_alert,
+    mapping_for_short_id,
     parse_short_id_from_alias,
     room_id_for_jira_alert,
 )
@@ -200,6 +201,7 @@ def handle_jira_status_webhook(
         data={
             "action": action,
             "alert_id": str(alert.get("alertId") or ""),
+            "has_alias": bool(str(alert.get("alias") or "").strip()),
             "has_extras": bool(extras),
             "bot_key": bot_key,
         },
@@ -226,6 +228,18 @@ def handle_jira_status_webhook(
         if not bot_key:
             logger.warning("Jira Create webhook: bot has no bot_key")
             return
+        _debug_log(
+            run_id="initial",
+            hypothesis_id="H6",
+            location="alerts/plugins/jira/status_webhook.py:handle_jira_status_webhook",
+            message="processing create webhook",
+            data={
+                "alert_id": jid,
+                "short_id": short_id,
+                "has_room_fallback": bool(room_fb),
+                "has_alias_fallback": bool(alias_fb),
+            },
+        )
         apply_create_webhook(
             jira_alert_id=jid,
             short_id=short_id,
@@ -240,6 +254,24 @@ def handle_jira_status_webhook(
     if not jid:
         logger.debug("Jira status webhook action=%s missing alertId", action)
         return
+
+    alias = str(alert.get("alias") or "").strip()
+    short_from_alias = parse_short_id_from_alias(alias)
+    short_map = mapping_for_short_id(short_from_alias, bot_key) if short_from_alias and bot_key else None
+    _debug_log(
+        run_id="initial",
+        hypothesis_id="H7",
+        location="alerts/plugins/jira/status_webhook.py:handle_jira_status_webhook",
+        message="non-create webhook alias mapping context",
+        data={
+            "action": action,
+            "has_alias": bool(alias),
+            "short_from_alias": short_from_alias,
+            "has_short_mapping": bool(short_map),
+            "short_mapping_has_room": bool(short_map and (short_map[1] or "").strip()),
+            "short_mapping_has_alert_id": bool(short_map and (short_map[0] or "").strip()),
+        },
+    )
 
     room_id = _resolve_room_id(bot_key=bot_key, jira_alert_id=jid, extras=extras)
     if not room_id:
