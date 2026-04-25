@@ -46,6 +46,8 @@ class BaseChatBot(ABC):
         self.responders = RespondersList()
         self.team_description = config.team_description
         self.room_title_template = config.room_title_template
+        self.incident_prompt_card_template = config.incident_prompt_card_template
+        self.incident_prompt_card_template_path = config.incident_prompt_card_template_path
         self.emergency_warning_message = config.emergency_warning_message
         # Set by the server bootstrap code; shared by all bots on a server.
         self.lookup_plugin: Optional[Any] = None
@@ -165,6 +167,8 @@ class BaseChatBotConfig(BaseModel):
     send_alerts: Optional[bool] = True
     responders: List[str]
     room_title_template: Optional[str] = '{{requester_name}} - {{team_description}} {{date}}'
+    incident_prompt_card_template: Optional[str] = None
+    incident_prompt_card_template_path: Optional[str] = None
     # Alert plugin module name under ``alerts.plugins``; use ``null`` when send_alerts is False.
     alert_type: str = "null"
     team_description: str

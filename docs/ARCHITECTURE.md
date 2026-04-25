@@ -99,6 +99,12 @@ Thaum uses a layered configuration model.
 
 - Responder lists, room templates, and other bot fields
 
+- Help/emergency incident prompt card templating via either:
+  - ``incident_prompt_card_template_path`` (path to a ``.j2`` file)
+  - ``incident_prompt_card_template`` (inline Jinja template)
+  - Inline template takes precedence if both are set.
+  - Templates render to JSON and are parsed before send; use ``|tojson`` for interpolated values.
+
 ### **PluginConfig**
 
 Each plugin config contains:

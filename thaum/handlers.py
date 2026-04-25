@@ -1,7 +1,10 @@
 # SPDX-License-Identifier: MPL-2.0
 # Copyright 2026 Clinton Bunch
 # thaum/handlers.py
-from jinja2 import Template
+import json
+import logging
+from pathlib import Path
+from jinja2 import Environment, StrictUndefined, Template
 from thaum.engine import create_incident_room, acknowledge_incident
 from typing import TYPE_CHECKING, Any, Dict, List
 from thaum.types import ThaumPerson, AlertPriority
@@ -11,7 +14,56 @@ if TYPE_CHECKING:
     from bots.base import BaseChatBot, MessageContext
 
 
-def _incident_prompt_card(
+_log = logging.getLogger(__name__)
+_jinja_env = Environment(undefined=StrictUndefined)
+
+DEFAULT_INCIDENT_PROMPT_CARD_TEMPLATE = """
+{
+  "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
+  "type": "AdaptiveCard",
+  "version": "1.3",
+  "body": [
+    {
+      "type": "TextBlock",
+      "text": {{ ("How can " ~ team_description ~ " help you today?") | tojson }},
+      "wrap": true
+    },
+    {
+      "type": "Input.Text",
+      "id": "summary",
+      "label": "Summary",
+      "placeholder": "Briefly describe what you need",
+      "isMultiline": true,
+      "isRequired": true
+    }
+    {% if show_priority_toggle %},
+    {
+      "type": "Input.Toggle",
+      "id": "is_emergency",
+      "title": "High priority (emergency) alert",
+      "value": {{ ("true" if default_high_priority else "false") | tojson }},
+      "valueOn": "true",
+      "valueOff": "false"
+    }
+    {% endif %}
+  ],
+  "actions": [
+    {
+      "type": "Action.Submit",
+      "title": "Submit",
+      "data": {
+        "action": "submit_incident"
+        {% if not show_priority_toggle %},
+        "is_emergency": "false"
+        {% endif %}
+      }
+    }
+  ]
+}
+"""
+
+
+def _incident_prompt_card_fallback(
     team_description: str,
     default_high_priority: bool,
     show_priority_toggle: bool,
@@ -46,8 +98,9 @@ def _incident_prompt_card(
         submit_data["is_emergency"] = "false"
 
     return {
+        "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
         "type": "AdaptiveCard",
-        "version": "1.2",
+        "version": "1.3",
         "body": body,
         "actions": [
             {
@@ -57,6 +110,55 @@ def _incident_prompt_card(
             }
         ],
     }
+
+
+def _is_valid_incident_card(card: Any) -> bool:
+    if not isinstance(card, dict):
+        return False
+    if card.get("type") != "AdaptiveCard":
+        return False
+    if not isinstance(card.get("version"), str):
+        return False
+    if not isinstance(card.get("body"), list):
+        return False
+    if not isinstance(card.get("actions"), list):
+        return False
+    return True
+
+
+def _incident_prompt_card(
+    bot: "BaseChatBot",
+    team_description: str,
+    default_high_priority: bool,
+    show_priority_toggle: bool,
+) -> Dict[str, Any]:
+    inline_template = (getattr(bot, "incident_prompt_card_template", None) or "").strip()
+    template_path = (getattr(bot, "incident_prompt_card_template_path", None) or "").strip()
+    context = {
+        "team_description": team_description,
+        "default_high_priority": default_high_priority,
+        "show_priority_toggle": show_priority_toggle,
+    }
+
+    try:
+        if inline_template:
+            source = inline_template
+        elif template_path:
+            source = Path(template_path).read_text(encoding="utf-8")
+        else:
+            source = DEFAULT_INCIDENT_PROMPT_CARD_TEMPLATE
+        rendered = _jinja_env.from_string(source).render(**context)
+        parsed = json.loads(rendered)
+        if _is_valid_incident_card(parsed):
+            return parsed
+        raise ValueError("Rendered incident prompt card is not a valid Adaptive Card object")
+    except Exception as exc:
+        _log.warning("Using default incident prompt card due to template error: %s", exc)
+        return _incident_prompt_card_fallback(
+            team_description=team_description,
+            default_high_priority=default_high_priority,
+            show_priority_toggle=show_priority_toggle,
+        )
 
 
 
@@ -102,6 +204,7 @@ def bind_thaum_handlers(bot: 'BaseChatBot') -> None:
             create_incident_room(bot, summary, message.person, priority)
         else:
             card = _incident_prompt_card(
+                bot,
                 bot.team_description,
                 default_high_priority=(cmd == "emergency"),
                 show_priority_toggle=bool(bot.high_pri_on),

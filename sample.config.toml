@@ -7,6 +7,9 @@
 #
 # Alert / ack commands: registered only when send_alerts = true (see thaum/handlers.py).
 # helpdesk-style bots use send_alerts = false + alert_type = "null" to disable them.
+# Incident prompt card for help/emergency can be customized per bot via Jinja JSON:
+# - incident_prompt_card_template_path = "./incident_prompt_card.sample.j2"
+# - incident_prompt_card_template = """{ ... jinja json ... }"""   # inline override
 # =============================================================================
 
 [server]
@@ -114,6 +117,10 @@ team_description = "Database"
 high_pri_on = false
 send_alerts = true
 alert_type = "jira"
+# Optional: path to a Jinja-rendered JSON Adaptive Card template for help/emergency.
+# incident_prompt_card_template_path = "./incident_prompt_card.sample.j2"
+# Optional inline override. If both are set, inline wins.
+# incident_prompt_card_template = """{ "$schema": "http://adaptivecards.io/schemas/adaptive-card.json", "type": "AdaptiveCard", "version": "1.3", "body": [], "actions": [] }"""
 # Who is invited into new incident rooms (lookup resolves team:/person: / email).
 responders = ["team:DBA"]
 emergency_warning_message = ""
