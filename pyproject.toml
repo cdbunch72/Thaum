@@ -6,13 +6,13 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "thaum"
-version = "0.4.0.dev0"
+version = "0.6.0rc1"
 description = "Chat-driven on-call and team alerting"
 readme = "README.md"
 license = "MPL-2.0"
 requires-python = ">=3.11"
 dependencies = [
-    "gemstone_utils @ git+https://github.com/gemstone-software-dev/gemstone_utils.git@v0.3.0a2",
+    "gemstone_utils @ git+https://github.com/gemstone-software-dev/gemstone_utils.git@v0.4.0rc1",
     'tzdata; platform_system == "Windows"',
     "Flask",
     "gunicorn",

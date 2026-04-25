@@ -1,9 +1,9 @@
 # Same dependency set as pyproject.toml [project.dependencies] — change both when updating.
 # Python >=3.11 (see pyproject.toml requires-python).
-# v0.3+ (UUID key ids, KEK canary on GemstoneKeyKdf). Use tag for reproducible installs.
+# gemstone_utils v0.4.x (UUID key ids, KEK canary on GemstoneKeyKdf). Use tag for reproducible installs.
 # Local dev: pip install -e ../gemstone_utils
 # Install from metadata: pip install .
-gemstone_utils @ git+https://github.com/gemstone-software-dev/gemstone_utils.git@v0.3.0a2
+gemstone_utils @ git+https://github.com/gemstone-software-dev/gemstone_utils.git@v0.4.0rc1
 tzdata; platform_system == "Windows"
 Flask
 gunicorn

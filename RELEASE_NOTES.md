@@ -1,17 +1,33 @@
 # Thaum release notes
 
-## v0.4.0.dev0 (development) — unreleased
+## v0.6.0rc1 (release candidate 1) — unreleased
 
-**`main` now targets the 0.4.x line.** This dev release is **not** an alpha or a published artifact—it only signals that ongoing work is **no longer** aimed at shipping **0.3.0** stable, and that the next numbered prereleases will be **0.4.0a1**, **0.4.0b1**, etc., when ready.
+**`pyproject.toml`** is set to **`0.6.0rc1`** so installs from an unreleased git checkout (e.g. `pip install .` from **`main`**) report a distinct version from published packages such as **v0.3.0a1**.
 
-**`pyproject.toml`** is set to **`0.4.0.dev0`** so installs from an unreleased git checkout (e.g. `pip install .` from **`main`**) report a distinct version from published packages such as **v0.3.0a1**.
+**Version numbering.** While **`0.4.0.dev0`** was still the declared version, **`main`** accumulated debugging and refactors toward a working build that, in a stricter release cadence, would have shipped as the **0.5.0** line. No **0.5.x** tag was ever cut on **`main`**, so this prerelease jumps straight to **`0.6.0rc1`**. The prerelease style moves from **`aN` / `bN`** to **`rc`** to signal that the surface area is now treated as roughly **60% stable**—breaking changes are less likely before **0.6.0** stable, but not impossible.
 
-Themes accumulated on **`main`** since **v0.3.0a1** (non-exhaustive; details will be finalized for the first **0.4.x** prerelease):
+### Highlights since v0.3.0a1
 
 - **Lookup** — `get_person_by_email` contract: cache vs live resolution; **Atlassian** Jira user search and **LDAP/AD** mail search; internal **`_get_cached_person_by_email`**.
 - **Connections** — Shared **`merge_connection_profile`**; **Jira** alert **`connection_ref`** merged in bootstrap (no plugin branch).
 - **LDAP** — Optional **`platform_ids_ldap_attribute`** / **`platform_ids_format`** (`json` or multi-value delimited) for extra Thaum platform ids; **[`docs/LDAP-AD-lookup.md`](docs/LDAP-AD-lookup.md)**.
+- **Jira alerts** — Alias-aware mapping and sender-name handling, **alias-based alert id lookup** (Jira **`alias`** field), **messageless** alert support, and status-webhook **`roomId`** resolution fixes.
+- **Webex bot** — **`delete_message`** on **`BaseChatBot`** / **`WebexChatBot`**, room-title support, webhook URL normalization in webhook pruning.
+- **Containers** — Docker entrypoint and supervisord refinements; PostgreSQL data-directory setup hardening.
 - **CI / containers** — **`:edge`** updated on **prerelease** and **stable** GitHub Releases (and manual **`main`** workflow) so it tracks the current image.
+
+### Dependencies
+
+**`gemstone_utils`** is pinned to **`v0.4.0rc1`** and installed from **`gemstone-software-dev/gemstone_utils`** on GitHub (Git tag only; **not** yet on PyPI). See **`pyproject.toml`**, **`requirements.txt`**, and the **`GEMSTONE_UTILS_REF`** build-arg in **`Dockerfile`**.
+
+### Upgrade from v0.3.0a1
+
+- **pip / venv**: **`pip install -U .`** or **`-r requirements.txt`** to pick up **`gemstone_utils`** at **`v0.4.0rc1`**.
+- **Containers**: rebuild or pull an image tagged **`0.6.0rc1`** when published; no manual schema migration required for the default layout (**`init_db`** creates any new ORM tables on startup).
+
+### Release candidate caveats
+
+- Breaking changes are **unlikely** but still possible before **v0.6.0** stable; validate in a non-production environment first.
 
 ---
 
