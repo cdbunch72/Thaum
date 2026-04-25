@@ -66,6 +66,29 @@ def strip_webex_self_mentions(text: str, person_id: str, emails: Tuple[str, ...]
     return cleaned.strip()
 
 
+def strip_leading_bot_labels(text: str, *labels: str) -> str:
+    """
+    Remove a leading plaintext bot label left after Webex expands @mentions in ``text``.
+
+    ``message.text`` often begins with the bot display name (e.g. ``askDBA``) while
+    ``markdown`` carries ``<@personId:…>``; if only ``text`` is used, command regexes
+    never see ``implode`` / ``usage`` at ``^`` and the unknown handler treats the name
+    as the command token.
+    """
+    s = text.strip()
+    seen_lower: set[str] = set()
+    for label in labels:
+        label = (label or "").strip()
+        if len(label) < 2:
+            continue
+        low = label.lower()
+        if low in seen_lower:
+            continue
+        seen_lower.add(low)
+        s = re.sub(rf"(?i)^{re.escape(label)}\s+", "", s)
+    return s.strip()
+
+
 class WebexChatBot(BaseChatBot):
     """Concrete driver for Webex."""
 
@@ -390,15 +413,24 @@ class WebexChatBot(BaseChatBot):
         if not (is_direct or is_mentioned):
             return None
 
-        if message.text:
-            clean_text = strip_webex_self_mentions(
-                message.text,
-                self.me.id,
-                _me_email_addresses(self.me),
-            )
-            return clean_text
+        md = getattr(message, "markdown", None)
+        tx = (message.text or "").strip()
+        raw = (md.strip() if isinstance(md, str) and md.strip() else "") or tx
+        if not raw:
+            return None
 
-        return None
+        clean_text = strip_webex_self_mentions(
+            raw,
+            self.me.id,
+            _me_email_addresses(self.me),
+        )
+        clean_text = strip_leading_bot_labels(
+            clean_text,
+            self.name,
+            (getattr(self.me, "displayName", None) or "").strip(),
+            (getattr(self, "bot_key", None) or "").strip(),
+        )
+        return clean_text if clean_text else None
 # -- End Method process_message
 
     def handle_event(self, event: Dict[str, Any]) -> None:
