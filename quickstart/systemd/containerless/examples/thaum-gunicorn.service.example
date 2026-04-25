@@ -10,6 +10,8 @@
 Description=Thaum (gunicorn, Unix socket)
 After=network-online.target
 Wants=network-online.target
+StartLimitIntervalSec=300
+StartLimitBurst=5
 
 [Service]
 Type=simple
@@ -20,8 +22,11 @@ Environment=THAUM_CONFIG_FILE=/etc/thaum/thaum.conf
 Environment=PYTHONUNBUFFERED=1
 # UDS: no TCP listener; only processes that can access the socket inode (mode/group) can connect.
 ExecStart=/srv/thaum/venv/bin/gunicorn --bind unix:/run/thaum/thaum.sock --workers 1 app:app
-Restart=always
+Restart=on-failure
 RestartSec=5
+# Do not auto-restart on planned permanent failure exit codes.
+# Reserved for config/credential/auth/precondition show-stoppers.
+RestartPreventExitStatus=10 11 12 40
 
 # Optional: systemd encrypted credentials (same IDs as quadlet).
 # Copy quickstart/systemd/quadlet/thaum.service.credentials.conf.example to:

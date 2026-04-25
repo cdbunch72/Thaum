@@ -2,6 +2,8 @@
 Description=Thaum bot service
 After=network-online.target
 Wants=network-online.target
+StartLimitIntervalSec=300
+StartLimitBurst=5
 
 [Container]
 # Default: pull stable CI image from GitHub Container Registry (see README.md “Container images (CI)” for :devel, :edge, :<version>).
@@ -21,8 +23,11 @@ Volume=thaum-data.volume:/var/lib/thaum
 Volume=thaum-log.volume:/var/log/thaum
 
 [Service]
-Restart=always
+Restart=on-failure
 RestartSec=5
+# Do not auto-restart on planned permanent failure exit codes.
+# Reserved for config/credential/auth/precondition show-stoppers.
+RestartPreventExitStatus=10 11 12 40
 
 [Install]
 WantedBy=multi-user.target
