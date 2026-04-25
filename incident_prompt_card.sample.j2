@@ -1,0 +1,42 @@
+{
+  "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
+  "type": "AdaptiveCard",
+  "version": "1.3",
+  "body": [
+    {
+      "type": "TextBlock",
+      "text": {{ ("How can " ~ team_description ~ " help you today?") | tojson }},
+      "wrap": true
+    },
+    {
+      "type": "Input.Text",
+      "id": "summary",
+      "label": "Summary",
+      "placeholder": "Briefly describe what you need",
+      "isMultiline": true,
+      "isRequired": true
+    }
+    {% if show_priority_toggle %},
+    {
+      "type": "Input.Toggle",
+      "id": "is_emergency",
+      "title": "High priority (emergency) alert",
+      "value": {{ ("true" if default_high_priority else "false") | tojson }},
+      "valueOn": "true",
+      "valueOff": "false"
+    }
+    {% endif %}
+  ],
+  "actions": [
+    {
+      "type": "Action.Submit",
+      "title": "Submit",
+      "data": {
+        "action": "submit_incident"
+        {% if not show_priority_toggle %},
+        "is_emergency": "false"
+        {% endif %}
+      }
+    }
+  ]
+}
