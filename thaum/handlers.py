@@ -46,7 +46,7 @@ DEFAULT_INCIDENT_PROMPT_CARD_TEMPLATE = """
       "id": "summary",
       "label": "Summary",
       "placeholder": "Briefly describe what you need",
-      "isMultiline": true,
+      "isMultiline": false,
       "isRequired": true
     }
     {% if show_priority_toggle %},
@@ -90,7 +90,7 @@ def _incident_prompt_card_fallback(
             "id": "summary",
             "label": "Summary",
             "placeholder": "Briefly describe what you need",
-            "isMultiline": True,
+            "isMultiline": False,
             "isRequired": True,
         },
     ]
