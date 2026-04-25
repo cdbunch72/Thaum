@@ -169,6 +169,20 @@ def _resolve_room_id(*, bot_key: str, jira_alert_id: str, extras: dict[str, Any]
                 data={"fallback_key": k, "room_present": True},
             )
             return v.strip()
+    alias = str(extras.get("alias") or "").strip()
+    sid = parse_short_id_from_alias(alias)
+    if sid and bot_key:
+        short_map = mapping_for_short_id(sid, bot_key)
+        short_room = (short_map[1] or "").strip() if short_map else ""
+        if short_room:
+            _debug_log(
+                run_id="initial",
+                hypothesis_id="H7",
+                location="alerts/plugins/jira/status_webhook.py:_resolve_room_id",
+                message="room resolved from alias->short mapping",
+                data={"short_id": sid, "has_short_mapping": True},
+            )
+            return short_room
     _debug_log(
         run_id="initial",
         hypothesis_id="H1",
@@ -274,12 +288,21 @@ def handle_jira_status_webhook(
     )
 
     room_id = _resolve_room_id(bot_key=bot_key, jira_alert_id=jid, extras=extras)
+    if not room_id and short_map:
+        room_id = (short_map[1] or "").strip()
+        if room_id:
+            _debug_log(
+                run_id="initial",
+                hypothesis_id="H7",
+                location="alerts/plugins/jira/status_webhook.py:handle_jira_status_webhook",
+                message="room fallback from short mapping context",
+                data={"action": action, "short_from_alias": short_from_alias},
+            )
     if not room_id:
         logger.warning("Jira status webhook action=%s could not resolve room for alertId=%s", action, jid)
         return
 
     ctx = _status_message_context(bot, cfg, logger, extras, alert)
-    use_markdown = bool(cfg.status_mentions)
 
     if action == "Acknowledge":
         text = _render_status_template(cfg.status_ack_template, ctx)
@@ -292,21 +315,21 @@ def handle_jira_status_webhook(
                 "room_id_present": bool(room_id),
                 "text_len": len(text),
                 "status_mentions": bool(cfg.status_mentions),
-                "markdown_value_type": str(type(use_markdown).__name__),
+                "markdown_value_type": "none",
             },
         )
-        bot.say(room_id, text, markdown=use_markdown)
+        bot.say(room_id, text)
         return
 
     if action == "UnAcknowledge":
         text = _render_status_template(cfg.status_unack_template, ctx)
-        bot.say(room_id, text, markdown=use_markdown)
+        bot.say(room_id, text)
         return
 
     if action == "Escalate":
         if cfg.send_escalate_msg:
             text = _render_status_template(cfg.status_escalate_template, ctx)
-            bot.say(room_id, text, markdown=use_markdown)
+            bot.say(room_id, text)
         return
 
     logger.debug("Jira status webhook unhandled action=%s", action)

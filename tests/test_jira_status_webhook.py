@@ -158,7 +158,7 @@ class JiraStatusWebhookSayTest(unittest.TestCase):
         args, kwargs = bot.say.call_args
         self.assertEqual(args[0], "space-9")
         self.assertIn("acknowledged", args[1].lower())
-        self.assertTrue(kwargs.get("markdown"))
+        self.assertNotIn("markdown", kwargs)
     # -- End Method test_acknowledge_says_to_room
 
     def test_acknowledge_status_mentions_false_uses_plain_markdown_flag(self) -> None:
@@ -194,7 +194,7 @@ class JiraStatusWebhookSayTest(unittest.TestCase):
             },
         )
         _args, kwargs = bot.say.call_args
-        self.assertFalse(kwargs.get("markdown"))
+        self.assertNotIn("markdown", kwargs)
     # -- End Method test_acknowledge_status_mentions_false_uses_plain_markdown_flag
 
     def test_escalate_respects_send_flag(self) -> None:
@@ -219,6 +219,44 @@ class JiraStatusWebhookSayTest(unittest.TestCase):
         )
         bot.say.assert_not_called()
     # -- End Method test_escalate_respects_send_flag
+
+    def test_acknowledge_falls_back_to_alias_short_mapping_when_alert_id_unmapped(self) -> None:
+        log = logging.getLogger("test.alias.fallback")
+        upsert_pending_row("ZXCV", "space-77", "bk1", "THAUM-20260328-ZXCV", log)
+
+        bot = MagicMock()
+        bot.bot_key = "bk1"
+        bot.team_description = "Platform"
+        bot.lookup_plugin = None
+        cfg = JiraAlertPluginConfig.model_construct(
+            plugin="jira",
+            site_url="https://example.atlassian.net",
+            cloud_id="c",
+            user="u",
+            api_token=SecretStr("t"),
+            responders=[],
+            status_webhook_bearer="",
+            send_escalate_msg=False,
+        )
+
+        handle_jira_status_webhook(
+            bot=bot,
+            cfg=cfg,
+            logger=log,
+            payload={
+                "action": "Acknowledge",
+                "alert": {
+                    "alertId": "unmapped-alert-id",
+                    "alias": "THAUM-20260328-ZXCV",
+                    "username": "responder@example.com",
+                },
+            },
+        )
+
+        bot.say.assert_called_once()
+        args, _kwargs = bot.say.call_args
+        self.assertEqual(args[0], "space-77")
+    # -- End Method test_acknowledge_falls_back_to_alias_short_mapping_when_alert_id_unmapped
 # -- End Class JiraStatusWebhookSayTest
 
 
