@@ -6,6 +6,7 @@ from __future__ import annotations
 import logging
 import re
 import time
+from urllib.parse import urlsplit, urlunsplit
 from typing import TYPE_CHECKING, Any, Dict, List, Literal, Optional, Tuple
 
 from pydantic import Field, model_validator
@@ -156,6 +157,19 @@ class WebexChatBot(BaseChatBot):
     def _normalize_target_url(self, url: str) -> str:
         return url.rstrip("/")
 
+    def _normalize_target_url_for_prune(self, url: str) -> str:
+        """
+        Canonicalize webhook target for cleanup matching.
+
+        Pruning treats HTTP and HTTPS variants as the same endpoint so a
+        protocol migration does not leave stale hooks behind.
+        """
+        normalized = self._normalize_target_url(url)
+        parts = urlsplit(normalized)
+        if not parts.netloc:
+            return normalized
+        return urlunsplit(("", parts.netloc, parts.path, parts.query, ""))
+
     def _webhook_secret_for_api(self) -> Optional[str]:
         return self._effective_hmac_secret()
 
@@ -165,11 +179,11 @@ class WebexChatBot(BaseChatBot):
             self.logger.error("Cannot register Webex webhooks: bot endpoint is not configured.")
             return
 
-        nt = self._normalize_target_url(target)
+        nt = self._normalize_target_url_for_prune(target)
         try:
             existing = list(self.api.webhooks.list())
             for wh in existing:
-                if wh.targetUrl and self._normalize_target_url(wh.targetUrl) == nt:
+                if wh.targetUrl and self._normalize_target_url_for_prune(wh.targetUrl) == nt:
                     self.api.webhooks.delete(wh.id)
         except Exception as e:
             self.logger.warning("While pruning old Webex webhooks: %s", e)
