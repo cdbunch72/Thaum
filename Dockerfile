@@ -115,5 +115,6 @@ EXPOSE 5165
 # Do not publish this port to the public host; expose only the proxy.
 ENV GUNICORN_BIND=0.0.0.0:5165
 ENV GUNICORN_WORKERS=1
+ENV THAUM_JSON_LOG=true
 
 ENTRYPOINT ["/app/docker/entrypoint.sh"]

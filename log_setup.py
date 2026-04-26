@@ -21,6 +21,7 @@ if TYPE_CHECKING:
 
 _configured_root_level: int = logging.INFO
 _logger_wrappers_installed: bool = False
+_early_logging_initialized: bool = False
 
 _original_logger_error = logging.Logger.error
 _original_logger_exception = logging.Logger.exception
@@ -225,6 +226,21 @@ class SecureTimedRotatingFileHandler(logging.handlers.TimedRotatingFileHandler):
         self._chmod_active()
 
 
+class JsonLineFormatter(logging.Formatter):
+    """Compact one-line JSON formatter for machine-consumable logs."""
+
+    def format(self, record: logging.LogRecord) -> str:
+        payload: dict[str, Any] = {
+            "ts": datetime.fromtimestamp(record.created, tz=timezone.utc).isoformat(timespec="auto"),
+            "level": record.levelname,
+            "logger": record.name,
+            "message": record.getMessage(),
+        }
+        if record.exc_info:
+            payload["exception"] = self.formatException(record.exc_info)
+        return json.dumps(payload, separators=(",", ":"), ensure_ascii=True)
+
+
 def _register_custom_log_level_names() -> None:
     """So %(levelname)s shows SPAM / VERBOSE / NOTICE instead of Level N."""
     from thaum.types import LogLevel
@@ -232,6 +248,111 @@ def _register_custom_log_level_names() -> None:
     logging.addLevelName(int(LogLevel.SPAM), "SPAM")
     logging.addLevelName(int(LogLevel.VERBOSE), "VERBOSE")
     logging.addLevelName(int(LogLevel.NOTICE), "NOTICE")
+
+
+def _env_truthy(raw: str) -> bool:
+    return raw.strip().lower() in ("1", "true", "yes", "on", "truthy")
+
+
+def _resolve_env_json_target(raw: str) -> Optional[str]:
+    s = raw.strip()
+    if not s:
+        return None
+    if _env_truthy(s):
+        return "stderr"
+    low = s.lower()
+    if low.startswith("file:"):
+        path = s[5:].strip()
+        if path:
+            return path
+    return None
+
+
+def get_env_log_level_override() -> Optional[int]:
+    raw = os.environ.get("THAUM_LOG_LEVEL", "").strip()
+    if not raw:
+        return None
+    parsed = parse_level_name(raw)
+    if parsed is None:
+        print(f"Thaum: ignoring invalid THAUM_LOG_LEVEL={raw!r}.", file=sys.stderr)
+    return parsed
+
+
+def _build_json_file_handler(path: str, backup_count: int) -> Optional[logging.Handler]:
+    p = Path(path).expanduser()
+    try:
+        parent = p.resolve().parent
+    except (OSError, RuntimeError):
+        print(
+            f"Thaum: cannot resolve json log file path {path!r}; JSON logging disabled.",
+            file=sys.stderr,
+        )
+        return None
+    if not parent.is_dir():
+        print(
+            f"Thaum: json log file directory does not exist ({parent}); JSON logging disabled.",
+            file=sys.stderr,
+        )
+        return None
+    try:
+        file_handler = SecureTimedRotatingFileHandler(
+            str(p),
+            when="midnight",
+            interval=1,
+            backupCount=max(0, int(backup_count)),
+            encoding="utf-8",
+            delay=True,
+        )
+    except OSError as e:
+        print(
+            f"Thaum: cannot open json log file {path!r}: {e}; JSON logging disabled.",
+            file=sys.stderr,
+        )
+        return None
+    file_handler.setFormatter(JsonLineFormatter())
+    return file_handler
+
+
+def _build_json_handler(target: str, backup_count: int) -> Optional[logging.Handler]:
+    t = (target or "").strip().lower()
+    if not t:
+        return None
+    if t == "stderr":
+        h = logging.StreamHandler(sys.stderr)
+        h.setFormatter(JsonLineFormatter())
+        return h
+    return _build_json_file_handler(target, backup_count)
+
+
+def init_early_logging_from_env() -> None:
+    """
+    Initialize minimal logging before config load.
+    Uses THAUM_LOG_LEVEL and THAUM_JSON_LOG only.
+    """
+    global _early_logging_initialized
+    if _early_logging_initialized:
+        return
+    _register_custom_log_level_names()
+    root_logger = logging.getLogger()
+    level = get_env_log_level_override()
+    root_logger.setLevel(level if level is not None else logging.INFO)
+    if not root_logger.handlers:
+        console_handler = logging.StreamHandler(sys.stdout)
+        console_handler.setFormatter(
+            ISO8601TimezoneFormatter(
+                "%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+                tz_string="UTC",
+                fractional_seconds=False,
+                no_timestamp=False,
+            )
+        )
+        root_logger.addHandler(console_handler)
+    env_target = _resolve_env_json_target(os.environ.get("THAUM_JSON_LOG", ""))
+    if env_target is not None:
+        json_handler = _build_json_handler(env_target, backup_count=5)
+        if json_handler is not None:
+            root_logger.addHandler(json_handler)
+    _early_logging_initialized = True
 
 
 def log_debug_blob(logger: logging.Logger, blob_title: str, data: Any, level: int = logging.DEBUG):
@@ -258,7 +379,12 @@ def configure_logging(
     tz_str = logging_config.timezone
     use_fractions = logging_config.fractional_seconds
 
-    _configured_root_level = int(logging_config.level)
+    env_level_override = None if logging_config.override_env else get_env_log_level_override()
+    _configured_root_level = (
+        int(env_level_override)
+        if env_level_override is not None
+        else int(logging_config.level)
+    )
 
     _register_custom_log_level_names()
 
@@ -320,6 +446,20 @@ def configure_logging(
                         f"Thaum: cannot open log file {log_path!r}: {e}; file logging disabled.",
                         file=sys.stderr,
                     )
+
+    env_json_target = _resolve_env_json_target(os.environ.get("THAUM_JSON_LOG", ""))
+    json_target: Optional[str] = None
+    if (not logging_config.override_env) and env_json_target is not None:
+        json_target = env_json_target
+    else:
+        json_target = logging_config.json_log
+    if json_target:
+        json_handler = _build_json_handler(
+            json_target,
+            backup_count=int(logging_config.file_backup_count),
+        )
+        if json_handler is not None:
+            root_logger.addHandler(json_handler)
 
     _install_logger_wrappers()
 

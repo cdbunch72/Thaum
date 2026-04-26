@@ -60,10 +60,25 @@ lookup_plugin = "null"
 # no_timestamp = false
 # fractional_seconds = false
 # Runtime: THAUM_LOG_TO_VAR_LOG=1|true|yes|on enables default file path /var/log/thaum/thaum.log when "file" is not set here.
+# Runtime: THAUM_LOG_LEVEL=<LEVEL> overrides logging.level when set (e.g. DEBUG, INFO, SPAM).
+# Runtime: THAUM_JSON_LOG=true|1|yes|on forces JSON logs to stderr when env_override is false.
 # Opt-in file logging: true / 1 / "yes" / "true" / "1" → default path /var/log/thaum/thaum.log
 # (parent dir must exist). Any other non-empty string → that path. file_backup_count = 5
 # file = true
 # file = "/var/lib/thaum/thaum.log"
+# Optional JSON sink selector (single-line JSON records):
+# false / 0 / no / off / "" / missing -> disabled
+# true / 1 / yes / on / truthy -> /var/log/thaum/thaum.json
+# stderr -> stderr sink
+# file:/path/to/thaum.json -> explicit file path
+# json_log = false
+# json_log = "stderr"
+# json_log = "file:/var/log/thaum/thaum.json"
+# Env precedence toggle for final logging:
+# false (default): env can override final JSON existence (THAUM_JSON_LOG) and level (THAUM_LOG_LEVEL)
+# true/truthy: TOML is authoritative for final JSON existence and level
+# (env still applies to early startup logs before TOML loads)
+# override_env = true
 # file_backup_count = 5
 
 [lookup]

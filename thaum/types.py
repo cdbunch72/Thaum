@@ -229,6 +229,7 @@ class ServerConfig(BaseModel):
 # -- End ServerConfig
 
 DEFAULT_LOG_FILE_PATH = "/var/log/thaum/thaum.log"
+DEFAULT_JSON_LOG_FILE_PATH = "/var/log/thaum/thaum.json"
 
 
 def _normalize_log_file_value(v: object) -> Optional[str]:
@@ -258,6 +259,68 @@ def _normalize_log_file_value(v: object) -> Optional[str]:
 
 LogFileSetting = Annotated[Optional[str], BeforeValidator(_normalize_log_file_value)]
 
+
+def _normalize_json_log_value(v: object) -> Optional[str]:
+    """
+    JSON sink selector:
+    - None/false/0/no/off/empty -> disabled (None)
+    - true/1/yes/on/truthy -> default JSON log file path
+    - stderr -> stderr sink
+    - file:/path -> explicit file path
+    """
+    if v is None:
+        return None
+    if isinstance(v, bool):
+        return DEFAULT_JSON_LOG_FILE_PATH if v else None
+    if isinstance(v, int):
+        if v == 0:
+            return None
+        if v == 1:
+            return DEFAULT_JSON_LOG_FILE_PATH
+        raise ValueError(
+            f"logging.json_log: invalid integer {v!r}; use 0 or 1, or stderr/file:/path string."
+        )
+    s = str(v).strip()
+    if not s:
+        return None
+    low = s.lower()
+    if low in ("no", "false", "0", "off"):
+        return None
+    if low in ("yes", "true", "1", "on", "truthy"):
+        return DEFAULT_JSON_LOG_FILE_PATH
+    if low == "stderr":
+        return "stderr"
+    if low.startswith("file:"):
+        path = s[5:].strip()
+        if not path:
+            raise ValueError("logging.json_log: 'file:' requires a non-empty path.")
+        return path
+    raise ValueError(
+        "logging.json_log: expected false/true/stderr/file:/path (or equivalent truthy/falsy values)."
+    )
+
+
+JsonLogSetting = Annotated[Optional[str], BeforeValidator(_normalize_json_log_value)]
+
+
+def _normalize_override_env_boolean(v: object) -> bool:
+    """
+    Env override guard:
+    - truthy values -> True (TOML authoritative for final logging decisions)
+    - all other values (including missing) -> False
+    """
+    if isinstance(v, bool):
+        return v
+    if v is None:
+        return False
+    if isinstance(v, int):
+        return v != 0
+    s = str(v).strip().lower()
+    return s in ("1", "true", "yes", "on", "truthy")
+
+
+OverrideEnvSetting = Annotated[bool, BeforeValidator(_normalize_env_override_value)]
+
 LogLevelSetting = Annotated[
     LogLevel,
     # IntEnum rejects str names in Pydantic; map config strings to members explicitly.
@@ -271,6 +334,8 @@ class LogConfig(BaseModel):
     no_timestamp: bool = False
     fractional_seconds: bool = False
     file: LogFileSetting = None
+    json_log: JsonLogSetting = None
+    env_override: OverrideEnvSetting = False
     file_backup_count: int = 5
     model_config = ConfigDict(
         extra='forbid',          # Reject extra keys in TOML (Prevents typos)

@@ -14,15 +14,19 @@ from __future__ import annotations
 
 import os
 
+
 from bootstrap import bootstrap, fail_fast_fatal
+from log_setup import init_early_logging_from_env
 from thaum.paths import ConfigResolutionError, resolve_config_path
 from web import create_app
 
+init_early_logging_from_env()
 try:
     _config = bootstrap(resolve_config_path())
 except ConfigResolutionError as e:
     fail_fast_fatal(str(e))
     raise
+
 app = create_app(_config)
 
 if __name__ == "__main__":
