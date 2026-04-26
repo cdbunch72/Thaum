@@ -15,9 +15,11 @@ from __future__ import annotations
 import os
 
 from bootstrap import bootstrap
+from log_setup import init_early_logging_from_env
 from thaum.paths import resolve_config_path
 from web import create_app
 
+init_early_logging_from_env()
 _config = bootstrap(resolve_config_path())
 app = create_app(_config)
 
