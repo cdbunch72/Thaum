@@ -6,7 +6,7 @@ import logging
 from pathlib import Path
 from jinja2 import Environment, StrictUndefined, Template
 from thaum.engine import create_incident_room, acknowledge_incident
-from typing import TYPE_CHECKING, Any, Dict, List
+from typing import TYPE_CHECKING, Any, Dict
 from thaum.types import ThaumPerson, AlertPriority
 import re
 
@@ -62,56 +62,6 @@ DEFAULT_INCIDENT_PROMPT_CARD_TEMPLATE = """
 }
 """
 
-
-def _incident_prompt_card_fallback(
-    team_description: str,
-    default_high_priority: bool,
-    show_priority_toggle: bool,
-) -> Dict[str, Any]:
-    """Adaptive Card for help/emergency when the user did not supply a summary on the command line."""
-    prompt = f"How can {team_description} help you today?"
-    body: List[Dict[str, Any]] = [
-        {"type": "TextBlock", "text": prompt, "wrap": True},
-        {
-            "type": "Input.Text",
-            "id": "summary",
-            "label": "Summary",
-            "placeholder": "Briefly describe what you need (if spaces fail in Webex, use +)",
-            "isMultiline": True,
-            "isRequired": True,
-        },
-    ]
-    if show_priority_toggle:
-        body.append(
-            {
-                "type": "Input.Toggle",
-                "id": "is_emergency",
-                "title": "High priority (emergency) alert",
-                "value": "true" if default_high_priority else "false",
-                "valueOn": "true",
-                "valueOff": "false",
-            }
-        )
-
-    submit_data: Dict[str, str] = {"action": "submit_incident"}
-    if not show_priority_toggle:
-        submit_data["is_emergency"] = "false"
-
-    return {
-        "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
-        "type": "AdaptiveCard",
-        "version": "1.3",
-        "body": body,
-        "actions": [
-            {
-                "type": "Action.Submit",
-                "title": "Submit",
-                "data": submit_data,
-            }
-        ],
-    }
-
-
 def _is_valid_incident_card(card: Any) -> bool:
     if not isinstance(card, dict):
         return False
@@ -140,6 +90,13 @@ def _incident_prompt_card(
         "show_priority_toggle": show_priority_toggle,
     }
 
+    def _render_card(source: str) -> Dict[str, Any]:
+        rendered = _jinja_env.from_string(source).render(**context)
+        parsed = json.loads(rendered)
+        if _is_valid_incident_card(parsed):
+            return parsed
+        raise ValueError("Rendered incident prompt card is not a valid Adaptive Card object")
+
     try:
         if inline_template:
             source = inline_template
@@ -147,19 +104,10 @@ def _incident_prompt_card(
             source = Path(template_path).read_text(encoding="utf-8")
         else:
             source = DEFAULT_INCIDENT_PROMPT_CARD_TEMPLATE
-        rendered = _jinja_env.from_string(source).render(**context)
-        parsed = json.loads(rendered)
-        if _is_valid_incident_card(parsed):
-            return parsed
-        raise ValueError("Rendered incident prompt card is not a valid Adaptive Card object")
+        return _render_card(source)
     except Exception as exc:
         _log.warning("Using default incident prompt card due to template error: %s", exc)
-        fb = _incident_prompt_card_fallback(
-            team_description=team_description,
-            default_high_priority=default_high_priority,
-            show_priority_toggle=show_priority_toggle,
-        )
-        return fb
+        return _render_card(DEFAULT_INCIDENT_PROMPT_CARD_TEMPLATE)
 
 
 
