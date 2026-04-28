@@ -66,11 +66,11 @@ class JsonLogNormalizationTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             LogConfig(json_log="banana")
 
-    def test_env_override_default(self) -> None:
-        self.assertFalse(LogConfig().env_override)
+    def test_override_env_default(self) -> None:
+        self.assertFalse(LogConfig().override_env)
 
-    def test_env_override_truthy_value(self) -> None:
-        self.assertTrue(LogConfig(env_override="true").env_override)
+    def test_override_env_truthy_value(self) -> None:
+        self.assertTrue(LogConfig(override_env="true").override_env)
 
 
 class ConfigureLoggingFileTest(unittest.TestCase):
@@ -139,15 +139,15 @@ class ConfigureLoggingFileTest(unittest.TestCase):
     def test_json_log_env_truthy_overrides_when_truthy_mode(self) -> None:
         with patch.dict(os.environ, {"THAUM_JSON_LOG": "true"}, clear=False):
             configure_logging(
-                LogConfig(level=LogLevel.INFO, json_log=False, env_override=False),
+                LogConfig(level=LogLevel.INFO, json_log=False, override_env=False),
             )
         root = logging.getLogger()
         self.assertEqual(len(root.handlers), 2)
 
-    def test_json_log_env_truthy_ignored_when_env_override_truthy(self) -> None:
+    def test_json_log_env_truthy_ignored_when_override_env_truthy(self) -> None:
         with patch.dict(os.environ, {"THAUM_JSON_LOG": "true"}, clear=False):
             configure_logging(
-                LogConfig(level=LogLevel.INFO, json_log=False, env_override=True),
+                LogConfig(level=LogLevel.INFO, json_log=False, override_env=True),
             )
         root = logging.getLogger()
         self.assertEqual(len(root.handlers), 1)
@@ -157,15 +157,15 @@ class ConfigureLoggingFileTest(unittest.TestCase):
             configure_logging(LogConfig(level=LogLevel.ERROR))
         self.assertEqual(logging.getLogger().level, logging.DEBUG)
 
-    def test_env_override_truthy_uses_toml_log_level_over_env(self) -> None:
+    def test_override_env_truthy_uses_toml_log_level_over_env(self) -> None:
         with patch.dict(os.environ, {"THAUM_LOG_LEVEL": "DEBUG"}, clear=False):
-            configure_logging(LogConfig(level=LogLevel.ERROR, env_override=True))
+            configure_logging(LogConfig(level=LogLevel.ERROR, override_env=True))
         self.assertEqual(logging.getLogger().level, logging.ERROR)
 
-    def test_early_init_then_env_override_truthy_can_disable_final_json(self) -> None:
+    def test_early_init_then_override_env_truthy_can_disable_final_json(self) -> None:
         with patch.dict(os.environ, {"THAUM_JSON_LOG": "true"}, clear=False):
             init_early_logging_from_env()
-            configure_logging(LogConfig(level=LogLevel.INFO, json_log=False, env_override=True))
+            configure_logging(LogConfig(level=LogLevel.INFO, json_log=False, override_env=True))
         self.assertEqual(len(logging.getLogger().handlers), 1)
 
 

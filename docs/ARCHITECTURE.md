@@ -245,11 +245,11 @@ Optional JSON logging uses a single `[logging].json_log` selector:
 - `stderr` -> stderr sink
 - `file:/path/to/file` -> explicit file sink
 
-Environment precedence for JSON is controlled by `[logging].env_override`:
+Environment precedence for JSON is controlled by `[logging].override_env`:
 - falsy/missing (default): truthy `THAUM_JSON_LOG` can force JSON logging to stderr in final config
 - truthy: TOML is authoritative for final JSON logging existence (`[logging].json_log`)
 
-`THAUM_LOG_LEVEL` overrides `[logging].level` when set to a valid level name, unless `[logging].env_override` is truthy (in that case TOML level is authoritative for final config).
+`THAUM_LOG_LEVEL` overrides `[logging].level` when set to a valid level name, unless `[logging].override_env` is truthy (in that case TOML level is authoritative for final config).
 
 ### Runtime log level (admin API)
 

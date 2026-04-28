@@ -55,7 +55,7 @@ lookup_plugin = "null"
 # fractional_seconds = false
 # Runtime: THAUM_LOG_TO_VAR_LOG=1|true|yes|on enables default file path /var/log/thaum/thaum.log when "file" is not set here.
 # Runtime: THAUM_LOG_LEVEL=<LEVEL> overrides logging.level when set (e.g. DEBUG, INFO, SPAM).
-# Runtime: THAUM_JSON_LOG=true|1|yes|on forces JSON logs to stderr when env_override is false.
+# Runtime: THAUM_JSON_LOG=true|1|yes|on forces JSON logs to stderr when override_env is false.
 # Opt-in file logging: true / 1 / "yes" / "true" / "1" → default path /var/log/thaum/thaum.log
 # (parent dir must exist). Any other non-empty string → that path. file_backup_count = 5
 # file = true

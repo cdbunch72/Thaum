@@ -17,6 +17,7 @@ dependencies = [
     "Flask",
     "gunicorn",
     "pydantic>=2.0",
+    "python-json-logger>=2.0.7",
     "webexpythonsdk",
     "SQLAlchemy",
     "ldap3",
