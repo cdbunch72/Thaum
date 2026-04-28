@@ -14,7 +14,19 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Optional, Tuple
 
+from pythonjsonlogger.json import JsonFormatter
 from zoneinfo import ZoneInfo
+
+
+def _json_dumps_compact(log_data: Any, **kwargs: Any) -> str:
+    """Match stdlib json.dumps one-line style (no spaces after ':' / ',')."""
+    return json.dumps(
+        log_data,
+        default=kwargs.get("default"),
+        cls=kwargs.get("cls"),
+        ensure_ascii=kwargs.get("ensure_ascii", True),
+        separators=(",", ":"),
+    )
 
 if TYPE_CHECKING:
     from thaum.types import LogConfig, ServerConfig
@@ -226,19 +238,21 @@ class SecureTimedRotatingFileHandler(logging.handlers.TimedRotatingFileHandler):
         self._chmod_active()
 
 
-class JsonLineFormatter(logging.Formatter):
-    """Compact one-line JSON formatter for machine-consumable logs."""
-
-    def format(self, record: logging.LogRecord) -> str:
-        payload: dict[str, Any] = {
-            "ts": datetime.fromtimestamp(record.created, tz=timezone.utc).isoformat(timespec="auto"),
-            "level": record.levelname,
-            "logger": record.name,
-            "message": record.getMessage(),
-        }
-        if record.exc_info:
-            payload["exception"] = self.formatException(record.exc_info)
-        return json.dumps(payload, separators=(",", ":"), ensure_ascii=True)
+def _make_json_formatter() -> logging.Formatter:
+    """One-line JSON records for machine-readable sinks (stderr / json_log file)."""
+    return JsonFormatter(
+        "%(levelname)s %(name)s %(message)s",
+        rename_fields={
+            "levelname": "level",
+            "name": "logger",
+            "timestamp": "ts",
+            "exc_info": "exception",
+        },
+        timestamp=True,
+        json_indent=None,
+        json_ensure_ascii=True,
+        json_serializer=_json_dumps_compact,
+    )
 
 
 def _register_custom_log_level_names() -> None:
@@ -309,7 +323,7 @@ def _build_json_file_handler(path: str, backup_count: int) -> Optional[logging.H
             file=sys.stderr,
         )
         return None
-    file_handler.setFormatter(JsonLineFormatter())
+    file_handler.setFormatter(_make_json_formatter())
     return file_handler
 
 
@@ -319,7 +333,7 @@ def _build_json_handler(target: str, backup_count: int) -> Optional[logging.Hand
         return None
     if t == "stderr":
         h = logging.StreamHandler(sys.stderr)
-        h.setFormatter(JsonLineFormatter())
+        h.setFormatter(_make_json_formatter())
         return h
     return _build_json_file_handler(target, backup_count)
 

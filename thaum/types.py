@@ -305,9 +305,9 @@ JsonLogSetting = Annotated[Optional[str], BeforeValidator(_normalize_json_log_va
 
 def _normalize_override_env_boolean(v: object) -> bool:
     """
-    Env override guard:
-    - truthy values -> True (TOML authoritative for final logging decisions)
-    - all other values (including missing) -> False
+    ``[logging].override_env``: when truthy, TOML is authoritative for final logging
+    (JSON sink from ``json_log``, level from ``level``); falsy allows ``THAUM_JSON_LOG``
+    / ``THAUM_LOG_LEVEL`` to affect final ``configure_logging`` (early bootstrap still reads env).
     """
     if isinstance(v, bool):
         return v
@@ -319,7 +319,7 @@ def _normalize_override_env_boolean(v: object) -> bool:
     return s in ("1", "true", "yes", "on", "truthy")
 
 
-OverrideEnvSetting = Annotated[bool, BeforeValidator(_normalize_env_override_value)]
+OverrideEnvSetting = Annotated[bool, BeforeValidator(_normalize_override_env_boolean)]
 
 LogLevelSetting = Annotated[
     LogLevel,
@@ -335,7 +335,7 @@ class LogConfig(BaseModel):
     fractional_seconds: bool = False
     file: LogFileSetting = None
     json_log: JsonLogSetting = None
-    env_override: OverrideEnvSetting = False
+    override_env: OverrideEnvSetting = False
     file_backup_count: int = 5
     model_config = ConfigDict(
         extra='forbid',          # Reject extra keys in TOML (Prevents typos)
