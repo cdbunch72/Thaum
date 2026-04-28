@@ -1,8 +1,21 @@
 # Thaum release notes
 
+## v0.6.0rc2 (release candidate 2) — unreleased
+
+**`pyproject.toml`** is set to **`0.6.0rc2`**.
+
+- **Chat commands** — Usage lists **`on-call[: message]`** for alerting the on-call contact; **`alert`**, **`oncall`**, and **`on_call`** are accepted as synonyms.
+
+### Upgrade from v0.6.0rc1
+
+- **pip / venv**: **`pip install -U .`** to pick up **`0.6.0rc2`**.
+- **Containers**: rebuild or pull an image tagged **`0.6.0rc2`** when published.
+
+---
+
 ## v0.6.0rc1 (release candidate 1) — unreleased
 
-**`pyproject.toml`** is set to **`0.6.0rc1`** so installs from an unreleased git checkout (e.g. `pip install .` from **`main`**) report a distinct version from published packages such as **v0.3.0a1**.
+**Packaging** for this line used **`0.6.0rc1`** so installs from an unreleased git checkout (e.g. `pip install .` from **`main`**) reported a distinct version from published packages such as **v0.3.0a1**.
 
 **Version numbering.** While **`0.4.0.dev0`** was still the declared version, **`main`** accumulated debugging and refactors toward a working build that, in a stricter release cadence, would have shipped as the **0.5.0** line. No **0.5.x** tag was ever cut on **`main`**, so this prerelease jumps straight to **`0.6.0rc1`**. The prerelease style moves from **`aN` / `bN`** to **`rc`** to signal that the surface area is now treated as roughly **60% stable**—breaking changes are less likely before **0.6.0** stable, but not impossible.
 

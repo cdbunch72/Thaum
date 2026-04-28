@@ -164,6 +164,10 @@ def _incident_prompt_card(
 
 
 
+# Alert command: usage documents ``on-call``; ``alert``, ``oncall``, and ``on_call`` are synonyms.
+ALERT_COMMAND_PATTERN = r"^(?P<cmd>alert|on[-_]?call)(?:\s*:\s*(?P<msg>.*))?$"
+
+
 # Define the template globally (or in a separate file if it gets too long)
 USAGE_TEMPLATE = """
 help[: summary]
@@ -227,7 +231,7 @@ def bind_thaum_handlers(bot: 'BaseChatBot') -> None:
     if bot.send_alerts:
         plugin_cls = type(bot.alert_plugin)
 
-        @bot.hears(r"^alert(?:\s*:\s*(?P<msg>.*))?$",priority=10)
+        @bot.hears(ALERT_COMMAND_PATTERN, priority=10)
         def handle_alert(bot: 'BaseChatBot', ctx: 'MessageContext', match: re.Match):
             msg = (match.group("msg") or "").strip()
             title = bot.room_title(ctx.room_id)

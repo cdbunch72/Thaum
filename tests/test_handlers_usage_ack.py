@@ -9,7 +9,7 @@ from unittest.mock import MagicMock
 
 from jinja2 import Template
 
-from thaum.handlers import USAGE_TEMPLATE, bind_thaum_handlers
+from thaum.handlers import ALERT_COMMAND_PATTERN, USAGE_TEMPLATE, bind_thaum_handlers
 from thaum.types import ThaumPerson
 
 
@@ -46,6 +46,7 @@ class UsageTemplateAckTest(unittest.TestCase):
         rendered = Template(USAGE_TEMPLATE).render(bot=bot, supports_acknowledge=True)
         self.assertIn("ack alert_id", rendered)
         self.assertIn("Produces an alert ID for tracking", rendered)
+        self.assertIn("on-call[: message]", rendered)
 
     def test_usage_omits_ack_when_not_supported(self) -> None:
         bot = MagicMock()
@@ -57,7 +58,7 @@ class UsageTemplateAckTest(unittest.TestCase):
         rendered = Template(USAGE_TEMPLATE).render(bot=bot, supports_acknowledge=False)
         self.assertNotIn("ack alert_id", rendered)
         self.assertNotIn("Produces an alert ID for tracking", rendered)
-        self.assertIn("alert[: message]", rendered)
+        self.assertIn("on-call[: message]", rendered)
 
 
 class BindHandlersAckTest(unittest.TestCase):
@@ -128,9 +129,10 @@ class AlertCommandShortIdOutputTest(unittest.TestCase):
     def test_alert_command_shows_tracking_id_when_present_even_without_ack_support(self) -> None:
         bot, routes = self._build_bot(_AlertPluginWithId())
         bind_thaum_handlers(bot)
-        alert_handler = next(fn for pattern, fn in routes if pattern.pattern.startswith("^alert"))
+        alert_pat = re.compile(ALERT_COMMAND_PATTERN)
+        alert_handler = next(fn for pattern, fn in routes if pattern.pattern == alert_pat.pattern)
         ctx = SimpleNamespace(room_id="room-1", person=self._person())
-        match = re.search(r"^alert(?:\s*:\s*(?P<msg>.*))", "alert: test issue")
+        match = alert_pat.search("alert: test issue")
         self.assertIsNotNone(match)
         alert_handler(bot, ctx, match)
         bot.alert_plugin.trigger_alert.assert_called_once_with(
@@ -143,9 +145,10 @@ class AlertCommandShortIdOutputTest(unittest.TestCase):
     def test_alert_command_falls_back_when_no_short_id(self) -> None:
         bot, routes = self._build_bot(_AlertPluginNoId())
         bind_thaum_handlers(bot)
-        alert_handler = next(fn for pattern, fn in routes if pattern.pattern.startswith("^alert"))
+        alert_pat = re.compile(ALERT_COMMAND_PATTERN)
+        alert_handler = next(fn for pattern, fn in routes if pattern.pattern == alert_pat.pattern)
         ctx = SimpleNamespace(room_id="room-2", person=self._person())
-        match = re.search(r"^alert(?:\s*:\s*(?P<msg>.*))", "alert: test issue")
+        match = alert_pat.search("alert: test issue")
         self.assertIsNotNone(match)
         alert_handler(bot, ctx, match)
         bot.alert_plugin.trigger_alert.assert_called_once_with(
@@ -154,6 +157,25 @@ class AlertCommandShortIdOutputTest(unittest.TestCase):
             ctx.person,
         )
         bot.say.assert_called_once_with("room-2", "Alert sent.")
+
+    def test_on_call_synonyms_invoke_same_handler(self) -> None:
+        alert_pat = re.compile(ALERT_COMMAND_PATTERN)
+        for line in ("on-call: ping", "oncall: ping", "on_call: ping"):
+            with self.subTest(line=line):
+                bot, routes = self._build_bot(_AlertPluginWithId())
+                bind_thaum_handlers(bot)
+                alert_handler = next(
+                    fn for pattern, fn in routes if pattern.pattern == alert_pat.pattern
+                )
+                ctx = SimpleNamespace(room_id="room-x", person=self._person())
+                match = alert_pat.search(line)
+                self.assertIsNotNone(match, msg=f"pattern should match {line!r}")
+                alert_handler(bot, ctx, match)
+                bot.alert_plugin.trigger_alert.assert_called_once_with(
+                    "X Person needs you in Room A: ping",
+                    "room-x",
+                    ctx.person,
+                )
 
 
 if __name__ == "__main__":
