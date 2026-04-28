@@ -181,6 +181,7 @@ emergency[: summary]
 {% endif %}
 {% if bot.send_alerts %}
 alert[: message]
+on-call[: message]
   Alerts the {{ bot.team_description }} on-call with a message. Does not create a room.
 {%- if supports_acknowledge %}
   Produces an alert ID for tracking.
