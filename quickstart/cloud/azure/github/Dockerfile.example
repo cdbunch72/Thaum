@@ -11,8 +11,8 @@ ARG THAUM_BASE_IMAGE=ghcr.io/gemstone-software-dev/thaum:latest
 
 FROM ${THAUM_BASE_IMAGE}
 
-# Stock image does not set THAUM_CONFIG_FILE; resolve_config_path() prefers /etc/thaum/Thaum.toml (see thaum/paths.py).
-COPY thaum.toml /etc/thaum/Thaum.toml
+# Stock image does not set THAUM_CONFIG_FILE; resolve_config_path() checks /etc/thaum/thaum.toml first (see thaum/paths.py).
+COPY thaum.toml /etc/thaum/thaum.toml
 
 # --- Simplest path (bundled PostgreSQL in the same container; single instance; not for HA) ---
 # Do not set THAUM_EXTERNAL_DB. See quickstart/cloud/azure/github/README.md for ephemeral-disk caveat.

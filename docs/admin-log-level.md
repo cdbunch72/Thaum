@@ -2,7 +2,7 @@
 
 Runtime root log level is changed with a **signed `POST`** to a **secret path** configured on the server. There is **no** file-based override.
 
-Server settings (`[server.admin]` in `config.toml`):
+Server settings (`[server.admin]` in your config TOML, canonical filename `thaum.toml`):
 
 | Key | Meaning |
 |-----|--------|

@@ -1,15 +1,16 @@
 # Thaum release notes
 
-## v0.6.0rc2 (release candidate 2) — unreleased
+## v0.6.0rc3 (release candidate 3) — unreleased
 
-**`pyproject.toml`** is set to **`0.6.0rc2`**.
+**`pyproject.toml`** is set to **`0.6.0rc3`**.
 
 - **Chat commands** — Usage lists **`on-call[: message]`** for alerting the on-call contact; **`alert`**, **`oncall`**, and **`on_call`** are accepted as synonyms.
+- **Config resolution** — `resolve_config_path()` now checks only `THAUM_CONFIG_FILE` (if set), then `/etc/thaum/thaum.toml`, `/etc/thaum/thaum.conf`, `./thaum.toml`, and `./thaum.conf`; startup now fails fast if none exist. `.toml` is canonical for examples/docs (`sample.thaum.toml`).
 
-### Upgrade from v0.6.0rc1
+### Upgrade from v0.6.0rc2
 
-- **pip / venv**: **`pip install -U .`** to pick up **`0.6.0rc2`**.
-- **Containers**: rebuild or pull an image tagged **`0.6.0rc2`** when published.
+- **pip / venv**: **`pip install -U .`** to pick up **`0.6.0rc3`**.
+- **Containers**: rebuild or pull an image tagged **`0.6.0rc3`** when published.
 
 ---
 

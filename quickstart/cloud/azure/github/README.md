@@ -95,7 +95,7 @@ Configure App Service **Health check** (when available on your plan) to hit `/re
 2. Set **`[server].base_url`** to your Web App’s public URL, for example `https://thaum-app-<unique>.azurewebsites.net` (or your custom domain).
 3. Save it in your deploy repo as **`thaum.toml`** (TOML content; use the **`.toml`** extension for editor highlighting). To use another path, set **`THAUM_CONFIG_FILE`** in the Dockerfile or environment.
 
-The stock Thaum image does **not** set `THAUM_CONFIG_FILE`; the app resolves config automatically (see `thaum.paths.resolve_config_path`). [Dockerfile.example](Dockerfile.example) copies **`thaum.toml`** to **`/etc/thaum/Thaum.toml`**.
+The stock Thaum image does **not** set `THAUM_CONFIG_FILE`; the app resolves config automatically (see `thaum.paths.resolve_config_path`). [Dockerfile.example](Dockerfile.example) copies **`thaum.toml`** to **`/etc/thaum/thaum.toml`**.
 
 Keep secrets out of committed files: use **`env:`** references and App Service **Configuration** application settings, or Key Vault references (see [Key Vault URI helper](#key-vault-uri-helper)).
 
@@ -108,7 +108,7 @@ If your pipeline substitutes `base_url` via environment at build time, some chec
 Use [Dockerfile.example](Dockerfile.example):
 
 - **`FROM`** a **pinned** upstream image (version tag or digest), not only `:latest`, for reproducible deploys. Default upstream: `ghcr.io/gemstone-software-dev/thaum` (see [README.md](../../../../README.md)).
-- **`COPY`** your versioned `thaum.toml` into `/etc/thaum/` (the example uses `Thaum.toml` so it matches the default resolution order).
+- **`COPY`** your versioned `thaum.toml` into `/etc/thaum/` as `/etc/thaum/thaum.toml` (canonical filename).
 - For **external Postgres**, set **`THAUM_EXTERNAL_DB=true`** in the Dockerfile or App Service settings and supply **`db_url`** (and secrets) as documented in [ARCHITECTURE.md](../../../../docs/ARCHITECTURE.md).
 
 ## 4. GitHub Actions
@@ -147,7 +147,7 @@ There is **no** interactive “enter all secrets” wizard: operators with **mul
 
 | File | Purpose |
 |------|---------|
-| [Dockerfile.example](Dockerfile.example) | `FROM` upstream Thaum image + `COPY` `thaum.toml` → `/etc/thaum/Thaum.toml` |
+| [Dockerfile.example](Dockerfile.example) | `FROM` upstream Thaum image + `COPY` `thaum.toml` → `/etc/thaum/thaum.toml` |
 | [deploy.yml.example](deploy.yml.example) | Build → schema-check → push to ACR → update Web App |
 | [scripts/keyvault-uri.ps1.example](scripts/keyvault-uri.ps1.example) | Print Key Vault URI (non-interactive) |
 | [scripts/keyvault-uri.bat.example](scripts/keyvault-uri.bat.example) | Invoke the PowerShell script from cmd |

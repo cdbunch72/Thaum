@@ -60,7 +60,7 @@ def main() -> int:
             )
         ini_path.write_text(content, encoding="utf-8")
 
-    print("# --- server [server.admin] snippet (config.toml) ---")
+    print("# --- server [server.admin] snippet (thaum.toml) ---")
     print("[server.admin]")
     print(f'route_id = "{route_id}"')
     print(f'hmac_secret_b64url = "{secret_ref}"')

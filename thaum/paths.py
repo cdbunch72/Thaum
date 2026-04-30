@@ -8,15 +8,15 @@ import os
 from pathlib import Path
 
 
+class ConfigResolutionError(RuntimeError):
+    """Raised when Thaum cannot resolve a startup config path."""
+
+
 def _candidate_paths(base: Path) -> tuple[Path, ...]:
-    """Order: title-case ``Thaum`` stem, then lowercase ``thaum``, ``.toml`` before ``.conf``; then ``config``."""
+    """Order: canonical ``thaum.toml`` then ``thaum.conf``."""
     return (
-        base / "Thaum.toml",
-        base / "Thaum.conf",
         base / "thaum.toml",
         base / "thaum.conf",
-        base / "config.toml",
-        base / "config.conf",
     )
 
 
@@ -24,10 +24,8 @@ def resolve_config_path() -> str:
     """
     Path to config (TOML in all cases): ``THAUM_CONFIG_FILE`` if set, else the first existing file in order:
 
-    * ``/etc/thaum/`` — ``Thaum.toml``, ``Thaum.conf``, ``thaum.toml``, ``thaum.conf``, ``config.toml``, ``config.conf``
+    * ``/etc/thaum/`` — ``thaum.toml``, ``thaum.conf``
     * working directory — same basename sequence under ``./``
-
-    If none exist, returns ``thaum.toml`` (typical path for a new file in the working directory).
     """
     env_path = os.environ.get("THAUM_CONFIG_FILE")
     if env_path:
@@ -38,4 +36,8 @@ def resolve_config_path() -> str:
         if candidate.exists():
             return str(candidate)
 
-    return "thaum.toml"
+    checked = ", ".join(str(c) for c in candidates)
+    raise ConfigResolutionError(
+        "Could not resolve config path. Set THAUM_CONFIG_FILE or create one of: "
+        f"{checked}"
+    )

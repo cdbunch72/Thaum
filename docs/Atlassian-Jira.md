@@ -2,7 +2,7 @@
 
 Thaum can integrate with **Atlassian Cloud** using:
 
-- **`[connections.<name>]`** with **`plugin = "atlassian"`** — shared **`site_url`**, **`cloud_id`**, **`org_id`**, **`user`**, and **`api_token`** (merged into **`[lookup.atlassian]`** and alert defaults when **`connection_ref`** is set; see **`sample.config.toml`**). **`org_id`** is required for lookup (Public Teams); the Jira alert plugin does not use it, but retaining it on the merged dict is harmless.
+- **`[connections.<name>]`** with **`plugin = "atlassian"`** — shared **`site_url`**, **`cloud_id`**, **`org_id`**, **`user`**, and **`api_token`** (merged into **`[lookup.atlassian]`** and alert defaults when **`connection_ref`** is set; see **`sample.thaum.toml`**). **`org_id`** is required for lookup (Public Teams); the Jira alert plugin does not use it, but retaining it on the merged dict is harmless.
 - **`lookup.atlassian`** — Public Teams API (`api.atlassian.com`) and Jira REST for users; uses platform id key **`jira`** in the identity cache.
 - **`alerts.plugins.jira`** — Jira Service Management Ops alerts; same site REST and **`api.atlassian.com/{cloud_id}/...`** paths.
 

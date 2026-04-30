@@ -31,7 +31,7 @@ env:
   IMAGE_NAME: ${{ vars.IMAGE_NAME }}
   RESOURCE_GROUP: ${{ vars.AZURE_RESOURCE_GROUP }}
   WEBAPP_NAME: ${{ vars.AZURE_WEBAPP_NAME }}
-  CONFIG_PATH: /etc/thaum/Thaum.toml
+  CONFIG_PATH: /etc/thaum/thaum.toml
   LOCAL_IMAGE: thaum-deploy:ci
 
 jobs:

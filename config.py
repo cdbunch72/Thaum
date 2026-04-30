@@ -12,7 +12,7 @@ logger = logging.getLogger("thaum.config")
 
 def load_and_validate(path: str) -> Dict[str, Any]:
     """
-    Load config.toml: parse TOML, validate ``[server]`` (including nested
+    Load config TOML: parse TOML, validate ``[server]`` (including nested
     ``[server.database]``, ``[server.admin]``, ``[server.election]``) and ``[logging]``.
 
     Each ``[bots.<id>]`` may include ``alert_type`` and a nested ``[bots.<id>.alert]``
@@ -30,7 +30,7 @@ def load_and_validate(path: str) -> Dict[str, Any]:
 
     server = config_raw.get("server")
     if not server:
-        raise ValueError("config.toml is missing mandatory [server] section.")
+        raise ValueError("Config is missing mandatory [server] section.")
 
     bots_raw = config_raw.get("bots", {})
     if not isinstance(bots_raw, dict):

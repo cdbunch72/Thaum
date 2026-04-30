@@ -6,19 +6,23 @@ WSGI entry: ``gunicorn app:app`` (multiple workers supported: leader election re
 webhooks once per deployment). Set ``server.database.database_vault_passphrase`` when using shared DB
 Webex HMAC (omit ``hmac_secret`` in bot config). Config: ``THAUM_CONFIG_FILE`` if set; else the first
 existing file in ``/etc/thaum/`` then ``./``, in order:
-``Thaum.toml``, ``Thaum.conf``, ``thaum.toml``, ``thaum.conf``, ``config.toml``, ``config.conf``;
-if none exist, ``thaum.toml``. See ``thaum.paths.resolve_config_path``.
+``thaum.toml``, ``thaum.conf``. If none exist, startup fails fast. See
+``thaum.paths.resolve_config_path``.
 """
 
 from __future__ import annotations
 
 import os
 
-from bootstrap import bootstrap
-from thaum.paths import resolve_config_path
+from bootstrap import bootstrap, fail_fast_fatal
+from thaum.paths import ConfigResolutionError, resolve_config_path
 from web import create_app
 
-_config = bootstrap(resolve_config_path())
+try:
+    _config = bootstrap(resolve_config_path())
+except ConfigResolutionError as e:
+    fail_fast_fatal(str(e))
+    raise
 app = create_app(_config)
 
 if __name__ == "__main__":

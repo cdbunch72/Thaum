@@ -28,8 +28,8 @@ from thaum.types import DEFAULT_LOG_FILE_PATH, LogLevel, LogConfig, ServerConfig
 logger = logging.getLogger("thaum.bootstrap")
 
 
-def _terminate_parent_on_fatal_bootstrap(reason: str) -> None:
-    """Best-effort: stop Gunicorn master so orchestrator restarts container."""
+def fail_fast_fatal(reason: str) -> None:
+    """Best-effort fatal path: stop Gunicorn master so orchestrator restarts container."""
     try:
         ppid = os.getppid()
         if ppid and ppid > 1:
@@ -162,7 +162,7 @@ def bootstrap(config_path: str) -> Dict[str, Any]:
     except Exception as e:
         # Expired/invalid upstream credentials (for leader init tasks) are fatal at startup:
         # allow orchestrator to restart the whole container instead of worker respawn loops.
-        _terminate_parent_on_fatal_bootstrap(str(e))
+        fail_fast_fatal(str(e))
         raise
     config["_thaum_leader_candidate_id"] = leader_candidate_id
     logger.log(

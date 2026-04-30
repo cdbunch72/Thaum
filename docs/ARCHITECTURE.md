@@ -18,7 +18,7 @@ Flask app is created.
 
 ### **Phase 1 - Load and validate core config**
 
-- `config.load_and_validate()` reads `config.toml` and builds `ServerConfig` and
+- `config.load_and_validate()` reads the resolved TOML config path (canonical filename: `thaum.toml`) and builds `ServerConfig` and
   `LogConfig`.
 
 - Bot tables are kept as dicts: each `[bots.<id>]` includes `alert_type` and an
