@@ -23,6 +23,11 @@ dependencies = [
     "psycopg[binary]>=3.2",
 ]
 
+[project.optional-dependencies]
+azure = [
+    "gemstone_utils[azure] @ git+https://github.com/gemstone-software-dev/gemstone_utils.git@v0.4.0rc1",
+]
+
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["thaum*", "alerts*", "bots*", "connections*", "lookup*"]

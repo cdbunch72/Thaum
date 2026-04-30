@@ -72,6 +72,7 @@ jobs:
             REPO_LOWER=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
             IMAGE="${REGISTRY}/${REPO_LOWER}"
           fi
+          IMAGE_AZURE="${IMAGE}-azure"
 
           VERSION=$(python - <<'PY'
           import tomllib
@@ -124,12 +125,22 @@ jobs:
               echo "${IMAGE}:${EDGE_TAG}"
               echo '__THAUM_TAGS__'
             } >> "$GITHUB_ENV"
+            {
+              echo 'TAGS_AZURE<<__THAUM_TAGS_AZURE__'
+              echo "${IMAGE_AZURE}:${EDGE_TAG}"
+              echo '__THAUM_TAGS_AZURE__'
+            } >> "$GITHUB_ENV"
           elif [ "${{ github.event_name }}" = "push" ] && [ "${{ github.ref_name }}" = "debug" ]; then
             THAUM_IMAGE_CHANNEL="edge-debug"
             {
               echo 'TAGS<<__THAUM_TAGS__'
               echo "${IMAGE}:edge-debug"
               echo '__THAUM_TAGS__'
+            } >> "$GITHUB_ENV"
+            {
+              echo 'TAGS_AZURE<<__THAUM_TAGS_AZURE__'
+              echo "${IMAGE_AZURE}:edge-debug"
+              echo '__THAUM_TAGS_AZURE__'
             } >> "$GITHUB_ENV"
           elif [ "${{ github.event.release.prerelease }}" = "true" ]; then
             THAUM_IMAGE_CHANNEL="devel"
@@ -139,6 +150,13 @@ jobs:
               echo "${IMAGE}:devel"
               echo "${IMAGE}:edge"
               echo '__THAUM_TAGS__'
+            } >> "$GITHUB_ENV"
+            {
+              echo 'TAGS_AZURE<<__THAUM_TAGS_AZURE__'
+              echo "${IMAGE_AZURE}:${VERSION}"
+              echo "${IMAGE_AZURE}:devel"
+              echo "${IMAGE_AZURE}:edge"
+              echo '__THAUM_TAGS_AZURE__'
             } >> "$GITHUB_ENV"
           else
             THAUM_IMAGE_CHANNEL="latest"
@@ -150,11 +168,20 @@ jobs:
               echo "${IMAGE}:edge"
               echo '__THAUM_TAGS__'
             } >> "$GITHUB_ENV"
+            {
+              echo 'TAGS_AZURE<<__THAUM_TAGS_AZURE__'
+              echo "${IMAGE_AZURE}:${VERSION}"
+              echo "${IMAGE_AZURE}:latest"
+              echo "${IMAGE_AZURE}:devel"
+              echo "${IMAGE_AZURE}:edge"
+              echo '__THAUM_TAGS_AZURE__'
+            } >> "$GITHUB_ENV"
           fi
 
           {
             echo "REGISTRY=${REGISTRY}"
             echo "IMAGE=${IMAGE}"
+            echo "IMAGE_AZURE=${IMAGE_AZURE}"
             echo "VERSION=${VERSION}"
             echo "THAUM_IMAGE_VERSION=${VERSION}"
             echo "THAUM_IMAGE_CHANNEL=${THAUM_IMAGE_CHANNEL}"
@@ -166,12 +193,15 @@ jobs:
         run: |
           echo "REGISTRY=${{ env.REGISTRY }}"
           echo "IMAGE=${{ env.IMAGE }}"
+          echo "IMAGE_AZURE=${{ env.IMAGE_AZURE }}"
           echo "VERSION=${{ env.VERSION }}"
           echo "THAUM_IMAGE_VERSION=${{ env.THAUM_IMAGE_VERSION }}"
           echo "THAUM_IMAGE_CHANNEL=${{ env.THAUM_IMAGE_CHANNEL }}"
           echo "PYTHON_VERSION=${{ env.PYTHON_VERSION }}"
           echo "TAGS:"
           printf '%s\n' "${{ env.TAGS }}"
+          echo "TAGS_AZURE:"
+          printf '%s\n' "${{ env.TAGS_AZURE }}"
 
       - name: Log in to GitHub Container Registry
         if: env.REGISTRY == 'ghcr.io'
@@ -200,7 +230,7 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Build and push
+      - name: Build and push base image
         uses: docker/build-push-action@v6
         with:
           context: .
@@ -208,6 +238,20 @@ jobs:
           build-args: |
             PYTHON_VERSION=${{ env.PYTHON_VERSION }}
             GEMSTONE_UTILS_REF=${{ env.GEMSTONE_UTILS_REF }}
+            THAUM_ENABLE_AZURE=0
             THAUM_IMAGE_VERSION=${{ env.THAUM_IMAGE_VERSION }}
             THAUM_IMAGE_CHANNEL=${{ env.THAUM_IMAGE_CHANNEL }}
           tags: ${{ env.TAGS }}
+
+      - name: Build and push azure image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          build-args: |
+            PYTHON_VERSION=${{ env.PYTHON_VERSION }}
+            GEMSTONE_UTILS_REF=${{ env.GEMSTONE_UTILS_REF }}
+            THAUM_ENABLE_AZURE=1
+            THAUM_IMAGE_VERSION=${{ env.THAUM_IMAGE_VERSION }}
+            THAUM_IMAGE_CHANNEL=${{ env.THAUM_IMAGE_CHANNEL }}
+          tags: ${{ env.TAGS_AZURE }}

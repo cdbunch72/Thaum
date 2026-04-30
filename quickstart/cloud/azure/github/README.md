@@ -1,6 +1,6 @@
-# Azure App Service + GitHub Actions
+# Azure Container Apps + GitHub Actions
 
-Deploy Thaum as a **single** Linux container on **Azure App Service**, built and pushed from **GitHub Actions**. This path targets **one Web App instance** and **low cost**: it is **not** a horizontal-scaling or high-availability guide.
+Deploy Thaum as a **single** container app on **Azure Container Apps**, built and pushed from **GitHub Actions**. This path targets a low-friction single service deployment; scale and high-availability tuning are out of scope for this quickstart.
 
 - General Thaum quickstart: [QUICKSTART.md](../../../QUICKSTART.md)
 - Example TOML (adjust for Azure): [systemd/thaum.conf.example](../../../systemd/thaum.conf.example)
@@ -10,14 +10,14 @@ Deploy Thaum as a **single** Linux container on **Azure App Service**, built and
 
 | Aspect | Behavior |
 |--------|----------|
-| **Topology** | One App Service plan, one Web App, one container revision |
+| **Topology** | One resource group, one Container Apps environment, one Container App |
 | **Default database** | **Bundled PostgreSQL** inside the official Thaum image (`THAUM_EXTERNAL_DB` unset or false). No managed database cost. |
-| **Data durability** | App Service **local disk is often ephemeral**. The bundled Postgres store can **lose data** on restart or move unless you attach **persistent storage** to the volume used for Postgres data, or switch to an external database (see below). Acceptable for lab/low-cost; use external DB or storage for production expectations. |
+| **Data durability** | Container filesystem is **ephemeral**. The bundled Postgres store can **lose data** on revision change or restart unless you add persistent storage or switch to an external database. |
 | **Optional upgrade** | **Azure Database for PostgreSQL** (or other managed Postgres): set **`THAUM_EXTERNAL_DB=true`**, set **`[server.database].db_url`** in your TOML (and supply secrets via env or Key Vault). See [Optional: external managed Postgres](#optional-external-managed-postgres). |
 
 ## Prerequisites
 
-- Azure subscription and permission to create resource groups, App Service, and (recommended) Azure Container Registry
+- Azure subscription and permission to create resource groups and Container Apps resources
 - [Azure CLI](https://learn.microsoft.com/cli/azure/install-azure-cli) (`az login`)
 - A GitHub repository for **your** deployment assets (Dockerfile + config + workflow). This can be a **separate** repo from the Thaum source tree, or a folder in a monorepo
 
@@ -29,56 +29,72 @@ Copy the example files from this directory into that repo:
 
 ## 1. Create Azure resources (CLI)
 
-Pick names (globally unique for Web App and ACR):
+Pick names and run the setup in PowerShell:
 
-```bash
-export SUBSCRIPTION="<your-subscription-id-or-name>"
-export LOCATION="eastus"
-export RG="thaum-rg"
-export PLAN="thaum-plan"
-export APP="thaum-app-<unique>"
-export ACR="thaumacr<unique>"   # 5–50 alphanumeric only, globally unique
+```powershell
+$SUBSCRIPTION = "<your-subscription-id-or-name>"
+$LOCATION = "eastus"
+$RESOURCE_GROUP = "thaum-rg"
+$ENVIRONMENT = "thaum-env"
+$APP_NAME = "thaum-app"
 
-az account set --subscription "$SUBSCRIPTION"
-az group create --name "$RG" --location "$LOCATION"
+az account set --subscription $SUBSCRIPTION
+az upgrade
+az extension add --name containerapp --upgrade --allow-preview true
+az provider register --namespace Microsoft.App
+az provider register --namespace Microsoft.OperationalInsights
+az group create --name $RESOURCE_GROUP --location $LOCATION
 
-# Linux App Service plan (adjust SKU: B1 is a common dev size; production may differ)
-az appservice plan create \
-  --name "$PLAN" \
-  --resource-group "$RG" \
-  --location "$LOCATION" \
-  --is-linux \
-  --sku B1
-
-# Web App for containers (placeholder image; you will point to ACR after first push)
-az webapp create \
-  --name "$APP" \
-  --resource-group "$RG" \
-  --plan "$PLAN" \
-  --deployment-container-image-name "mcr.microsoft.com/azuredocs/aci-helloworld:latest"
-
-# Container listens on 5165 (Gunicorn in the Thaum image)
-az webapp config appsettings set \
-  --resource-group "$RG" \
-  --name "$APP" \
-  --settings WEBSITES_PORT=5165
-
-# Optional: reduce cold starts on supported SKUs (adds cost)
-# az webapp config set --resource-group "$RG" --name "$APP" --always-on true
+az containerapp up `
+  --name $APP_NAME `
+  --resource-group $RESOURCE_GROUP `
+  --location $LOCATION `
+  --environment $ENVIRONMENT `
+  --source .
 ```
 
-### Azure Container Registry (recommended)
+The `az containerapp up` command creates (or reuses) the resource group, registry, environment, and app, then builds/deploys from your local source.
 
-Push **your** image (Dockerfile `FROM` upstream Thaum + your config) to ACR; the Web App pulls from there.
+### Secret mount and `secret:key` config pattern
 
-```bash
-az acr create --resource-group "$RG" --name "$ACR" --sku Basic --admin-enabled true
-az acr credential show --name "$ACR" --query "passwords[0].value" -o tsv   # save for GitHub Secrets if not using service principal alone
+Thaum supports credential indirection as `secret:key`. For Azure Container Apps, define secrets in the app and mount them as files under `/run/secrets`, then reference those names in `thaum.toml`.
+
+Example Container Apps commands:
+
+```powershell
+az containerapp secret set `
+  --name $APP_NAME `
+  --resource-group $RESOURCE_GROUP `
+  --secrets webex_token_database="<token>" webex_token_system="<token>" webex_token_helpdesk="<token>"
+
+az containerapp update `
+  --name $APP_NAME `
+  --resource-group $RESOURCE_GROUP `
+  --set-env-vars THAUM_CREDS_DIR=/tmp/thaum-creds `
+  --yaml containerapp.secrets.yaml
 ```
 
-After your pipeline pushes `YOUR_ACR.azurecr.io/your-image:tag`, point the Web App at it (see [deploy.yml.example](deploy.yml.example) or run `az webapp config container set` with your registry URL, image name, and credentials).
+Use a small YAML patch (`containerapp.secrets.yaml`) to mount a `Secret` volume at `/run/secrets` and map secret items to filenames. The filename should match the `secret:key` identifier you use in config.
 
-**Portal:** You can create the same resources in the Azure Portal (**Create a resource** → **Web App** → **Docker Container**, Linux). Set **Configuration** → **Application settings** → add **`WEBSITES_PORT` = `5165`**.
+```yaml
+properties:
+  template:
+    containers:
+      - name: thaum-app
+        volumeMounts:
+          - volumeName: thaum-secrets
+            mountPath: /run/secrets
+    volumes:
+      - name: thaum-secrets
+        storageType: Secret
+        secrets:
+          - secretRef: webex_token_database
+            path: webex_token_database
+          - secretRef: webex_token_system
+            path: webex_token_system
+          - secretRef: webex_token_helpdesk
+            path: webex_token_helpdesk
+```
 
 ### Health checks
 
@@ -87,17 +103,17 @@ Thaum exposes:
 - `GET /health` — process liveness
 - `GET /ready` — database readiness (`SELECT 1`)
 
-Configure App Service **Health check** (when available on your plan) to hit `/ready` or `/health` on your site’s HTTPS URL. Paths are under your public `base_url` host.
+Configure Container Apps probes to hit `/ready` (or `/health`) on port `5165`.
 
 ## 2. Configuration file
 
 1. Start from [systemd/thaum.conf.example](../../../systemd/thaum.conf.example).
-2. Set **`[server].base_url`** to your Web App’s public URL, for example `https://thaum-app-<unique>.azurewebsites.net` (or your custom domain).
+2. Set **`[server].base_url`** to your Container App’s public URL.
 3. Save it in your deploy repo as **`thaum.toml`** (TOML content; use the **`.toml`** extension for editor highlighting). To use another path, set **`THAUM_CONFIG_FILE`** in the Dockerfile or environment.
 
 The stock Thaum image does **not** set `THAUM_CONFIG_FILE`; the app resolves config automatically (see `thaum.paths.resolve_config_path`). [Dockerfile.example](Dockerfile.example) copies **`thaum.toml`** to **`/etc/thaum/thaum.toml`**.
 
-Keep secrets out of committed files: use **`env:`** references and App Service **Configuration** application settings, or Key Vault references (see [Key Vault URI helper](#key-vault-uri-helper)).
+Keep secrets out of committed files: use `secret:key` references and mounted files in `/run/secrets`, or use Key Vault references (see [Key Vault URI helper](#key-vault-uri-helper)).
 
 ### `THAUM_BASE_URL` in CI
 
@@ -109,18 +125,18 @@ Use [Dockerfile.example](Dockerfile.example):
 
 - **`FROM`** a **pinned** upstream image (version tag or digest), not only `:latest`, for reproducible deploys. Default upstream: `ghcr.io/gemstone-software-dev/thaum` (see [README.md](../../../../README.md)).
 - **`COPY`** your versioned `thaum.toml` into `/etc/thaum/` as `/etc/thaum/thaum.toml` (canonical filename).
-- For **external Postgres**, set **`THAUM_EXTERNAL_DB=true`** in the Dockerfile or App Service settings and supply **`db_url`** (and secrets) as documented in [ARCHITECTURE.md](../../../../docs/ARCHITECTURE.md).
+- For **external Postgres**, set **`THAUM_EXTERNAL_DB=true`** in the Dockerfile or Container Apps env vars and supply **`db_url`** (and secrets) as documented in [ARCHITECTURE.md](../../../../docs/ARCHITECTURE.md).
 
 ## 4. GitHub Actions
 
 Copy [deploy.yml.example](deploy.yml.example) to `.github/workflows/deploy.yml` and set:
 
-- **Repository variables** (or hardcode in the workflow): resource group, Web App name, ACR login server, image name/tag
+- **Repository variables** (or hardcode in the workflow): resource group, Container App name, ACR login server, image name/tag
 - **Repository secrets**
-  - **`AZURE_CREDENTIALS`**: JSON output of a service principal with rights to push to ACR and update the Web App (e.g. `az ad sp create-for-rbac --name "gha-thaum" --role contributor --scopes /subscriptions/<sub>/resourceGroups/<rg> --sdk-auth`)
+  - **`AZURE_CREDENTIALS`**: JSON output of a service principal with rights to push to ACR and update the Container App (e.g. `az ad sp create-for-rbac --name "gha-thaum" --role contributor --scopes /subscriptions/<sub>/resourceGroups/<rg> --sdk-auth`)
   - Registry credentials if your workflow uses explicit `docker login` (some setups rely on `az acr login` after `azure/login` with an SP that has `AcrPush`)
 
-The workflow **builds** your image, runs **`thaum_config_check.py --schema-check`** **inside** the built image (no checkout of the Thaum source repo required), **pushes** to ACR, and **updates** the Web App container. The example uses **`az acr credential show`** so the Web App can pull the image; **ACR admin account** must be enabled (see CLI snippet above). If your org disables admin users, configure pull authentication separately (for example [managed identity for the Web App](https://learn.microsoft.com/azure/app-service/configure-custom-container)) and replace the `az webapp config container set` step accordingly.
+The workflow **builds** your image, runs **`thaum_config_check.py --schema-check`** **inside** the built image (no checkout of the Thaum source repo required), **pushes** to ACR, and **updates** the Container App image revision.
 
 - **`--schema-check`**: safe in CI without resolving secrets or hitting the database.
 - **`--test-config`**: full validation + DB ping; run only where secrets and DB exist (e.g. manual run on a trusted host or a protected environment).
@@ -128,7 +144,7 @@ The workflow **builds** your image, runs **`thaum_config_check.py --schema-check
 ## Optional: external managed Postgres
 
 1. Create a managed Postgres instance and a database/user for Thaum.
-2. Set App Service application setting **`THAUM_EXTERNAL_DB=true`**.
+2. Set Container Apps environment variable **`THAUM_EXTERNAL_DB=true`**.
 3. In your TOML, set **`[server.database].db_url`** to the SQLAlchemy URL (use **`env:`** or Key Vault; do not commit passwords).
 4. Redeploy. The container runs **Gunicorn only** (no bundled Postgres); see [Dockerfile](../../../../Dockerfile) and [docker/entrypoint.sh](../../../../docker/entrypoint.sh).
 
@@ -148,6 +164,6 @@ There is **no** interactive “enter all secrets” wizard: operators with **mul
 | File | Purpose |
 |------|---------|
 | [Dockerfile.example](Dockerfile.example) | `FROM` upstream Thaum image + `COPY` `thaum.toml` → `/etc/thaum/thaum.toml` |
-| [deploy.yml.example](deploy.yml.example) | Build → schema-check → push to ACR → update Web App |
+| [deploy.yml.example](deploy.yml.example) | Build → schema-check → push to ACR → update Container App |
 | [scripts/keyvault-uri.ps1.example](scripts/keyvault-uri.ps1.example) | Print Key Vault URI (non-interactive) |
 | [scripts/keyvault-uri.bat.example](scripts/keyvault-uri.bat.example) | Invoke the PowerShell script from cmd |

@@ -29,7 +29,7 @@ lookup_plugin = "null"
 
 [server.database]
 # Shared app DB (lookup cache, election, crypto metadata, admin state). SQLAlchemy URL.
-# Supports ResolvedSecret forms via resolve_secret (inline, env:VAR, file:/path, secret:name).
+# Supports ResolvedSecret forms via resolve_secret (inline, env:VAR, file:/path, secret:key).
 # Empty/unset: bundled PostgreSQL default (Unix socket) when THAUM_EXTERNAL_DB is unset/false;
 # if THAUM_EXTERNAL_DB is true, you must set db_url (e.g. managed Postgres or sqlite for dev).
 # Bundled default uses peer auth on the Unix socket (no password); optional THAUM_PG_USER,
@@ -73,7 +73,7 @@ lookup_plugin = "null"
 
 # Named connection profiles (connections.plugins.<plugin>). Merge order for consumers is
 # connection → defaults → plugin/bot. Optional: connection_ref on lookup and on [defaults.alert.jira] points here.
-# Use secret:name for systemd encrypted credentials (Quadlet); file:/run/secrets often fails for rootless.
+# Use secret:key for mounted secret files (systemd credentials, Azure Container Apps mounts, Kubernetes secrets).
 [connections.example-atlassian]
 plugin = "atlassian"
 site_url = "https://example.atlassian.net"
@@ -134,9 +134,9 @@ alert_type = "jira"
 responders = ["team:DBA"]
 emergency_warning_message = ""
 # Webex bot token (ResolvedSecret).
-token = "file:/run/secrets/webex_token_database"
+token = "secret:webex_token_database"
 # Omit hmac_secret for random value (set server.database.database_vault_passphrase so secret can be shared between workers). Or pin a secret:
-# hmac_secret = "file:/run/secrets/webex_hmac_database"
+# hmac_secret = "secret:webex_hmac_database"
 
 [bots.database.alert]
 # Jira alert responders (team IDs resolved via Jira + lookup). Merged over defaults.alert.jira.
@@ -153,8 +153,8 @@ send_alerts = true
 alert_type = "jira"
 responders = ["team:SysAdmin"]
 emergency_warning_message = ""
-token = "file:/run/secrets/webex_token_system"
-# hmac_secret = "file:/run/secrets/webex_hmac_system"
+token = "secret:webex_token_system"
+# hmac_secret = "secret:webex_hmac_system"
 
 [bots.system.alert]
 responders = ["team:SysAdmin"]
@@ -171,7 +171,7 @@ send_alerts = false
 alert_type = "null"
 responders = ["team:Helpdesk"]
 emergency_warning_message = ""
-token = "file:/run/secrets/webex_token_helpdesk"
-# hmac_secret = "file:/run/secrets/webex_hmac_helpdesk"
+token = "secret:webex_token_helpdesk"
+# hmac_secret = "secret:webex_hmac_helpdesk"
 
 # No [bots.helpdesk.alert] — null alert plugin; help still creates incident rooms via engine.

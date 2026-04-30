@@ -9,7 +9,7 @@ export HOME=/home/thaum
 # Writable log directory for the app user (e.g. THAUM_LOG_TO_VAR_LOG, PostgreSQL logs under subtree).
 install -d -m 0755 -o thaum -g thaum /var/log/thaum
 
-# Systemd/orchestrator credentials often appear under /run/secrets (or /var/run/secrets) with
+# Systemd/orchestrator credentials (including Azure Container Apps secret volumes) often appear under /run/secrets (or /var/run/secrets) with
 # permissions readable only by root. The app runs as user thaum, so resolve_secret(secret:...)
 # cannot read those files unless we copy them to a tmpfs dir (see Quadlet THAUM_CREDS_DIR) and
 # point CREDENTIALS_DIRECTORY there. This must run before any exec path (external DB or supervisord).

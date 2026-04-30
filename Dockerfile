@@ -1,5 +1,6 @@
 # syntax=docker/dockerfile:1
-# Build (local tag for Dockerfile builds; see quickstart/systemd/quadlet/thaum.container): docker build -t localhost/thaum:local .
+# Build (base image): docker build -t localhost/thaum:local .
+# Build (azure-enabled variant): docker build --build-arg THAUM_ENABLE_AZURE=1 -t localhost/thaum-azure:local .
 # Buildah: buildah bud -t localhost/thaum:local -f Dockerfile .
 #
 # Python 3.14: docker build --build-arg PYTHON_VERSION=3.14 -t localhost/thaum:local .
@@ -13,6 +14,7 @@ ARG PYTHON_VERSION=3.13
 FROM python:${PYTHON_VERSION}-slim AS builder
 
 ARG GEMSTONE_UTILS_REF=v0.4.0rc1
+ARG THAUM_ENABLE_AZURE=0
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \
@@ -32,8 +34,12 @@ ENV PATH="/venv/bin:$PATH"
 
 # Install gemstone_utils from GitHub first; omit any gemstone_utils requirement line from requirements.txt.
 RUN pip install --no-cache-dir --upgrade pip setuptools wheel \
-    && pip install --no-cache-dir \
-        "gemstone_utils[azure] @ git+https://github.com/gemstone-software-dev/gemstone_utils.git@${GEMSTONE_UTILS_REF}" \
+    && if [ "${THAUM_ENABLE_AZURE}" = "1" ]; then \
+         GEMSTONE_SPEC="gemstone_utils[azure] @ git+https://github.com/gemstone-software-dev/gemstone_utils.git@${GEMSTONE_UTILS_REF}"; \
+       else \
+         GEMSTONE_SPEC="gemstone_utils @ git+https://github.com/gemstone-software-dev/gemstone_utils.git@${GEMSTONE_UTILS_REF}"; \
+       fi \
+    && pip install --no-cache-dir "${GEMSTONE_SPEC}" \
     && grep -v '^gemstone_utils' requirements.txt > /tmp/requirements.nopypi-eu.txt \
     && pip install --no-cache-dir -r /tmp/requirements.nopypi-eu.txt \
     && pip uninstall -y pip setuptools wheel \

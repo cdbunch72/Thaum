@@ -6,7 +6,7 @@ Guides for running Thaum on **public-cloud managed platforms** (SaaS / IaaS): ho
 
 | Path | Description |
 |------|-------------|
-| [**azure/github**](azure/github/README.md) | **Azure App Service** (Linux container) + **GitHub Actions** — build, schema-check, push to ACR, deploy |
+| [**azure/github**](azure/github/README.md) | **Azure Container Apps** + **GitHub Actions** — build, schema-check, push to ACR, deploy |
 
 ## Planned
 
