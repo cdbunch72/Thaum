@@ -1,0 +1,177 @@
+# =============================================================================
+# Thaum sample configuration (annotated)
+# =============================================================================
+# Config discovery order:
+# 1) THAUM_CONFIG_FILE (if set)
+# 2) /etc/thaum/thaum.toml
+# 3) /etc/thaum/thaum.conf
+# 4) ./thaum.toml
+# 5) ./thaum.conf
+# Canonical filename is thaum.toml (best editor syntax support).
+# - Bot webhook URL is built as: {base_url}{bot_url_prefix}/{bot_key}
+# - Do not set bot "endpoint" in TOML; validate_bot_config injects it.
+#
+# Alert / ack commands: registered only when send_alerts = true (see thaum/handlers.py).
+# helpdesk-style bots use send_alerts = false + alert_type = "null" to disable them.
+# Incident prompt card for help/emergency can be customized per bot via Jinja JSON:
+# - incident_prompt_card_template_path = "./incident_prompt_card.sample.j2"
+# - incident_prompt_card_template = """{ ... jinja json ... }"""   # inline override
+# =============================================================================
+
+[server]
+# Public base URL of this Thaum deployment (used for bot webhooks and links).
+base_url = "https://thaum.example.com"
+# Bot driver module under bots.plugins (e.g. webex).
+bot_type = "webex"
+# Lookup plugin under lookup.plugins (null = no external directory).
+lookup_plugin = "null"
+# bot_url_prefix = "/bot"          # default; webhook path = {base_url}/bot/{bot_key}
+
+[server.database]
+# Shared app DB (lookup cache, election, crypto metadata, admin state). SQLAlchemy URL.
+# Supports ResolvedSecret forms via resolve_secret (inline, env:VAR, file:/path, secret:name).
+# Empty/unset: bundled PostgreSQL default (Unix socket) when THAUM_EXTERNAL_DB is unset/false;
+# if THAUM_EXTERNAL_DB is true, you must set db_url (e.g. managed Postgres or sqlite for dev).
+# Bundled default uses peer auth on the Unix socket (no password); optional THAUM_PG_USER,
+# THAUM_PG_DATABASE, THAUM_PG_SOCKET_DIR (see docs/ARCHITECTURE.md).
+# db_url = "sqlite:////var/lib/thaum/thaum.db"
+# database_vault_passphrase = "env:THAUM_DATABASE_VAULT_PASSPHRASE"   # required if Webex omits hmac_secret (shared DB HMAC)
+# data_key_rotate_days = 60       # 0 = disable automatic DEK rotation
+
+[server.election]
+# All workers participate; Webex webhooks are registered by the leader only.
+# Non-leader workers block in bootstrap until leader init tasks finish (DB barrier row).
+# namespace = "thaum"
+# lease_seconds = 60
+# heartbeat_seconds = 15.0
+# leader_init_wait_timeout_seconds = 300.0
+
+[server.admin]
+# Signed log-level admin (see docs/admin-log-level.md).
+# route_id = ""                    # e.g. random segment to cut down on malicious probes; empty disables POST /{route_id}/log-level
+# hmac_secret_b64url = "env:THAUM_LOG_ADMIN_HMAC_SECRET_B64U"   # 32 bytes as base64url
+# clock_skew_seconds = 300
+# log_state_poll_seconds = 2.0   # 0 = no poll; >0 syncs workers from DB
+
+[logging]
+# All keys optional; see thaum.types.LogConfig (extra keys forbidden).
+# level = "INFO"        # e.g. DEBUG, VERBOSE, INFO, WARNING, ERROR
+# timezone = "UTC"
+# no_timestamp = false
+# fractional_seconds = false
+# Runtime: THAUM_LOG_TO_VAR_LOG=1|true|yes|on enables default file path /var/log/thaum/thaum.log when "file" is not set here.
+# Opt-in file logging: true / 1 / "yes" / "true" / "1" → default path /var/log/thaum/thaum.log
+# (parent dir must exist). Any other non-empty string → that path. file_backup_count = 5
+# file = true
+# file = "/var/lib/thaum/thaum.log"
+# file_backup_count = 5
+
+[lookup]
+# Merged with [lookup.<lookup_plugin>] (same section name as server.lookup_plugin).
+# Configure the DB URL under [server.database].db_url (not here).
+# default_team_ttl_seconds = 14400
+
+# Named connection profiles (connections.plugins.<plugin>). Merge order for consumers is
+# connection → defaults → plugin/bot. Optional: connection_ref on lookup and on [defaults.alert.jira] points here.
+# Use secret:name for systemd encrypted credentials (Quadlet); file:/run/secrets often fails for rootless.
+[connections.example-atlassian]
+plugin = "atlassian"
+site_url = "https://example.atlassian.net"
+cloud_id = "00000000-0000-0000-0000-000000000000"
+org_id = "ffffffff-ffff-ffff-ffff-ffffffffffff"
+user = "thaum-atlassian-bot@example.com"
+api_token = "secret:atlassian-api-token"
+
+# Atlassian Cloud lookup (lookup.plugins.atlassian): Public Teams + Jira REST. Platform id key "jira".
+# server.lookup_plugin = "atlassian"
+# [lookup.atlassian]
+# connection_ref = "example-atlassian"
+# teams_page_size = 50
+# http_timeout_seconds = 30
+
+# -----------------------------------------------------------------------------
+# Shared Jira (JSM Ops) alert defaults merged into each bot that uses alert_type "jira".
+# Keys must match alerts.plugins.jira.config.JiraAlertPluginConfig.
+# Per-bot overrides: [bots.<id>.alert] (shallow merge; bot table wins on same keys).
+# Also inherits alerts.base.BaseAlertPluginConfig (e.g. status_mentions).
+# -----------------------------------------------------------------------------
+[defaults.alert.jira]
+# Pull site_url, cloud_id, org_id, user, api_token from [connections.example-atlassian] (Jira alert ignores org_id).
+connection_ref = "example-atlassian"
+# Per-bot [bots.<id>.alert] can still override any of these keys (shallow merge; bot wins).
+# Bearer for POST {base_url}/alerts/<bot_key>/status (canonical JSON pattern). Empty disables verification.
+status_webhook_bearer = ""
+# Default empty; each Jira bot normally sets responders under [bots.<id>.alert].
+responders = []
+
+# --- Built-in defaults (uncomment to override) ---
+# priority_normal = "P3"
+# priority_high = "P2"
+# status_mentions = true
+# send_escalate_msg = false
+# Jinja context: team_description, sender_*, responder_* (see alerts.plugins.jira.status_webhook)
+# status_ack_template = """..."""
+# status_unack_template = """..."""
+# status_escalate_template = """..."""
+
+# =============================================================================
+# Bot: database — Jira on-call for DBA team
+# =============================================================================
+[bots.database]
+name = "Thaum Database"
+team_description = "Database"
+high_pri_on = false
+send_alerts = true
+alert_type = "jira"
+# Optional: path to a Jinja-rendered JSON Adaptive Card template for help/emergency.
+# incident_prompt_card_template_path = "./incident_prompt_card.sample.j2"
+# Optional inline override. If both are set, inline wins.
+# incident_prompt_card_template = """{ "$schema": "http://adaptivecards.io/schemas/adaptive-card.json", "type": "AdaptiveCard", "version": "1.3", "body": [], "actions": [] }"""
+# Optional customer service message posted when a new incident room is created.
+# Set to an empty string ("") to disable sending this message.
+# customer_service_message_template = "Thank you for your patience.  The next available person from {{ team_description }} will be with you shortlly."
+# Who is invited into new incident rooms (lookup resolves team:/person: / email).
+responders = ["team:DBA"]
+emergency_warning_message = ""
+# Webex bot token (ResolvedSecret).
+token = "file:/run/secrets/webex_token_database"
+# Omit hmac_secret for random value (set server.database.database_vault_passphrase so secret can be shared between workers). Or pin a secret:
+# hmac_secret = "file:/run/secrets/webex_hmac_database"
+
+[bots.database.alert]
+# Jira alert responders (team IDs resolved via Jira + lookup). Merged over defaults.alert.jira.
+responders = ["team:DBA"]
+
+# =============================================================================
+# Bot: system — Jira on-call for SysAdmin team
+# =============================================================================
+[bots.system]
+name = "Thaum System"
+team_description = "Systems"
+high_pri_on = false
+send_alerts = true
+alert_type = "jira"
+responders = ["team:SysAdmin"]
+emergency_warning_message = ""
+token = "file:/run/secrets/webex_token_system"
+# hmac_secret = "file:/run/secrets/webex_hmac_system"
+
+[bots.system.alert]
+responders = ["team:SysAdmin"]
+
+# =============================================================================
+# Bot: helpdesk — rooms only, no Jira / no alert or ack commands
+# =============================================================================
+[bots.helpdesk]
+name = "Thaum Helpdesk"
+team_description = "Helpdesk"
+high_pri_on = false
+# send_alerts false disables standalone "alert" and "ack" handlers and requires alert_type "null".
+send_alerts = false
+alert_type = "null"
+responders = ["team:Helpdesk"]
+emergency_warning_message = ""
+token = "file:/run/secrets/webex_token_helpdesk"
+# hmac_secret = "file:/run/secrets/webex_hmac_helpdesk"
+
+# No [bots.helpdesk.alert] — null alert plugin; help still creates incident rooms via engine.
