@@ -53,7 +53,8 @@ Flask app is created.
 
   - Otherwise (unset/false): **bundled PostgreSQL** — the URL is built by `default_bundled_db_url()` as `postgresql+psycopg://…` over a **Unix socket** (`host` query parameter), using **peer** authentication (no password in the URL; the process OS user must match the role, e.g. `thaum` in the container). Optional: **`THAUM_PG_USER`** (default `thaum`), **`THAUM_PG_DATABASE`** (default `thaum`), **`THAUM_PG_SOCKET_DIR`** (default `/tmp/postgres`).
 
-- The single container image uses **`THAUM_EXTERNAL_DB`** in `entrypoint.sh`: external DB → `gunicorn` only; bundled → `supervisord` (PostgreSQL + app). See the `Dockerfile` and `docker/` assets.
+- **Container images** are built from one `Dockerfile` with build args **`THAUM_ENABLE_AZURE`** (venv includes `gemstone_utils[azure]`) and **`THAUM_BUNDLED_POSTGRES`** (install PostgreSQL + supervisord in the image). CI publishes four name suffixes on the same registry base: default, **`-azure`**, **`-external-db`**, **`-azure-external-db`** (the last is `…-azure-external-db`, i.e. Azure-enabled image name plus `-external-db`).
+- **`THAUM_IMAGE_BUNDLED_POSTGRES`** is set at image build time from **`THAUM_BUNDLED_POSTGRES`**. In `entrypoint.sh`, if it is **0** (external-db image), the process always runs **gunicorn** only. Otherwise **`THAUM_EXTERNAL_DB`** selects runtime mode: external DB → **gunicorn** only; bundled → **supervisord** (PostgreSQL + app). See the `Dockerfile` and `docker/` assets.
 
 ### **Phase 4 - Instantiate lookup, bots, and alert plugins**
 

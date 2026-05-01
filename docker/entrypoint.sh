@@ -30,6 +30,21 @@ if [ -n "${THAUM_CREDS_DIR:-}" ]; then
   export CREDENTIALS_DIRECTORY="$thaum_creds_dir"
 fi
 
+# Baked at image build time: 0 = no bundled PostgreSQL/supervisord in this image (gunicorn only).
+img_bundled_raw="${THAUM_IMAGE_BUNDLED_POSTGRES:-1}"
+img_bundled="$(printf %s "$img_bundled_raw" | tr '[:upper:]' '[:lower:]')"
+case "$img_bundled" in
+  0|false|no|off) IMAGE_EXTERNAL_ONLY=1 ;;
+  *) IMAGE_EXTERNAL_ONLY=0 ;;
+esac
+
+if [ "$IMAGE_EXTERNAL_ONLY" = 1 ]; then
+  exec gosu thaum /venv/bin/gunicorn \
+    --bind "${GUNICORN_BIND:-0.0.0.0:5165}" \
+    --workers "${GUNICORN_WORKERS:-1}" \
+    app:app
+fi
+
 ext_raw="${THAUM_EXTERNAL_DB:-}"
 ext="$(printf %s "$ext_raw" | tr '[:upper:]' '[:lower:]')"
 case "$ext" in

@@ -1,12 +1,22 @@
 # syntax=docker/dockerfile:1
-# Build (base image): docker build -t localhost/thaum:local .
-# Build (azure-enabled variant): docker build --build-arg THAUM_ENABLE_AZURE=1 -t localhost/thaum-azure:local .
+#
+# Build args (combine as needed):
+#   THAUM_ENABLE_AZURE=0|1     — gemstone_utils[azure] in the venv (default 0).
+#   THAUM_BUNDLED_POSTGRES=0|1 — install PostgreSQL + supervisord in the image (default 1).
+#
+# Four variants (examples; PYTHON_VERSION optional):
+#   docker build -t localhost/thaum:local .
+#   docker build --build-arg THAUM_ENABLE_AZURE=1 -t localhost/thaum-azure:local .
+#   docker build --build-arg THAUM_BUNDLED_POSTGRES=0 -t localhost/thaum-external-db:local .
+#   docker build --build-arg THAUM_ENABLE_AZURE=1 --build-arg THAUM_BUNDLED_POSTGRES=0 \
+#     -t localhost/thaum-azure-external-db:local .
+#
+# Runtime:
+#   Bundled image (THAUM_BUNDLED_POSTGRES=1): unset THAUM_EXTERNAL_DB for Unix-socket Postgres + supervisord;
+#     or THAUM_EXTERNAL_DB=true + [server.database].db_url for gunicorn only.
+#   External-db image (THAUM_BUNDLED_POSTGRES=0): gunicorn only; set [server.database].db_url (THAUM_EXTERNAL_DB not required).
+#
 # Buildah: buildah bud -t localhost/thaum:local -f Dockerfile .
-#
-# Python 3.14: docker build --build-arg PYTHON_VERSION=3.14 -t localhost/thaum:local .
-#
-# Bundled PostgreSQL (default): unset THAUM_EXTERNAL_DB or false; app connects via Unix socket (peer).
-# External DB: THAUM_EXTERNAL_DB=true and set [server.database].db_url — entrypoint runs gunicorn only.
 
 ARG PYTHON_VERSION=3.13
 
@@ -48,37 +58,48 @@ RUN pip install --no-cache-dir --upgrade pip setuptools wheel \
 # --- runtime: copy venv + app only ---
 FROM python:${PYTHON_VERSION}-slim AS runtime
 
+ARG THAUM_BUNDLED_POSTGRES=1
 ARG THAUM_IMAGE_VERSION=unknown
 ARG THAUM_IMAGE_CHANNEL=local
 LABEL org.opencontainers.image.version="${THAUM_IMAGE_VERSION}" \
-      thaum.image.channel="${THAUM_IMAGE_CHANNEL}"
+      thaum.image.channel="${THAUM_IMAGE_CHANNEL}" \
+      thaum.image.bundled_postgres="${THAUM_BUNDLED_POSTGRES}"
 
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends \
-        gosu \
-        postgresql \
-        postgresql-client \
-        supervisor \
-    && rm -rf /var/lib/apt/lists/* \
-    && PG_BINDIR="$(ls -d /usr/lib/postgresql/*/bin | head -n1)" \
-    && for f in initdb pg_ctl postgres pg_isready; do \
-        ln -sf "${PG_BINDIR}/${f}" "/usr/local/bin/${f}"; \
-    done
+    && apt-get install -y --no-install-recommends gosu \
+    && if [ "${THAUM_BUNDLED_POSTGRES}" = "1" ]; then \
+         apt-get install -y --no-install-recommends \
+             postgresql \
+             postgresql-client \
+             supervisor \
+         && PG_BINDIR="$(ls -d /usr/lib/postgresql/*/bin | head -n1)" \
+         && for f in initdb pg_ctl postgres pg_isready; do \
+                ln -sf "${PG_BINDIR}/${f}" "/usr/local/bin/${f}"; \
+            done; \
+       fi \
+    && rm -rf /var/lib/apt/lists/*
 
 RUN useradd --create-home --uid 1000 --shell /usr/sbin/nologin thaum \
-    && usermod -aG postgres thaum
+    && if [ "${THAUM_BUNDLED_POSTGRES}" = "1" ]; then usermod -aG postgres thaum; fi
 
 WORKDIR /app
 # Do not set THAUM_CONFIG_FILE in the image. Let runtime configuration decide config location.
 # Prefer .toml over .conf for the same TOML content for better editor syntax highlighting.
 ENV PATH="/venv/bin:$PATH" \
     PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1
+    PYTHONUNBUFFERED=1 \
+    THAUM_IMAGE_BUNDLED_POSTGRES=${THAUM_BUNDLED_POSTGRES}
 
 COPY --from=builder /venv /venv
 COPY --chown=1000:1000 . .
 
-COPY docker/supervisord.conf /etc/supervisor/supervisord.conf
+COPY docker/supervisord.conf /tmp/thaum-supervisord.conf
+RUN if [ "${THAUM_BUNDLED_POSTGRES}" = "1" ]; then \
+        install -d /etc/supervisor \
+        && mv /tmp/thaum-supervisord.conf /etc/supervisor/supervisord.conf; \
+    else \
+        rm -f /tmp/thaum-supervisord.conf; \
+    fi
 
 RUN chmod +x \
         /app/docker/entrypoint.sh \
