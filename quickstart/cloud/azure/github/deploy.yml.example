@@ -1,5 +1,7 @@
 # SPDX-License-Identifier: MPL-2.0
 # Example GitHub Actions workflow: build deploy image, schema-check, push to ACR, update Azure Container App.
+# Application secrets (tokens, DB passwords) belong in Azure Key Vault and are wired to the app with
+# keyvaultref + --secret-volume-mount per quickstart/cloud/azure/github/README.md — not in this workflow.
 # Copy to .github/workflows/deploy.yml in your deploy repository and configure repository Variables
 # (Settings → Secrets and variables → Actions → Variables) and Secrets below.
 #

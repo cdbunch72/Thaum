@@ -1,13 +1,16 @@
 # SPDX-License-Identifier: MPL-2.0
-# Print Azure Key Vault URI (vaultUri) for use in documentation or manual TOML editing.
+# Print Azure Key Vault base URI (properties.vaultUri), e.g. https://myvault.vault.azure.net/
+# For Azure Container Apps keyvaultref secrets, append: secrets/<SecretName>
+#   Full URI (latest version): https://myvault.vault.azure.net/secrets/MySecret
+# See: https://learn.microsoft.com/en-us/azure/container-apps/manage-secrets?tabs=azure-cli
+#
 # Copy to keyvault-uri.ps1 and run non-interactively, e.g.:
 #   .\keyvault-uri.ps1 -VaultName myvault
 #   .\keyvault-uri.ps1 -VaultName myvault -Subscription "00000000-0000-0000-0000-000000000000"
 #
-# For storing secrets use Azure CLI or your standard process, e.g.:
-#   az keyvault secret set --vault-name myvault --name MySecret --value "..."
-#
-# `azexp:` reference grammar is defined in gemstone_utils (see Thaum thaum_config_check / docs).
+# To upload secret bytes from a file without echoing them on the command line:
+#   az keyvault secret set --vault-name myvault --name MySecret --file path\to\secret.txt
+# Or use set-keyvault-secret-from-file.ps1.example in this directory.
 
 param(
     [Parameter(Mandatory = $true, HelpMessage = "Key Vault name")]

@@ -1,42 +1,46 @@
 # Azure Container Apps + GitHub Actions
 
-Deploy Thaum as a **single** container app on **Azure Container Apps**, built and pushed from **GitHub Actions**. This path targets a low-friction single service deployment; scale and high-availability tuning are out of scope for this quickstart.
+Deploy Thaum as a **single** container app on **Azure Container Apps** using an image from a **container registry** (public [GHCR](https://github.com/orgs/gemstone-software-dev/packages) or your own **ACR** after [GitHub Actions](deploy.yml.example) builds and pushes). This quickstart does not use `az containerapp up --source .`; it follows the registry-based pattern in [Tutorial: Build and deploy your app to Azure Container Apps (ACR-remote)](https://learn.microsoft.com/en-us/azure/container-apps/tutorial-code-to-cloud?tabs=bash%2Ccsharp&pivots=acr-remote).
 
 - General Thaum quickstart: [QUICKSTART.md](../../../QUICKSTART.md)
 - Example TOML (adjust for Azure): [systemd/thaum.conf.example](../../../systemd/thaum.conf.example)
 - Container image tags (GHCR, etc.): [README.md](../../../../README.md) (section *Container images (CI)*)
+
+Microsoft references for secrets and Key Vault:
+
+- [Manage secrets in Azure Container Apps](https://learn.microsoft.com/en-us/azure/container-apps/manage-secrets?tabs=azure-cli) (`keyvaultref`, `secretref`, `--secret-volume-mount`)
+- [`az keyvault secret set`](https://learn.microsoft.com/en-us/cli/azure/keyvault/secret?view=azure-cli-latest#az-keyvault-secret-set)
 
 ## What you get
 
 | Aspect | Behavior |
 |--------|----------|
 | **Topology** | One resource group, one Container Apps environment, one Container App |
+| **Image** | Pulled from **GHCR** (simplest if the image is public) or **ACR** (typical with a deploy repo and CI) |
 | **Default database** | **Bundled PostgreSQL** inside the official Thaum image (`THAUM_EXTERNAL_DB` unset or false). No managed database cost. |
 | **Data durability** | Container filesystem is **ephemeral**. The bundled Postgres store can **lose data** on revision change or restart unless you add persistent storage or switch to an external database. |
-| **Optional upgrade** | **Azure Database for PostgreSQL** (or other managed Postgres): set **`THAUM_EXTERNAL_DB=true`**, set **`[server.database].db_url`** in your TOML (and supply secrets via env or Key Vault). See [Optional: external managed Postgres](#optional-external-managed-postgres). |
+| **Optional upgrade** | **Azure Database for PostgreSQL** (or other managed Postgres): set **`THAUM_EXTERNAL_DB=true`**, set **`[server.database].db_url`** in your TOML (and supply credentials via Key Vault as below). See [Optional: external managed Postgres](#optional-external-managed-postgres). |
 
 ## Prerequisites
 
-- Azure subscription and permission to create resource groups and Container Apps resources
+- Azure subscription and rights to create resource groups, Container Apps, Key Vault, and (for ACR path) Azure Container Registry
 - [Azure CLI](https://learn.microsoft.com/cli/azure/install-azure-cli) (`az login`)
-- A GitHub repository for **your** deployment assets (Dockerfile + config + workflow). This can be a **separate** repo from the Thaum source tree, or a folder in a monorepo
+- A GitHub repository for **your** deployment assets (Dockerfile + config + workflow) if you use the ACR path
 
 Copy the example files from this directory into that repo:
 
 - [Dockerfile.example](Dockerfile.example) → `Dockerfile`
 - [deploy.yml.example](deploy.yml.example) → `.github/workflows/deploy.yml`
-- Optionally [scripts/keyvault-uri.ps1.example](scripts/keyvault-uri.ps1.example) → `scripts/keyvault-uri.ps1`
+- [scripts/keyvault-uri.ps1.example](scripts/keyvault-uri.ps1.example) → `scripts/keyvault-uri.ps1` (optional)
+- [scripts/set-keyvault-secret-from-file.ps1.example](scripts/set-keyvault-secret-from-file.ps1.example) → `scripts/set-keyvault-secret-from-file.ps1` (optional)
 
-## 1. Create Azure resources (CLI)
-
-Pick names and run the setup in PowerShell:
+## 1. Azure CLI setup
 
 ```powershell
 $SUBSCRIPTION = "<your-subscription-id-or-name>"
 $LOCATION = "eastus"
 $RESOURCE_GROUP = "thaum-rg"
 $ENVIRONMENT = "thaum-env"
-$APP_NAME = "thaum-app"
 
 az account set --subscription $SUBSCRIPTION
 az upgrade
@@ -45,125 +49,166 @@ az provider register --namespace Microsoft.App
 az provider register --namespace Microsoft.OperationalInsights
 az group create --name $RESOURCE_GROUP --location $LOCATION
 
-az containerapp up `
-  --name $APP_NAME `
+az containerapp env create `
+  --name $ENVIRONMENT `
   --resource-group $RESOURCE_GROUP `
-  --location $LOCATION `
-  --environment $ENVIRONMENT `
-  --source .
+  --location $LOCATION
 ```
 
-The `az containerapp up` command creates (or reuses) the resource group, registry, environment, and app, then builds/deploys from your local source.
+## 2. Choose an image source
 
-### Secret mount and `secret:key` config pattern
+### Path A: Public image from GHCR
 
-Thaum supports credential indirection as `secret:key`. For Azure Container Apps, define secrets in the app and mount them as files under `/run/secrets`, then reference those names in `thaum.toml`.
-
-Example Container Apps commands:
+If your organization pulls **public** images from GHCR without authentication, create the app with `--image` pointing at a pinned tag (see upstream [README.md](../../../../README.md)).
 
 ```powershell
-az containerapp secret set `
+$APP_NAME = "thaum-app"
+$IMAGE = "ghcr.io/gemstone-software-dev/thaum:<version-tag>"
+
+az containerapp create `
   --name $APP_NAME `
   --resource-group $RESOURCE_GROUP `
-  --secrets webex_token_database="<token>" webex_token_system="<token>" webex_token_helpdesk="<token>"
+  --environment $ENVIRONMENT `
+  --image $IMAGE `
+  --ingress external `
+  --target-port 5165
+```
+
+If the image is **private**, configure registry credentials or managed identity for your registry per [Container Apps registries](https://learn.microsoft.com/en-us/azure/container-apps/containers#container-registries); that is outside this minimal quickstart.
+
+### Path B: Azure Container Registry + GitHub Actions
+
+1. Create a registry (names must be globally unique and alphanumeric):
+
+   ```powershell
+   $ACR_NAME = "thaumacr<unique>"
+   az acr create --resource-group $RESOURCE_GROUP --name $ACR_NAME --sku Basic --admin-enabled true
+   ```
+
+2. One-time: create the Container App with the **first** image you will push (or a public placeholder), same ingress as Path A, using `myregistry.azurecr.io/<repo>:tag` after your pipeline has pushed at least once—or create the app in the portal and point CI at `az containerapp update --image` as in [deploy.yml.example](deploy.yml.example).
+
+3. Wire CI: copy [deploy.yml.example](deploy.yml.example), set variables (`ACR_LOGIN_SERVER`, `IMAGE_NAME`, `AZURE_RESOURCE_GROUP`, `AZURE_CONTAINERAPP_NAME`), and push; each run builds, schema-checks, pushes to ACR, and updates the app image. This matches the **ACR-remote** tutorial flow ([link](https://learn.microsoft.com/en-us/azure/container-apps/tutorial-code-to-cloud?tabs=bash%2Ccsharp&pivots=acr-remote)).
+
+## 3. Secrets: Key Vault + `keyvaultref` + volume mount
+
+Avoid putting production secret values in Container Apps directly. Store them in **Azure Key Vault**, then reference them from the app using **`keyvaultref:`** as described in [Manage secrets](https://learn.microsoft.com/en-us/azure/container-apps/manage-secrets?tabs=azure-cli).
+
+**Important:** On `az containerapp create`, Key Vault references in `--secrets` require a **user-assigned** managed identity—the system-assigned identity is not available until after the app exists ([Microsoft Learn note](https://learn.microsoft.com/en-us/azure/container-apps/manage-secrets?tabs=azure-cli)).
+
+### 3a. Key Vault and secret values
+
+Create a vault and write each secret from a file (avoids secrets on the command line). Example:
+
+```powershell
+$VAULT_NAME = "thaum-kv-<unique>"
+az keyvault create --name $VAULT_NAME --resource-group $RESOURCE_GROUP --location $LOCATION
+
+# Example: write token to a UTF-8 file, then upload (see scripts/set-keyvault-secret-from-file.ps1.example); delete the file afterward if needed
+az keyvault secret set --vault-name $VAULT_NAME --name webex_token_database --file .\webex_token_database.txt
+```
+
+Use one Key Vault secret name per Thaum `secret:<key>` file you need under `/run/secrets` (names must match; see [sample.thaum.toml](../../../../sample.thaum.toml)).
+
+### 3b. User-assigned identity and Key Vault access
+
+```powershell
+$UAMI_NAME = "thaum-aca-secrets"
+$UAMI_ID = az identity create --name $UAMI_NAME --resource-group $RESOURCE_GROUP --location $LOCATION --query id -o tsv
+$KV_ID = az keyvault show --name $VAULT_NAME --resource-group $RESOURCE_GROUP --query id -o tsv
+
+$UAMI_PRINCIPAL = az identity show --ids $UAMI_ID --query principalId -o tsv
+az role assignment create `
+  --role "Key Vault Secrets User" `
+  --assignee-object-id $UAMI_PRINCIPAL `
+  --assignee-principal-type ServicePrincipal `
+  --scope $KV_ID
+```
+
+### 3c. Key Vault secret URI
+
+For each secret, the URI passed to `keyvaultref` is either:
+
+- `https://<vault>.vault.azure.net/secrets/<name>` (latest version), or
+- `https://<vault>.vault.azure.net/secrets/<name>/<version-id>` (pinned version)
+
+You can print the vault base URI with [scripts/keyvault-uri.ps1.example](scripts/keyvault-uri.ps1.example) and append `/secrets/<name>`.
+
+### 3d. Attach identity, define Key Vault–backed app secrets, mount files, set `THAUM_CREDS_DIR`
+
+Thaum runs as user `thaum`. Orchestrator-mounted secret files are often root-readable only; set **`THAUM_CREDS_DIR`** so [docker/entrypoint.sh](../../../../docker/entrypoint.sh) copies `/run/secrets` into a tmpfs directory the app user can read.
+
+Use **`--secret-volume-mount "/run/secrets"`** to mount **all** app-level secrets as files under `/run/secrets` without a YAML file ([Manage secrets — mounting secrets in a volume](https://learn.microsoft.com/en-us/azure/container-apps/manage-secrets?tabs=azure-cli#mounting-secrets-in-a-volume)). Each file name equals the **Container Apps secret name**; keep those names aligned with `secret:<key>` in `thaum.toml`.
+
+**Caveat:** If you need **only a subset** of secrets mounted or **custom filenames** inside the volume, Microsoft documents using **YAML** (`--yaml`) instead of `--secret-volume-mount`.
+
+Example (add `--user-assigned` and `--secrets` / `--secret-volume-mount` / `--set-env-vars` to `create`, or use `az containerapp update` on an existing app):
+
+```powershell
+$APP_NAME = "thaum-app"
+$SECRET_URI_DB = "https://$VAULT_NAME.vault.azure.net/secrets/webex_token_database"
 
 az containerapp update `
   --name $APP_NAME `
   --resource-group $RESOURCE_GROUP `
-  --set-env-vars THAUM_CREDS_DIR=/tmp/thaum-creds `
-  --yaml containerapp.secrets.yaml
+  --user-assigned $UAMI_ID `
+  --secrets "webex_token_database=keyvaultref:$SECRET_URI_DB,identityref:$UAMI_ID" `
+  --secret-volume-mount "/run/secrets" `
+  --set-env-vars "THAUM_CREDS_DIR=/tmp/thaum-creds"
 ```
 
-Use a small YAML patch (`containerapp.secrets.yaml`) to mount a `Secret` volume at `/run/secrets` and map secret items to filenames. The filename should match the `secret:key` identifier you use in config.
+Repeat additional `keyvaultref:` pairs in `--secrets` for each bot token (and any other file-backed secrets). If `create` is used instead of `update`, include the same flags together with `--image`, `--environment`, `--ingress`, and `--target-port 5165`.
 
-```yaml
-properties:
-  template:
-    containers:
-      - name: thaum-app
-        volumeMounts:
-          - volumeName: thaum-secrets
-            mountPath: /run/secrets
-    volumes:
-      - name: thaum-secrets
-        storageType: Secret
-        secrets:
-          - secretRef: webex_token_database
-            path: webex_token_database
-          - secretRef: webex_token_system
-            path: webex_token_system
-          - secretRef: webex_token_helpdesk
-            path: webex_token_helpdesk
-```
+In **`thaum.toml`**, use `secret:webex_token_database` (etc.) so `resolve_secret` reads the file copied into `CREDENTIALS_DIRECTORY`.
 
-### Health checks
+## Health checks
 
 Thaum exposes:
 
 - `GET /health` — process liveness
 - `GET /ready` — database readiness (`SELECT 1`)
 
-Configure Container Apps probes to hit `/ready` (or `/health`) on port `5165`.
+Configure Container Apps probes to hit `/ready` (or `/health`) on port **5165**.
 
-## 2. Configuration file
+## Configuration file
 
 1. Start from [systemd/thaum.conf.example](../../../systemd/thaum.conf.example).
 2. Set **`[server].base_url`** to your Container App’s public URL.
-3. Save it in your deploy repo as **`thaum.toml`** (TOML content; use the **`.toml`** extension for editor highlighting). To use another path, set **`THAUM_CONFIG_FILE`** in the Dockerfile or environment.
+3. Save it in your deploy repo as **`thaum.toml`**. [Dockerfile.example](Dockerfile.example) copies it to **`/etc/thaum/thaum.toml`**.
 
-The stock Thaum image does **not** set `THAUM_CONFIG_FILE`; the app resolves config automatically (see `thaum.paths.resolve_config_path`). [Dockerfile.example](Dockerfile.example) copies **`thaum.toml`** to **`/etc/thaum/thaum.toml`**.
-
-Keep secrets out of committed files: use `secret:key` references and mounted files in `/run/secrets`, or use Key Vault references (see [Key Vault URI helper](#key-vault-uri-helper)).
+Keep sensitive values out of Git: use **`secret:<key>`** with the Key Vault–backed mount flow above (not inline tokens in `az containerapp secret set` for production).
 
 ### `THAUM_BASE_URL` in CI
 
-If your pipeline substitutes `base_url` via environment at build time, some checks may expect **`THAUM_BASE_URL`**; see `thaum_config_check.py` epilog in the main repo. For a static committed TOML with a real `base_url`, you typically do not need this.
+If your pipeline substitutes `base_url` via environment at build time, some checks may expect **`THAUM_BASE_URL`**; see `thaum_config_check.py` epilog in the main repo.
 
-## 3. Dockerfile (deploy repo)
+## Dockerfile (deploy repo)
 
 Use [Dockerfile.example](Dockerfile.example):
 
-- **`FROM`** a **pinned** upstream image (version tag or digest), not only `:latest`, for reproducible deploys. Default upstream: `ghcr.io/gemstone-software-dev/thaum` (see [README.md](../../../../README.md)).
-- **`COPY`** your versioned `thaum.toml` into `/etc/thaum/` as `/etc/thaum/thaum.toml` (canonical filename).
-- For **external Postgres**, set **`THAUM_EXTERNAL_DB=true`** in the Dockerfile or Container Apps env vars and supply **`db_url`** (and secrets) as documented in [ARCHITECTURE.md](../../../../docs/ARCHITECTURE.md).
+- **`FROM`** a **pinned** upstream image (tag or digest), not only `:latest`.
+- **`COPY`** your `thaum.toml` to `/etc/thaum/thaum.toml`.
+- For **external Postgres**, set **`THAUM_EXTERNAL_DB=true`** and supply **`db_url`** (and secrets via Key Vault as above). See [ARCHITECTURE.md](../../../../docs/ARCHITECTURE.md).
 
-## 4. GitHub Actions
+## GitHub Actions
 
-Copy [deploy.yml.example](deploy.yml.example) to `.github/workflows/deploy.yml` and set:
-
-- **Repository variables** (or hardcode in the workflow): resource group, Container App name, ACR login server, image name/tag
-- **Repository secrets**
-  - **`AZURE_CREDENTIALS`**: JSON output of a service principal with rights to push to ACR and update the Container App (e.g. `az ad sp create-for-rbac --name "gha-thaum" --role contributor --scopes /subscriptions/<sub>/resourceGroups/<rg> --sdk-auth`)
-  - Registry credentials if your workflow uses explicit `docker login` (some setups rely on `az acr login` after `azure/login` with an SP that has `AcrPush`)
-
-The workflow **builds** your image, runs **`thaum_config_check.py --schema-check`** **inside** the built image (no checkout of the Thaum source repo required), **pushes** to ACR, and **updates** the Container App image revision.
+Copy [deploy.yml.example](deploy.yml.example) to `.github/workflows/deploy.yml`. The workflow builds and pushes the **image** only; **application secrets** stay in Key Vault and are wired with `keyvaultref` as in section 3 (not stored in GitHub Secrets for Thaum tokens unless you choose that separately).
 
 - **`--schema-check`**: safe in CI without resolving secrets or hitting the database.
-- **`--test-config`**: full validation + DB ping; run only where secrets and DB exist (e.g. manual run on a trusted host or a protected environment).
+- **`--test-config`**: full validation + DB ping; run only where secrets and DB exist.
 
 ## Optional: external managed Postgres
 
 1. Create a managed Postgres instance and a database/user for Thaum.
 2. Set Container Apps environment variable **`THAUM_EXTERNAL_DB=true`**.
-3. In your TOML, set **`[server.database].db_url`** to the SQLAlchemy URL (use **`env:`** or Key Vault; do not commit passwords).
+3. In your TOML, set **`[server.database].db_url`** (reference credentials via Key Vault–mounted files and `secret:` / `env:` as appropriate; do not commit passwords).
 4. Redeploy. The container runs **Gunicorn only** (no bundled Postgres); see [Dockerfile](../../../../Dockerfile) and [docker/entrypoint.sh](../../../../docker/entrypoint.sh).
-
-## Key Vault URI helper
-
-For **`azexp:`** (and related) resolution, the exact reference grammar lives in **gemstone_utils** (Thaum loads the experimental backend when running full config checks). This repo’s checker enables that path in **`--test-config`** only; see `scripts/python/thaum_config_check.py` in the main tree.
-
-To print your Key Vault **vault URI** for documentation or manual TOML editing:
-
-- PowerShell: [scripts/keyvault-uri.ps1.example](scripts/keyvault-uri.ps1.example)
-- Or: `az keyvault show --name <VaultName> --query properties.vaultUri -o tsv`
-
-There is **no** interactive “enter all secrets” wizard: operators with **multiple bots** or complex layouts should use **`az keyvault secret set`** (or your org’s process) with naming conventions you control.
 
 ## Files in this directory
 
 | File | Purpose |
 |------|---------|
 | [Dockerfile.example](Dockerfile.example) | `FROM` upstream Thaum image + `COPY` `thaum.toml` → `/etc/thaum/thaum.toml` |
-| [deploy.yml.example](deploy.yml.example) | Build → schema-check → push to ACR → update Container App |
-| [scripts/keyvault-uri.ps1.example](scripts/keyvault-uri.ps1.example) | Print Key Vault URI (non-interactive) |
-| [scripts/keyvault-uri.bat.example](scripts/keyvault-uri.bat.example) | Invoke the PowerShell script from cmd |
+| [deploy.yml.example](deploy.yml.example) | Build → schema-check → push to ACR → update Container App image |
+| [scripts/keyvault-uri.ps1.example](scripts/keyvault-uri.ps1.example) | Print Key Vault `vaultUri` (build `keyvaultref` secret URIs) |
+| [scripts/set-keyvault-secret-from-file.ps1.example](scripts/set-keyvault-secret-from-file.ps1.example) | Set a vault secret from a file via `az keyvault secret set --file` |
+| [scripts/keyvault-uri.bat.example](scripts/keyvault-uri.bat.example) | Invoke the PowerShell URI script from cmd |
