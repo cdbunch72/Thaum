@@ -15,17 +15,20 @@ from __future__ import annotations
 import os
 
 
-from bootstrap import bootstrap, fail_fast_fatal
+from bootstrap import bootstrap
 from log_setup import init_early_logging_from_env
+from thaum.fatal import fail_fast_fatal
 from thaum.paths import ConfigResolutionError, resolve_config_path
 from web import create_app
 
 init_early_logging_from_env()
 try:
-    _config = bootstrap(resolve_config_path())
+    _config_path = resolve_config_path()
 except ConfigResolutionError as e:
-    fail_fast_fatal(str(e))
+    fail_fast_fatal(f"Config path resolution failed: {e}", exc_info=True)
     raise
+
+_config = bootstrap(_config_path)
 
 app = create_app(_config)
 

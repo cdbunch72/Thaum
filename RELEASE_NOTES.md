@@ -5,6 +5,7 @@
 **`pyproject.toml`** is **`0.7.0a1`**.
 
 - **Logging** — Optional JSON structured logs (`[logging]`, `logging.json.*`); **SPAM**-level diagnostics behind `THAUM_LOG_SPAM=1`; dependency **`python-json-logger`**.
+- **Startup** — Irrecoverable failures (missing config file, `bootstrap()` errors including **`init_db`**, leader upstream preflight, Webex webhook registration at startup, and invalid plugin configs) log a traceback via **`thaum.fatal.fail_fast_fatal`** and SIGTERM the Gunicorn parent when applicable.
 
 ### Upgrade from v0.6.0
 

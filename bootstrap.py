@@ -5,7 +5,6 @@ from __future__ import annotations
 
 import logging
 import os
-import signal
 from typing import Any, Dict
 
 from pydantic import BaseModel
@@ -21,26 +20,12 @@ from thaum.db_bootstrap import init_app_db, resolve_app_db_url
 from plugin_loader import ensure_plugin_loaded, get_plugin_config_model
 from thaum.database_crypto import apply_database_crypto, requires_database_vault_passphrase
 from thaum.factory import initialize_bots
+from thaum.fatal import fail_fast_fatal
 from thaum.leader_bootstrap import run_leader_bootstrap_phase
 from thaum.maintenance_bootstrap import register_all_maintenance_tasks
 from thaum.types import DEFAULT_LOG_FILE_PATH, LogLevel, LogConfig, ServerConfig
 
 logger = logging.getLogger("thaum.bootstrap")
-
-
-def fail_fast_fatal(reason: str) -> None:
-    """Best-effort fatal path: stop Gunicorn master so orchestrator restarts container."""
-    try:
-        ppid = os.getppid()
-        if ppid and ppid > 1:
-            logger.critical(
-                "Fatal bootstrap after leader election phase; sending SIGTERM to parent pid=%s: %s",
-                ppid,
-                reason,
-            )
-            os.kill(ppid, signal.SIGTERM)
-    except Exception as e:
-        logger.error("Failed to terminate parent process after fatal bootstrap: %s", e)
 
 
 def _log_config_with_env_defaults(log_cfg: LogConfig) -> LogConfig:
@@ -125,7 +110,7 @@ def validate_config_after_load(config: Dict[str, Any]) -> BaseModel:
     return validated_lookup
 
 
-def bootstrap(config_path: str) -> Dict[str, Any]:
+def _bootstrap_inner(config_path: str) -> Dict[str, Any]:
     """
     Load config, logging, import plugins, validate all Pydantic configs, init DB,
     instantiate lookup, run election leader init (barrier), then bots + alert plugins.
@@ -157,13 +142,7 @@ def bootstrap(config_path: str) -> Dict[str, Any]:
         "Bootstrap: leader election bootstrap phase (namespace=%r)",
         server.election.namespace,
     )
-    try:
-        leader_candidate_id = run_leader_bootstrap_phase(server, config)
-    except Exception as e:
-        # Expired/invalid upstream credentials (for leader init tasks) are fatal at startup:
-        # allow orchestrator to restart the whole container instead of worker respawn loops.
-        fail_fast_fatal(str(e))
-        raise
+    leader_candidate_id = run_leader_bootstrap_phase(server, config)
     config["_thaum_leader_candidate_id"] = leader_candidate_id
     logger.log(
         LogLevel.VERBOSE,
@@ -180,4 +159,19 @@ def bootstrap(config_path: str) -> Dict[str, Any]:
         run_startup_leader_tasks(server, config)
     logger.log(LogLevel.VERBOSE, "Thaum bootstrap complete for config %s", config_path)
     return config
+
+
+def bootstrap(config_path: str) -> Dict[str, Any]:
+    """
+    Run :func:`_bootstrap_inner`; on any exception, log with traceback, invoke
+    :func:`~thaum.fatal.fail_fast_fatal`, then re-raise (config, DB init, lookup, leader preflight,
+    bot init, Webex webhook registration, and similar are not recoverable by respawning a worker).
+    """
+    try:
+        return _bootstrap_inner(config_path)
+    except Exception as e:
+        fail_fast_fatal(f"Bootstrap failed ({config_path!r}): {e}", exc_info=True)
+        raise
+
+
 # -- End Function bootstrap
