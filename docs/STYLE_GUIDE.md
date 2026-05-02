@@ -102,10 +102,10 @@ Thaum uses structured, multi-level logging with strict semantics.
 
 - **VERBOSE** - Routine status messages.
 
-- **DEBUG** - Developer-level detail without stack traces.
+- **DEBUG** - Developer-level detail without multiline blobs or console tracebacks.
 
 - **SPAM** - Full diagnostics, including JSON bodies, object dumps, and
-  stack traces.
+  traceback/stack text on human-readable logs.
 
 ### Multi-Line Output
 
@@ -123,11 +123,13 @@ This ensures consistent indentation and readability.
 
 ### Stack Traces
 
-- Only emitted at **SPAM** level.
+- On **human-readable** logs (console and optional rotated text file), formatted
+  tracebacks appear **only at SPAM** (same rule for formatted `stack_info`).
 
-- Wrapped using the blob helper.
+- The optional **`[logging].json_log`** stream includes traceback fields whenever
+  the record carries exception info (`exception()`, `error(..., exc_info=True)`, etc.), even below SPAM.
 
-- Never appear in INFO/NOTICE/VERBOSE/DEBUG.
+- Deliberate multiline dumps (blob helper at SPAM) remain the style for discretionary detail.
 
 ------------------------------------------------------------------------
 

@@ -45,7 +45,11 @@ _admin_state_poller_started: bool = False
 
 
 def should_log_exception_trace() -> bool:
-    """True when root log level enables SPAM (stack traces allowed)."""
+    """
+    True when human-readable formatters should append traceback and stack dumps.
+    Matches SPAM-enabled root logging; structured JSON sinks use record.exc_info
+    independently of this gate.
+    """
     from thaum.types import LogLevel
 
     return logging.getLogger().isEnabledFor(LogLevel.SPAM)
@@ -156,31 +160,22 @@ def start_log_admin_state_poller(server_config: Optional["ServerConfig"] = None)
 
 
 def _install_logger_wrappers() -> None:
+    """
+    Thin patch on Logger.error: at SPAM, default uncovered exc_info to True so bare
+    .error() calls capture the active exception context. Never strips caller-supplied exc_info.
+    Logger.exception stays stdlib (always records traceback on the LogRecord).
+    """
     global _logger_wrappers_installed
     if _logger_wrappers_installed:
         return
 
-    def _smart_error(self: logging.Logger, msg: Any, *args: Any, **kwargs: Any) -> None:
-        # Stack traces only when root enables SPAM; strip exc_info otherwise.
-        if should_log_exception_trace():
-            if "exc_info" not in kwargs:
-                kwargs["exc_info"] = True
-        else:
-            kwargs.pop("exc_info", None)
+    def _spam_default_exc_error(self: logging.Logger, msg: Any, *args: Any, **kwargs: Any) -> None:
+        if should_log_exception_trace() and "exc_info" not in kwargs:
+            kwargs["exc_info"] = True
         _original_logger_error(self, msg, *args, **kwargs)
 
-    def _smart_exception(self: logging.Logger, msg: Any, *args: Any, **kwargs: Any) -> None:
-        if should_log_exception_trace():
-            kwargs.setdefault("exc_info", True)
-            _original_logger_exception(self, msg, *args, **kwargs)
-        else:
-            exc = sys.exc_info()[1]
-            suffix = f" ({type(exc).__name__}: {exc})" if exc else ""
-            kwargs.pop("exc_info", None)
-            _original_logger_error(self, str(msg) + suffix, *args, **kwargs)
-
-    logging.Logger.error = _smart_error  # type: ignore[method-assign]
-    logging.Logger.exception = _smart_exception  # type: ignore[method-assign]
+    logging.Logger.error = _spam_default_exc_error  # type: ignore[method-assign]
+    logging.Logger.exception = _original_logger_exception  # type: ignore[method-assign]
     _logger_wrappers_installed = True
 
 
@@ -216,6 +211,35 @@ class ISO8601TimezoneFormatter(logging.Formatter):
         spec = "auto" if self.fractional_seconds else "seconds"
         return dt.isoformat(timespec=spec)
 # -- End ISO8601TimezoneFormatter
+
+
+class SpamGatedTextFormatter(ISO8601TimezoneFormatter):
+    """
+    Human-readable (stdout/file) formatter: emits exc_text and stack_info only when
+    should_log_exception_trace() (SPAM). Leaves record.exc_info intact for JSON sinks.
+    """
+
+    def format(self, record: logging.LogRecord) -> str:
+        try:
+            record.message = record.getMessage()
+        except TypeError as te:
+            raise TypeError(f"Unable to convert message: {record.msg!r}") from te
+        if self.usesTime():
+            record.asctime = self.formatTime(record, self.datefmt)
+        s = self.formatMessage(record)
+        if should_log_exception_trace():
+            if record.exc_info and not isinstance(record.exc_info, str):
+                if record.exc_text is None:
+                    record.exc_text = self.formatException(record.exc_info)
+                if record.exc_text:
+                    if s[-1:] != "\n":
+                        s = s + "\n"
+                    s = s + record.exc_text
+            if record.stack_info:
+                if s[-1:] != "\n":
+                    s = s + "\n"
+                s = s + self.formatStack(record.stack_info)
+        return s
 
 
 class SecureTimedRotatingFileHandler(logging.handlers.TimedRotatingFileHandler):
@@ -353,7 +377,7 @@ def init_early_logging_from_env() -> None:
     if not root_logger.handlers:
         console_handler = logging.StreamHandler(sys.stdout)
         console_handler.setFormatter(
-            ISO8601TimezoneFormatter(
+            SpamGatedTextFormatter(
                 "%(asctime)s [%(levelname)s] %(name)s: %(message)s",
                 tz_string="UTC",
                 fractional_seconds=False,
@@ -386,7 +410,7 @@ def configure_logging(
 ):
     """
     Sets up a global, single-line, timezone-aware logging system.
-    Replaces existing root handlers and installs SPAM-gated exception traces.
+    Replaces existing root handlers; SPAM gates traceback/stack text on human sinks only.
     """
     global _configured_root_level
 
@@ -403,13 +427,13 @@ def configure_logging(
     _register_custom_log_level_names()
 
     log_format = "%(asctime)s [%(levelname)s] %(name)s: %(message)s"
-    console_formatter = ISO8601TimezoneFormatter(
+    console_formatter = SpamGatedTextFormatter(
         log_format,
         tz_string=tz_str,
         fractional_seconds=use_fractions,
         no_timestamp=logging_config.no_timestamp,
     )
-    file_formatter = ISO8601TimezoneFormatter(
+    file_formatter = SpamGatedTextFormatter(
         log_format,
         tz_string=tz_str,
         fractional_seconds=use_fractions,

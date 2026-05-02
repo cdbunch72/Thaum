@@ -160,15 +160,13 @@ def _db_throttle_should_log(
 
         from thaum.webhook_bearer_warn import WebhookBearerWarnState
     except Exception as e:
-        from log_setup import should_log_exception_trace
-
         logger.warning(
             "Webhook bearer rotation throttle skipped: could not load DB layer (transient)."
         )
         logger.error(
             "Webhook bearer rotation throttle: import or setup failed: %s",
             e,
-            exc_info=should_log_exception_trace(),
+            exc_info=True,
         )
         return _RotationThrottleResult.STORAGE_FAILED
 
@@ -219,15 +217,13 @@ def _db_throttle_should_log(
                     return _RotationThrottleResult.EMIT
                 return _RotationThrottleResult.EMIT
     except Exception as e:
-        from log_setup import should_log_exception_trace
-
         logger.warning(
             "Webhook bearer rotation throttle skipped: database error (transient)."
         )
         logger.error(
             "Webhook bearer rotation throttle failed: %s",
             e,
-            exc_info=should_log_exception_trace(),
+            exc_info=True,
         )
         return _RotationThrottleResult.STORAGE_FAILED
 # -- End Function _db_throttle_should_log
@@ -276,8 +272,8 @@ def validate_webhook_bearer(
     Enforces exp (null = never). When within ``warn`` days of exp, logs a warning at most
     once per 24 hours per token; throttle state is stored only in the
     ``webhook_bearer_warn_state`` table. If the database cannot be used, logs WARNING and
-    ERROR (stack traces only when root log level enables SPAM) and does not emit the
-    pre-expiry advisory.
+    ERROR with exception context on the log record (structured JSON includes tracebacks;
+    human-readable logs show them only at SPAM) and does not emit the pre-expiry advisory.
 
     ``bot_key`` is optional metadata stored with the throttle row (not used for auth).
     """

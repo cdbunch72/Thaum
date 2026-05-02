@@ -6,6 +6,7 @@ from __future__ import annotations
 import io
 import logging
 import os
+import sys
 import unittest
 from contextlib import redirect_stderr
 from pathlib import Path
@@ -167,6 +168,74 @@ class ConfigureLoggingFileTest(unittest.TestCase):
             init_early_logging_from_env()
             configure_logging(LogConfig(level=LogLevel.INFO, json_log=False, override_env=True))
         self.assertEqual(len(logging.getLogger().handlers), 1)
+
+
+class ExceptionJsonVsHumanTextTest(unittest.TestCase):
+    """JSON sinks carry tracebacks whenever exc_info is set; human text only at SPAM."""
+
+    def tearDown(self) -> None:
+        configure_logging(LogConfig(level=LogLevel.INFO))
+
+    def _emit_zero_div_exc(self, log: logging.Logger, use_error_exc_info: bool) -> None:
+        try:
+            _ = 1 / 0
+        except ZeroDivisionError:
+            if use_error_exc_info:
+                log.error("boom_err", exc_info=True)
+            else:
+                log.exception("boom_exc")
+
+    def test_json_stderr_has_exception_text_not_human_at_info(self) -> None:
+        fake_out = io.StringIO()
+        fake_err = io.StringIO()
+        old_out, old_err = sys.stdout, sys.stderr
+        sys.stdout, sys.stderr = fake_out, fake_err
+        try:
+            configure_logging(LogConfig(level=LogLevel.INFO, json_log="stderr"))
+            log = logging.getLogger("exc_split")
+            self._emit_zero_div_exc(log, use_error_exc_info=False)
+        finally:
+            sys.stdout, sys.stderr = old_out, old_err
+        out = fake_out.getvalue()
+        err = fake_err.getvalue()
+        self.assertIn("boom_exc", out)
+        self.assertNotIn("Traceback", out)
+        self.assertIn('"exception"', err.lower())
+        self.assertIn("Traceback", err)
+
+    def test_json_stderr_has_exception_for_error_exc_info_at_info(self) -> None:
+        fake_out = io.StringIO()
+        fake_err = io.StringIO()
+        old_out, old_err = sys.stdout, sys.stderr
+        sys.stdout, sys.stderr = fake_out, fake_err
+        try:
+            configure_logging(LogConfig(level=LogLevel.INFO, json_log="stderr"))
+            log = logging.getLogger("exc_split_err")
+            self._emit_zero_div_exc(log, use_error_exc_info=True)
+        finally:
+            sys.stdout, sys.stderr = old_out, old_err
+        out = fake_out.getvalue()
+        err = fake_err.getvalue()
+        self.assertIn("boom_err", out)
+        self.assertNotIn("Traceback", out)
+        self.assertIn('"exception"', err.lower())
+        self.assertIn("Traceback", err)
+
+    def test_human_stdout_includes_traceback_at_spam(self) -> None:
+        fake_out = io.StringIO()
+        fake_err = io.StringIO()
+        old_out, old_err = sys.stdout, sys.stderr
+        sys.stdout, sys.stderr = fake_out, fake_err
+        try:
+            configure_logging(LogConfig(level=LogLevel.SPAM, json_log="stderr"))
+            log = logging.getLogger("exc_spam")
+            self._emit_zero_div_exc(log, use_error_exc_info=False)
+        finally:
+            sys.stdout, sys.stderr = old_out, old_err
+        out = fake_out.getvalue()
+        err = fake_err.getvalue()
+        self.assertIn("Traceback", out)
+        self.assertIn('"exception"', err.lower())
 
 
 class LogEnvDefaultFileTest(unittest.TestCase):
