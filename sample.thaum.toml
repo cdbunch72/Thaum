@@ -118,7 +118,7 @@ responders = []
 # Bot: database — Jira on-call for DBA team
 # =============================================================================
 [bots.database]
-name = "Thaum Database"
+name = "pageDBA"
 team_description = "Database"
 high_pri_on = false
 send_alerts = true
@@ -146,7 +146,7 @@ responders = ["team:DBA"]
 # Bot: system — Jira on-call for SysAdmin team
 # =============================================================================
 [bots.system]
-name = "Thaum System"
+name = "pageSA"
 team_description = "Systems"
 high_pri_on = false
 send_alerts = true
@@ -163,7 +163,7 @@ responders = ["team:SysAdmin"]
 # Bot: helpdesk — rooms only, no Jira / no alert or ack commands
 # =============================================================================
 [bots.helpdesk]
-name = "Thaum Helpdesk"
+name = "Myrddin"
 team_description = "Helpdesk"
 high_pri_on = false
 # send_alerts false disables standalone "alert" and "ack" handlers and requires alert_type "null".
