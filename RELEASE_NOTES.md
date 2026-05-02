@@ -1,5 +1,18 @@
 # Thaum release notes
 
+## v0.7.0a1 (alpha 1) — unreleased
+
+**`pyproject.toml`** is **`0.7.0a1`**.
+
+- **Logging** — Optional JSON structured logs (`[logging]`, `logging.json.*`); **SPAM**-level diagnostics behind `THAUM_LOG_SPAM=1`; dependency **`python-json-logger`**.
+
+### Upgrade from v0.6.0
+
+- **pip / venv**: **`pip install -U .`** for **`0.7.0a1`** when published from **`main`**.
+- **Containers**: rebuild when your pipeline tags this line.
+
+---
+
 ## v0.6.0 — 2026-05-02
 
 First **stable 0.6.x** release. **`pyproject.toml`** is **`0.6.0`**.
