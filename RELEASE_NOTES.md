@@ -1,20 +1,41 @@
 # Thaum release notes
 
-## v0.6.0rc3 (release candidate 3) — unreleased
+## v0.6.0 — 2026-05-02
 
-**`pyproject.toml`** is set to **`0.6.0rc3`**.
+First **stable 0.6.x** release. **`pyproject.toml`** is **`0.6.0`**.
+
+This line finalizes the **v0.6.0rc1** / **v0.6.0rc2** candidates and includes the post-RC changes listed below.
+
+### Changes since tag v0.6.0rc2
+
+- **Config resolution** — Refactored path resolution and error handling; `resolve_config_path()` uses `THAUM_CONFIG_FILE` (if set), then `/etc/thaum/thaum.toml`, `/etc/thaum/thaum.conf`, `./thaum.toml`, and `./thaum.conf`; startup fails fast if none exist. `.toml` is canonical for examples (`sample.thaum.toml`).
+- **Samples** — Removed legacy `sample.config.toml`; sample handles in `sample.thaum.toml` use obvious placeholder names.
+- **Azure** — Container Apps deployment configuration; Key Vault integration in documentation and scripts.
+- **Containers** — Dockerfile and entrypoint updates for bundled PostgreSQL and Azure-oriented deployment.
+
+### Highlights carried forward from the 0.6 RC line
 
 - **Chat commands** — Usage lists **`on-call[: message]`** for alerting the on-call contact; **`alert`**, **`oncall`**, and **`on_call`** are accepted as synonyms.
-- **Config resolution** — `resolve_config_path()` now checks only `THAUM_CONFIG_FILE` (if set), then `/etc/thaum/thaum.toml`, `/etc/thaum/thaum.conf`, `./thaum.toml`, and `./thaum.conf`; startup now fails fast if none exist. `.toml` is canonical for examples/docs (`sample.thaum.toml`).
+- **Lookup** — `get_person_by_email` contract; **Atlassian** Jira user search and **LDAP/AD** mail search; internal **`_get_cached_person_by_email`**.
+- **Connections** — Shared **`merge_connection_profile`**; **Jira** alert **`connection_ref`** merged in bootstrap.
+- **Jira alerts** — Alias-aware mapping, sender-name handling, **alias** field lookup, messageless alerts, status-webhook **`roomId`** fixes.
+- **Webex bot** — **`delete_message`**, room-title support, webhook URL normalization in pruning.
+- **CI / containers** — **`:edge`** tracks prerelease and stable GitHub Releases (and manual **`main`** workflow).
 
-### Upgrade from v0.6.0rc2
+### Dependencies
 
-- **pip / venv**: **`pip install -U .`** to pick up **`0.6.0rc3`**.
-- **Containers**: rebuild or pull an image tagged **`0.6.0rc3`** when published.
+**`gemstone_utils`** is pinned to **`v0.4.0rc1`** from **`gemstone-software-dev/gemstone_utils`** on GitHub (see **`pyproject.toml`**, **`requirements.txt`**, **`GEMSTONE_UTILS_REF`** in **`Dockerfile`**).
+
+### Upgrade from v0.6.0rc2 or earlier prereleases
+
+- **pip / venv**: **`pip install -U .`** (or your lockfile workflow) to pick up **`0.6.0`**.
+- **Containers**: rebuild or pull an image tagged **`0.6.0`** when published.
+
+No manual schema migration is required for the default layout (**`init_db`** creates ORM tables on startup).
 
 ---
 
-## v0.6.0rc1 (release candidate 1) — unreleased
+## v0.6.0rc1 (release candidate 1) — 2026-04 (superseded by v0.6.0)
 
 **Packaging** for this line used **`0.6.0rc1`** so installs from an unreleased git checkout (e.g. `pip install .` from **`main`**) reported a distinct version from published packages such as **v0.3.0a1**.
 
@@ -41,7 +62,7 @@
 
 ### Release candidate caveats
 
-- Breaking changes are **unlikely** but still possible before **v0.6.0** stable; validate in a non-production environment first.
+- **v0.6.0** stable shipped **2026-05-02** (see section above); this RC section remains for historical context.
 
 ---
 
