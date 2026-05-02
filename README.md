@@ -5,7 +5,7 @@ Thaum was written to solve the problem of users who expect operations to be acti
 
 I have implemented Webex and Jira Service Manager Ops.  But plugins could be written for PagerDuty or even something as simple as a team broadcast via Pushover.  A plugin could also be written to make it a Teams bot instead of webex.
 
-I have over 30 years of experience in IT operations and I know the pain of on-call.  I also know the pain of trying to use logging to troubleshoot an operational system. (Stacktraces are not logs!)  I built something I want to use, and I hope you'll find it useful too.
+I have over 30 years of experience in IT operations and I know the pain of on-call.  I also know the pain of trying to use logging to troubleshoot an operational system. I keep **human-visible** consoles readable (full tracebacks there only when you opt into SPAM), while optional **structured JSON** logging can carry tracebacks for failure analysis without widening console noise—so troubleshooting does not force noisy defaults.
 
 Some code in this repository was written with the help of **Cursor** and **GitHub Copilot** (assistive tooling; human review and integration remain the author’s responsibility).
 

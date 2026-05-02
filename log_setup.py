@@ -14,13 +14,26 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import TYPE_CHECKING, Any, Optional, Tuple
 
+from pythonjsonlogger.json import JsonFormatter
 from zoneinfo import ZoneInfo
+
+
+def _json_dumps_compact(log_data: Any, **kwargs: Any) -> str:
+    """Match stdlib json.dumps one-line style (no spaces after ':' / ',')."""
+    return json.dumps(
+        log_data,
+        default=kwargs.get("default"),
+        cls=kwargs.get("cls"),
+        ensure_ascii=kwargs.get("ensure_ascii", True),
+        separators=(",", ":"),
+    )
 
 if TYPE_CHECKING:
     from thaum.types import LogConfig, ServerConfig
 
 _configured_root_level: int = logging.INFO
 _logger_wrappers_installed: bool = False
+_early_logging_initialized: bool = False
 
 _original_logger_error = logging.Logger.error
 _original_logger_exception = logging.Logger.exception
@@ -32,7 +45,11 @@ _admin_state_poller_started: bool = False
 
 
 def should_log_exception_trace() -> bool:
-    """True when root log level enables SPAM (stack traces allowed)."""
+    """
+    True when human-readable formatters should append traceback and stack dumps.
+    Matches SPAM-enabled root logging; structured JSON sinks use record.exc_info
+    independently of this gate.
+    """
     from thaum.types import LogLevel
 
     return logging.getLogger().isEnabledFor(LogLevel.SPAM)
@@ -143,31 +160,22 @@ def start_log_admin_state_poller(server_config: Optional["ServerConfig"] = None)
 
 
 def _install_logger_wrappers() -> None:
+    """
+    Thin patch on Logger.error: at SPAM, default uncovered exc_info to True so bare
+    .error() calls capture the active exception context. Never strips caller-supplied exc_info.
+    Logger.exception stays stdlib (always records traceback on the LogRecord).
+    """
     global _logger_wrappers_installed
     if _logger_wrappers_installed:
         return
 
-    def _smart_error(self: logging.Logger, msg: Any, *args: Any, **kwargs: Any) -> None:
-        # Stack traces only when root enables SPAM; strip exc_info otherwise.
-        if should_log_exception_trace():
-            if "exc_info" not in kwargs:
-                kwargs["exc_info"] = True
-        else:
-            kwargs.pop("exc_info", None)
+    def _spam_default_exc_error(self: logging.Logger, msg: Any, *args: Any, **kwargs: Any) -> None:
+        if should_log_exception_trace() and "exc_info" not in kwargs:
+            kwargs["exc_info"] = True
         _original_logger_error(self, msg, *args, **kwargs)
 
-    def _smart_exception(self: logging.Logger, msg: Any, *args: Any, **kwargs: Any) -> None:
-        if should_log_exception_trace():
-            kwargs.setdefault("exc_info", True)
-            _original_logger_exception(self, msg, *args, **kwargs)
-        else:
-            exc = sys.exc_info()[1]
-            suffix = f" ({type(exc).__name__}: {exc})" if exc else ""
-            kwargs.pop("exc_info", None)
-            _original_logger_error(self, str(msg) + suffix, *args, **kwargs)
-
-    logging.Logger.error = _smart_error  # type: ignore[method-assign]
-    logging.Logger.exception = _smart_exception  # type: ignore[method-assign]
+    logging.Logger.error = _spam_default_exc_error  # type: ignore[method-assign]
+    logging.Logger.exception = _original_logger_exception  # type: ignore[method-assign]
     _logger_wrappers_installed = True
 
 
@@ -205,6 +213,35 @@ class ISO8601TimezoneFormatter(logging.Formatter):
 # -- End ISO8601TimezoneFormatter
 
 
+class SpamGatedTextFormatter(ISO8601TimezoneFormatter):
+    """
+    Human-readable (stdout/file) formatter: emits exc_text and stack_info only when
+    should_log_exception_trace() (SPAM). Leaves record.exc_info intact for JSON sinks.
+    """
+
+    def format(self, record: logging.LogRecord) -> str:
+        try:
+            record.message = record.getMessage()
+        except TypeError as te:
+            raise TypeError(f"Unable to convert message: {record.msg!r}") from te
+        if self.usesTime():
+            record.asctime = self.formatTime(record, self.datefmt)
+        s = self.formatMessage(record)
+        if should_log_exception_trace():
+            if record.exc_info and not isinstance(record.exc_info, str):
+                if record.exc_text is None:
+                    record.exc_text = self.formatException(record.exc_info)
+                if record.exc_text:
+                    if s[-1:] != "\n":
+                        s = s + "\n"
+                    s = s + record.exc_text
+            if record.stack_info:
+                if s[-1:] != "\n":
+                    s = s + "\n"
+                s = s + self.formatStack(record.stack_info)
+        return s
+
+
 class SecureTimedRotatingFileHandler(logging.handlers.TimedRotatingFileHandler):
     """Timed rotation with best-effort chmod 0o600 on the active log file (Unix)."""
 
@@ -225,6 +262,23 @@ class SecureTimedRotatingFileHandler(logging.handlers.TimedRotatingFileHandler):
         self._chmod_active()
 
 
+def _make_json_formatter() -> logging.Formatter:
+    """One-line JSON records for machine-readable sinks (stderr / json_log file)."""
+    return JsonFormatter(
+        "%(levelname)s %(name)s %(message)s",
+        rename_fields={
+            "levelname": "level",
+            "name": "logger",
+            "timestamp": "ts",
+            "exc_info": "exception",
+        },
+        timestamp=True,
+        json_indent=None,
+        json_ensure_ascii=True,
+        json_serializer=_json_dumps_compact,
+    )
+
+
 def _register_custom_log_level_names() -> None:
     """So %(levelname)s shows SPAM / VERBOSE / NOTICE instead of Level N."""
     from thaum.types import LogLevel
@@ -232,6 +286,111 @@ def _register_custom_log_level_names() -> None:
     logging.addLevelName(int(LogLevel.SPAM), "SPAM")
     logging.addLevelName(int(LogLevel.VERBOSE), "VERBOSE")
     logging.addLevelName(int(LogLevel.NOTICE), "NOTICE")
+
+
+def _env_truthy(raw: str) -> bool:
+    return raw.strip().lower() in ("1", "true", "yes", "on", "truthy")
+
+
+def _resolve_env_json_target(raw: str) -> Optional[str]:
+    s = raw.strip()
+    if not s:
+        return None
+    if _env_truthy(s):
+        return "stderr"
+    low = s.lower()
+    if low.startswith("file:"):
+        path = s[5:].strip()
+        if path:
+            return path
+    return None
+
+
+def get_env_log_level_override() -> Optional[int]:
+    raw = os.environ.get("THAUM_LOG_LEVEL", "").strip()
+    if not raw:
+        return None
+    parsed = parse_level_name(raw)
+    if parsed is None:
+        print(f"Thaum: ignoring invalid THAUM_LOG_LEVEL={raw!r}.", file=sys.stderr)
+    return parsed
+
+
+def _build_json_file_handler(path: str, backup_count: int) -> Optional[logging.Handler]:
+    p = Path(path).expanduser()
+    try:
+        parent = p.resolve().parent
+    except (OSError, RuntimeError):
+        print(
+            f"Thaum: cannot resolve json log file path {path!r}; JSON logging disabled.",
+            file=sys.stderr,
+        )
+        return None
+    if not parent.is_dir():
+        print(
+            f"Thaum: json log file directory does not exist ({parent}); JSON logging disabled.",
+            file=sys.stderr,
+        )
+        return None
+    try:
+        file_handler = SecureTimedRotatingFileHandler(
+            str(p),
+            when="midnight",
+            interval=1,
+            backupCount=max(0, int(backup_count)),
+            encoding="utf-8",
+            delay=True,
+        )
+    except OSError as e:
+        print(
+            f"Thaum: cannot open json log file {path!r}: {e}; JSON logging disabled.",
+            file=sys.stderr,
+        )
+        return None
+    file_handler.setFormatter(_make_json_formatter())
+    return file_handler
+
+
+def _build_json_handler(target: str, backup_count: int) -> Optional[logging.Handler]:
+    t = (target or "").strip().lower()
+    if not t:
+        return None
+    if t == "stderr":
+        h = logging.StreamHandler(sys.stderr)
+        h.setFormatter(_make_json_formatter())
+        return h
+    return _build_json_file_handler(target, backup_count)
+
+
+def init_early_logging_from_env() -> None:
+    """
+    Initialize minimal logging before config load.
+    Uses THAUM_LOG_LEVEL and THAUM_JSON_LOG only.
+    """
+    global _early_logging_initialized
+    if _early_logging_initialized:
+        return
+    _register_custom_log_level_names()
+    root_logger = logging.getLogger()
+    level = get_env_log_level_override()
+    root_logger.setLevel(level if level is not None else logging.INFO)
+    if not root_logger.handlers:
+        console_handler = logging.StreamHandler(sys.stdout)
+        console_handler.setFormatter(
+            SpamGatedTextFormatter(
+                "%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+                tz_string="UTC",
+                fractional_seconds=False,
+                no_timestamp=False,
+            )
+        )
+        root_logger.addHandler(console_handler)
+    env_target = _resolve_env_json_target(os.environ.get("THAUM_JSON_LOG", ""))
+    if env_target is not None:
+        json_handler = _build_json_handler(env_target, backup_count=5)
+        if json_handler is not None:
+            root_logger.addHandler(json_handler)
+    _early_logging_initialized = True
 
 
 def log_debug_blob(logger: logging.Logger, blob_title: str, data: Any, level: int = logging.DEBUG):
@@ -251,25 +410,30 @@ def configure_logging(
 ):
     """
     Sets up a global, single-line, timezone-aware logging system.
-    Replaces existing root handlers and installs SPAM-gated exception traces.
+    Replaces existing root handlers; SPAM gates traceback/stack text on human sinks only.
     """
     global _configured_root_level
 
     tz_str = logging_config.timezone
     use_fractions = logging_config.fractional_seconds
 
-    _configured_root_level = int(logging_config.level)
+    env_level_override = None if logging_config.override_env else get_env_log_level_override()
+    _configured_root_level = (
+        int(env_level_override)
+        if env_level_override is not None
+        else int(logging_config.level)
+    )
 
     _register_custom_log_level_names()
 
     log_format = "%(asctime)s [%(levelname)s] %(name)s: %(message)s"
-    console_formatter = ISO8601TimezoneFormatter(
+    console_formatter = SpamGatedTextFormatter(
         log_format,
         tz_string=tz_str,
         fractional_seconds=use_fractions,
         no_timestamp=logging_config.no_timestamp,
     )
-    file_formatter = ISO8601TimezoneFormatter(
+    file_formatter = SpamGatedTextFormatter(
         log_format,
         tz_string=tz_str,
         fractional_seconds=use_fractions,
@@ -320,6 +484,20 @@ def configure_logging(
                         f"Thaum: cannot open log file {log_path!r}: {e}; file logging disabled.",
                         file=sys.stderr,
                     )
+
+    env_json_target = _resolve_env_json_target(os.environ.get("THAUM_JSON_LOG", ""))
+    json_target: Optional[str] = None
+    if (not logging_config.override_env) and env_json_target is not None:
+        json_target = env_json_target
+    else:
+        json_target = logging_config.json_log
+    if json_target:
+        json_handler = _build_json_handler(
+            json_target,
+            backup_count=int(logging_config.file_backup_count),
+        )
+        if json_handler is not None:
+            root_logger.addHandler(json_handler)
 
     _install_logger_wrappers()
 

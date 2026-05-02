@@ -10,7 +10,6 @@ import types
 from typing import Any, Callable, Dict, Tuple, TypedDict, cast
 
 from pydantic import BaseModel
-from log_setup import should_log_exception_trace
 
 from alerts.base import BaseAlertPlugin
 
@@ -98,7 +97,7 @@ def load_plugins(family: str, names: list[str]) -> None:
                 name,
                 e.__class__.__name__,
                 str(e),
-                exc_info=should_log_exception_trace(),
+                exc_info=True,
             )
             raise
 
