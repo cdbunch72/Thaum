@@ -21,7 +21,7 @@ class _StubBotForActions:
         self.send_alerts = False
         self.high_pri_on = False
         self.team_description = "Team"
-        self.name = "StubBot"
+        self.handle = "StubBot"
         self.emergency_warning_message = ""
 
     def hears(self, pattern: str, priority: int = 50):

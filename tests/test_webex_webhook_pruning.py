@@ -10,7 +10,7 @@ from bots.plugins.webex_bot import WebexChatBot
 def _make_bot(endpoint: str, existing_hooks: list[SimpleNamespace]) -> WebexChatBot:
     bot = WebexChatBot.__new__(WebexChatBot)
     bot.endpoint = endpoint
-    bot.name = "TestBot"
+    bot.handle = "TestBot"
     bot.bot_key = "test-bot"
     bot.logger = MagicMock()
     bot._webhook_ids = None

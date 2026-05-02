@@ -132,8 +132,9 @@ responders = []
 # =============================================================================
 # Bot: database — Jira on-call for DBA team
 # =============================================================================
+# ``handle`` — platform @-mention username (e.g. Webex), not the bot's display name.
 [bots.database]
-name = "pageDBA"
+handle = "pageDBA"
 team_description = "Database"
 high_pri_on = false
 send_alerts = true
@@ -161,7 +162,7 @@ responders = ["team:DBA"]
 # Bot: system — Jira on-call for SysAdmin team
 # =============================================================================
 [bots.system]
-name = "pageSA"
+handle = "pageSA"
 team_description = "Systems"
 high_pri_on = false
 send_alerts = true
@@ -178,7 +179,7 @@ responders = ["team:SysAdmin"]
 # Bot: helpdesk — rooms only, no Jira / no alert or ack commands
 # =============================================================================
 [bots.helpdesk]
-name = "Myrddin"
+handle = "Myrddin"
 team_description = "Helpdesk"
 high_pri_on = false
 # send_alerts false disables standalone "alert" and "ack" handlers and requires alert_type "null".

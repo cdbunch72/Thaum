@@ -28,8 +28,8 @@ def initialize_bots(bot_type: str, config: Dict[str, Any]) -> None:
     for bot_key, bot_row in config.get("bots", {}).items():
         if not isinstance(bot_row, dict):
             raise ValueError(f"Bot {bot_key!r} must be a table.")
-        bot_name = bot_row.get("name", bot_key)
-        boot_logger = logging.getLogger(f"bootstrap.{bot_name}")
+        boot_ident = bot_row.get("handle", bot_key)
+        boot_logger = logging.getLogger(f"bootstrap.{boot_ident}")
 
         try:
             validated_bot = bot_row.get("_validated_bot")
@@ -74,8 +74,8 @@ def initialize_bots(bot_type: str, config: Dict[str, Any]) -> None:
             if callable(init_fn):
                 init_fn(server_cfg)
             BOTS[bot_key] = bot
-            boot_logger.log(LogLevel.VERBOSE, "Thaum bot '%s' initialized.", bot_name)
+            boot_logger.log(LogLevel.VERBOSE, "Thaum bot '%s' initialized.", boot_ident)
         except Exception as e:
-            boot_logger.critical("Failed to bootstrap %s: %s", bot_name, e)
+            boot_logger.critical("Failed to bootstrap %s: %s", boot_ident, e)
             raise
 # -- End Function initialize_bots

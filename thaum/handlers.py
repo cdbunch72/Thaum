@@ -138,7 +138,7 @@ ack alert_id
 {%- endif %}
 {% endif %}
 implode
-  Deletes the current room if {{ bot.name }} created it.
+  Deletes the current room if {{ bot.handle }} created it.
 usage|commands|?
   Prints this message.
 """
@@ -216,7 +216,7 @@ def bind_thaum_handlers(bot: 'BaseChatBot') -> None:
     
     @bot.hears(r"^(?P<cmd>\S+)\s+.*$",priority=99)
     def handle_unknown(bot: 'BaseChatBot', ctx: 'MessageContext', match: re.Match):
-        bot.say(ctx.room_id,f"Unknown command {match.group('cmd')}. Please use @{bot.name} usage to see a list of commands")
+        bot.say(ctx.room_id,f"Unknown command {match.group('cmd')}. Please use @{bot.handle} usage to see a list of commands")
 
     
     @bot.on_action

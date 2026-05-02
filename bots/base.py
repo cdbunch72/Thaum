@@ -35,8 +35,8 @@ class BaseChatBot(ABC):
     plugin_name: str = 'base'
 
     def __init__(self, config: 'BaseChatBotConfig'):
-        self.name = config.name
-        self.logger = logging.getLogger(f"bot.{self.name}")
+        self.handle = config.handle
+        self.logger = logging.getLogger(f"bot.{self.handle}")
         # Some identity/team flows expect a `.log` attribute for warnings.
         self.log = self.logger
         self.send_alerts = config.send_alerts
@@ -171,7 +171,9 @@ class BaseChatBot(ABC):
 # -- End Class BaseChatBot
 
 class BaseChatBotConfig(BaseModel):
-    name: str
+    """Web-style **mention** identifier for this bot (e.g. Webex Bot username), not logging or display."""
+
+    handle: str
     # Public HTTPS URL for this bot's events (factory default: ``{base_url}/bot/{bot_key}``).
     endpoint: str
     high_pri_on: Optional[bool] = True
@@ -193,18 +195,18 @@ class BaseChatBotConfig(BaseModel):
     def consistent_alert_settings(self) -> "BaseChatBotConfig":
         if self.send_alerts and self.alert_type == "null":
             raise ValueError(
-                f"{self.name}: send_alerts=True requires alert_type other than 'null'."
+                f"{self.handle}: send_alerts=True requires alert_type other than 'null'."
             )
 
         if not self.send_alerts and self.alert_type != "null":
             raise ValueError(
-                f"{self.name}: send_alerts=False requires alert_type='null'."
+                f"{self.handle}: send_alerts=False requires alert_type='null'."
             )
 
         if self.high_pri_on:
             if not self.send_alerts:
                 raise ValueError(
-                    f"{self.name}: high_pri_on=True requires send_alerts to also be True."
+                    f"{self.handle}: high_pri_on=True requires send_alerts to also be True."
                 )
 
         return self

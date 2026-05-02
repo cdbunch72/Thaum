@@ -101,7 +101,7 @@ class JiraPayloadTest(unittest.TestCase):
         )
         body = build_trigger_alert_body(
             summary="Something broke",
-            bot_name="ThaumBot",
+            bot_handle="ThaumBot",
             room_id="room-1",
             sender=sender,
             priority=AlertPriority.NORMAL,

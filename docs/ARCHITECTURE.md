@@ -21,8 +21,9 @@ Flask app is created.
 - `config.load_and_validate()` reads the resolved TOML config path (canonical filename: `thaum.toml`) and builds `ServerConfig` and
   `LogConfig`.
 
-- Bot tables are kept as dicts: each `[bots.<id>]` includes `alert_type` and an
-  optional nested `[bots.<id>.alert]` table for per-bot alert options.
+- Bot tables are kept as dicts: each `[bots.<id>]` includes **`handle`** (platform mention
+  identifier, e.g. Webex bot username), `alert_type`, and an optional nested `[bots.<id>.alert]`
+  table for per-bot alert options.
 
 - `log_setup.configure_logging()` runs next.
 

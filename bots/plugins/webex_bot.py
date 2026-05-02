@@ -95,7 +95,7 @@ class WebexChatBot(BaseChatBot):
 
     def __init__(self, config: WebexChatBotConfig):
         super().__init__(config)
-        self.logger = logging.getLogger(f"bot.{config.name}")
+        self.logger = logging.getLogger(f"bot.{config.handle}")
         self.log = self.logger
         self._web_cfg = config
         self.hmac_mode: WebexHmacMode = config.hmac_mode
@@ -189,7 +189,7 @@ class WebexChatBot(BaseChatBot):
             self.logger.warning("While pruning old Webex webhooks: %s", e)
 
         secret = self._webhook_secret_for_api()
-        name_prefix = f"Thaum {self.name}"
+        name_prefix = f"Thaum {self.handle}"
         if self.bot_key:
             name_prefix = f"{name_prefix} [{self.bot_key}]"
 
@@ -332,7 +332,7 @@ class WebexChatBot(BaseChatBot):
                 )
                 self.say(
                     room_id,
-                    f"Access Denied: {self.name} did not create room '{room.title}'",
+                    f"Access Denied: {self.handle} did not create room '{room.title}'",
                 )
                 return
 
@@ -454,7 +454,7 @@ class WebexChatBot(BaseChatBot):
         )
         clean_text = strip_leading_bot_labels(
             clean_text,
-            self.name,
+            self.handle,
             (getattr(self.me, "displayName", None) or "").strip(),
             (getattr(self, "bot_key", None) or "").strip(),
         )

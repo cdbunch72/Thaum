@@ -46,7 +46,7 @@ class BaseAlertPlugin:
     def attach_bot(self, bot: "BaseChatBot") -> None:
         """Binds the bot and updates the logger context."""
         self.bot = bot
-        self.logger = logging.getLogger(f"bot.{bot.name}.plugin.{self.__class__.__name__}")
+        self.logger = logging.getLogger(f"bot.{bot.handle}.plugin.{self.__class__.__name__}")
     # -- End Method attach_bot
 
     def get_webhook_handlers(self) -> Dict[str, Callable]:
@@ -70,7 +70,7 @@ class BaseAlertPlugin:
             return True
         bot_key = None
         if getattr(self, "bot", None) is not None:
-            bot_key = getattr(self.bot, "bot_key", None) or getattr(self.bot, "name", None)
+            bot_key = getattr(self.bot, "bot_key", None) or getattr(self.bot, "handle", None)
         return _validate_webhook_bearer_plaintext(
             authorization_header_value=authorization_header_value,
             expected_secret_text=configured_secret,

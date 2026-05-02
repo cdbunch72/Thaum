@@ -198,7 +198,7 @@ class JiraPlugin(BaseAlertPlugin):
         bk = str(getattr(self.bot, "bot_key", None) or "")
         alert = build_trigger_alert_body(
             summary,
-            self.bot.name,
+            self.bot.handle,
             room_id,
             sender,
             priority,

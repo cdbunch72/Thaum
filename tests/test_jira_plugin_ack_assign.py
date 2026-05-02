@@ -54,7 +54,7 @@ class JiraPluginAckAssignTest(unittest.TestCase):
         self.plugin.bot = SimpleNamespace(
             bot_key="bk1",
             say=MagicMock(),
-            name="ThaumBot",
+            handle="ThaumBot",
             plugin_name="webex",
             responders=SimpleNamespace(),
         )

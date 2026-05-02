@@ -15,8 +15,9 @@ def load_and_validate(path: str) -> Dict[str, Any]:
     Load config TOML: parse TOML, validate ``[server]`` (including nested
     ``[server.database]``, ``[server.admin]``, ``[server.election]``) and ``[logging]``.
 
-    Each ``[bots.<id>]`` may include ``alert_type`` and a nested ``[bots.<id>.alert]``
-    table (exposed as key ``alert``); no normalization — bootstrap merges defaults later.
+    Each ``[bots.<id>]`` must include ``handle`` (mention / @-label for the bot driver) and may
+    include ``alert_type`` and a nested ``[bots.<id>.alert]`` table (exposed as key ``alert``);
+    no normalization — bootstrap merges defaults later.
     """
     try:
         with open(path, "rb") as f:

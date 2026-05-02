@@ -29,7 +29,7 @@ MINIMAL_SCHEMA_TOML = textwrap.dedent(
     database_vault_passphrase = "env:THAUM_SCHEMA_CHECK_MISSING_VAULT"
 
     [bots.testbot]
-    name = "Test Bot"
+    handle = "Test Bot"
     token = "env:THAUM_SCHEMA_CHECK_MISSING_TOKEN"
     send_alerts = false
     high_pri_on = false
@@ -52,7 +52,7 @@ MINIMAL_TEST_TOML = textwrap.dedent(
     database_vault_passphrase = "unit-test-vault-passphrase-not-for-production-use"
 
     [bots.testbot]
-    name = "Test Bot"
+    handle = "Test Bot"
     token = "unit-test-webex-token-not-real-use-placeholder-only"
     send_alerts = false
     high_pri_on = false

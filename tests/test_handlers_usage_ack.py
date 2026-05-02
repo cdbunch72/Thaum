@@ -41,7 +41,7 @@ class UsageTemplateAckTest(unittest.TestCase):
         bot.send_alerts = True
         bot.team_description = "SRE"
         bot.high_pri_on = False
-        bot.name = "ThaumBot"
+        bot.handle = "ThaumBot"
         bot.emergency_warning_message = ""
         rendered = Template(USAGE_TEMPLATE).render(bot=bot, supports_acknowledge=True)
         self.assertIn("ack alert_id", rendered)
@@ -53,7 +53,7 @@ class UsageTemplateAckTest(unittest.TestCase):
         bot.send_alerts = True
         bot.team_description = "SRE"
         bot.high_pri_on = False
-        bot.name = "ThaumBot"
+        bot.handle = "ThaumBot"
         bot.emergency_warning_message = ""
         rendered = Template(USAGE_TEMPLATE).render(bot=bot, supports_acknowledge=False)
         self.assertNotIn("ack alert_id", rendered)
@@ -118,7 +118,7 @@ class AlertCommandShortIdOutputTest(unittest.TestCase):
             say=MagicMock(),
             delete_room=MagicMock(),
             team_description="SRE",
-            name="ThaumBot",
+            handle="ThaumBot",
             emergency_warning_message="",
             send_card=MagicMock(),
             get_person=MagicMock(),

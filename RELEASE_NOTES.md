@@ -6,6 +6,7 @@
 
 - **Logging** — Optional JSON structured logs (`[logging]`, `logging.json.*`); **SPAM**-level diagnostics behind `THAUM_LOG_SPAM=1`; dependency **`python-json-logger`**.
 - **Startup** — Irrecoverable failures (missing config file, `bootstrap()` errors including **`init_db`**, leader upstream preflight, Webex webhook registration at startup, and invalid plugin configs) log a traceback via **`thaum.fatal.fail_fast_fatal`** and SIGTERM the Gunicorn parent when applicable.
+- **Breaking — bot config** — Per-bot **`name`** is renamed to **`handle`** (mention / @-label for the chat platform). There is no **`name`** alias; update every **`[bots.<id>]`** table and any code building bot config dicts.
 
 ### Upgrade from v0.6.0
 

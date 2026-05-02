@@ -99,7 +99,7 @@ def build_sender_extra_properties(sender: ThaumPerson, plugin_name: str) -> tupl
 
 def build_trigger_alert_body(
     summary: str,
-    bot_name: str,
+    bot_handle: str,
     room_id: str,
     sender: ThaumPerson,
     priority: AlertPriority,
@@ -114,7 +114,7 @@ def build_trigger_alert_body(
     sender_name, _sender_pid = build_sender_extra_properties(sender, plugin_name)
     alert: dict[str, Any] = {
         "message": summary,
-        "source": bot_name,
+        "source": bot_handle,
         "alias": f"THAUM-{datetime.now(timezone.utc).strftime('%Y%m%d')}-{short_id}",
         "priority": severity,
         "responders": responders_payload,

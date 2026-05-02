@@ -34,7 +34,7 @@ def validate_bot_config(
 
     Strips ``alert`` (per-bot alert instance table) and runtime-only keys; sets ``endpoint``.
     """
-    bot_name = bot_row.get("name", bot_key)
+    bot_ident = bot_row.get("handle", bot_key)
     try:
         module = ensure_plugin_loaded("bots", bot_type)
         config_model = module.get_config_model()
@@ -42,7 +42,7 @@ def validate_bot_config(
         clean.setdefault("endpoint", _bot_endpoint(server_cfg, bot_key))
         return config_model(**clean)
     except Exception as e:
-        logger.critical("Invalid configuration for bot '%s': %s", bot_name, e)
+        logger.critical("Invalid configuration for bot '%s': %s", bot_ident, e)
         if isinstance(e, ValidationError):
             raise
         raise
