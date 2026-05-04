@@ -97,6 +97,14 @@ Avoid putting production secret values in Container Apps directly. Store them in
 
 ### 3a. Key Vault and secret values
 
+Register the **Microsoft.KeyVault** resource provider namespace for your subscription if it is not already **Registered**; otherwise `az keyvault create` can fail with an error that the subscription is not registered for that namespace. See [Azure resource providers and types](https://learn.microsoft.com/en-us/azure/azure-resource-manager/management/resource-providers-and-types).
+
+```powershell
+az provider register --namespace Microsoft.KeyVault
+# Optional: wait until this prints Registered (can take a minute)
+az provider show --namespace Microsoft.KeyVault --query registrationState -o tsv
+```
+
 Create a vault and write each secret from a file (avoids secrets on the command line). Example:
 
 ```powershell
