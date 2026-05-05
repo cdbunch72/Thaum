@@ -105,15 +105,30 @@ az provider register --namespace Microsoft.KeyVault
 az provider show --namespace Microsoft.KeyVault --query registrationState -o tsv
 ```
 
-Create a vault and write each secret from a file (avoids secrets on the command line). Example:
+Create a vault, then ensure **you** (or whichever principal runs the CLI) can **write** secrets. New vaults use **Azure role-based access control** for the data plane by default; without a write role, `az keyvault secret set` (and [scripts/set-keyvault-secret-from-file.ps1.example](scripts/set-keyvault-secret-from-file.ps1.example)) fail with permission errors.
+
+This is **separate from §3b:** the user-assigned managed identity only needs **`Key Vault Secrets User`** (read secrets at runtime). Whoever **uploads** secret values needs a role that allows **setting** secrets—for example **`Key Vault Secrets Officer`**, or **`Key Vault Administrator`** if your organization assigns that instead. See [Key Vault and Azure RBAC](https://learn.microsoft.com/en-us/azure/key-vault/general/rbac-guide) and [Azure built-in roles](https://learn.microsoft.com/en-us/azure/role-based-access-control/built-in-roles#security).
+
+Example: grant **your** signed-in user read/write on secrets at the vault scope (same pattern as §3b’s `--assignee-object-id` for the UAMI, but with your Entra **object ID** and **`User`**):
 
 ```powershell
 $VAULT_NAME = "thaum-kv-<unique>"
 az keyvault create --name $VAULT_NAME --resource-group $RESOURCE_GROUP --location $LOCATION
 
-# Example: write token to a UTF-8 file, then upload (see scripts/set-keyvault-secret-from-file.ps1.example); delete the file afterward if needed
+$KV_ID = az keyvault show --name $VAULT_NAME --resource-group $RESOURCE_GROUP --query id -o tsv
+
+$MY_OBJECT_ID = az ad signed-in-user show --query id -o tsv
+az role assignment create `
+  --role "Key Vault Secrets Officer" `
+  --assignee-object-id $MY_OBJECT_ID `
+  --assignee-principal-type User `
+  --scope $KV_ID
+
+# Write each secret from a file (avoids secrets on the command line); delete the file afterward if needed
 az keyvault secret set --vault-name $VAULT_NAME --name webex_token_database --file .\webex_token_database.txt
 ```
+
+For another user’s object ID: `az ad user show --id someone@example.com --query id -o tsv`. For a **service principal** used in CI or automation, use that principal’s **object ID** in Entra ID and **`--assignee-principal-type ServicePrincipal`**.
 
 Use one Key Vault secret name per Thaum `secret:<key>` file you need under `/run/secrets` (names must match; see [sample.thaum.toml](../../../../sample.thaum.toml)).
 
