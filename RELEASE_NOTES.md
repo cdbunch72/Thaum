@@ -1,8 +1,10 @@
 # Thaum release notes
 
-## v0.7.0a1 (alpha 1) — unreleased
+## v0.7.0a1 (alpha 1) — 2026-05-04
 
 **`pyproject.toml`** is **`0.7.0a1`**.
+
+First **0.7.x** alpha: structured logging, fail-fast startup behavior, and **`handle`** replacing **`name`** in bot config.
 
 - **Logging** — Optional JSON structured logs (`[logging]`, `logging.json.*`); **SPAM**-level diagnostics behind `THAUM_LOG_SPAM=1`; dependency **`python-json-logger`**.
 - **Startup** — Irrecoverable failures (missing config file, `bootstrap()` errors including **`init_db`**, leader upstream preflight, Webex webhook registration at startup, and invalid plugin configs) log a traceback via **`thaum.fatal.fail_fast_fatal`** and SIGTERM the Gunicorn parent when applicable.
@@ -10,8 +12,8 @@
 
 ### Upgrade from v0.6.0
 
-- **pip / venv**: **`pip install -U .`** for **`0.7.0a1`** when published from **`main`**.
-- **Containers**: rebuild when your pipeline tags this line.
+- **pip / venv**: **`pip install -U .`** (or your lockfile workflow) to pick up **`0.7.0a1`**.
+- **Containers**: rebuild or pull an image tagged **`0.7.0a1`** when published.
 
 ---
 
