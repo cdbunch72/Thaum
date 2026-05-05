@@ -89,6 +89,8 @@ lookup_plugin = "null"
 # Named connection profiles (connections.plugins.<plugin>). Merge order for consumers is
 # connection → defaults → plugin/bot. Optional: connection_ref on lookup and on [defaults.alert.jira] points here.
 # Use secret:key for mounted secret files (systemd credentials, Azure Container Apps mounts, Kubernetes secrets).
+# Azure Key Vault secret names allow only alphanumeric characters and hyphens (no underscores); use camelCase
+# (or kebab-case) for keys you will store in Key Vault so the same key works in thaum.toml and mounted filenames.
 [connections.example-atlassian]
 plugin = "atlassian"
 site_url = "https://example.atlassian.net"
@@ -150,9 +152,9 @@ alert_type = "jira"
 responders = ["team:DBA"]
 emergency_warning_message = ""
 # Webex bot token (ResolvedSecret).
-token = "secret:webex_token_database"
+token = "secret:webexTokenDatabase"
 # Omit hmac_secret for random value (set server.database.database_vault_passphrase so secret can be shared between workers). Or pin a secret:
-# hmac_secret = "secret:webex_hmac_database"
+# hmac_secret = "secret:webexHmacDatabase"
 
 [bots.database.alert]
 # Jira alert responders (team IDs resolved via Jira + lookup). Merged over defaults.alert.jira.
@@ -169,8 +171,8 @@ send_alerts = true
 alert_type = "jira"
 responders = ["team:SysAdmin"]
 emergency_warning_message = ""
-token = "secret:webex_token_system"
-# hmac_secret = "secret:webex_hmac_system"
+token = "secret:webexTokenSystem"
+# hmac_secret = "secret:webexHmacSystem"
 
 [bots.system.alert]
 responders = ["team:SysAdmin"]
@@ -187,7 +189,7 @@ send_alerts = false
 alert_type = "null"
 responders = ["team:Helpdesk"]
 emergency_warning_message = ""
-token = "secret:webex_token_helpdesk"
-# hmac_secret = "secret:webex_hmac_helpdesk"
+token = "secret:webexTokenHelpdesk"
+# hmac_secret = "secret:webexHmacHelpdesk"
 
 # No [bots.helpdesk.alert] — null alert plugin; help still creates incident rooms via engine.
