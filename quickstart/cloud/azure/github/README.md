@@ -10,6 +10,7 @@ Microsoft references for secrets and Key Vault:
 
 - [Manage secrets in Azure Container Apps](https://learn.microsoft.com/en-us/azure/container-apps/manage-secrets?tabs=azure-cli) (`keyvaultref`, `secretref`, `--secret-volume-mount`)
 - [`az keyvault secret set`](https://learn.microsoft.com/en-us/cli/azure/keyvault/secret?view=azure-cli-latest#az-keyvault-secret-set)
+- [Key Vault secret names](https://learn.microsoft.com/en-us/azure/key-vault/general/about-keys-secrets-certificates#object-types) — alphanumeric characters and hyphens only (no underscores); examples below use **camelCase** so the same names work in Key Vault, Container Apps `--secrets`, and `secret:<name>` in `thaum.toml`.
 
 ## What you get
 
@@ -125,7 +126,7 @@ az role assignment create `
   --scope $KV_ID
 
 # Write each secret from a file (avoids secrets on the command line); delete the file afterward if needed
-az keyvault secret set --vault-name $VAULT_NAME --name webex_token_database --file .\webex_token_database.txt
+az keyvault secret set --vault-name $VAULT_NAME --name webexTokenDatabase --file .\webexTokenDatabase.txt
 ```
 
 For another user’s object ID: `az ad user show --id someone@example.com --query id -o tsv`. For a **service principal** used in CI or automation, use that principal’s **object ID** in Entra ID and **`--assignee-principal-type ServicePrincipal`**.
@@ -154,7 +155,7 @@ For each secret, the URI passed to `keyvaultref` is either:
 - `https://<vault>.vault.azure.net/secrets/<name>` (latest version), or
 - `https://<vault>.vault.azure.net/secrets/<name>/<version-id>` (pinned version)
 
-You can print the vault base URI with [scripts/keyvault-uri.ps1.example](scripts/keyvault-uri.ps1.example) and append `/secrets/<name>`.
+You can print the vault base URI with [scripts/keyvault-uri.ps1.example](scripts/keyvault-uri.ps1.example) and append `/secrets/<name>` (use a `<name>` that satisfies Key Vault naming—**camelCase** in these examples).
 
 ### 3d. Attach identity, define Key Vault–backed app secrets, mount files, set `THAUM_CREDS_DIR`
 
@@ -168,20 +169,20 @@ Example (add `--user-assigned` and `--secrets` / `--secret-volume-mount` / `--se
 
 ```powershell
 $APP_NAME = "thaum-app"
-$SECRET_URI_DB = "https://$VAULT_NAME.vault.azure.net/secrets/webex_token_database"
+$SECRET_URI_DB = "https://$VAULT_NAME.vault.azure.net/secrets/webexTokenDatabase"
 
 az containerapp update `
   --name $APP_NAME `
   --resource-group $RESOURCE_GROUP `
   --user-assigned $UAMI_ID `
-  --secrets "webex_token_database=keyvaultref:$SECRET_URI_DB,identityref:$UAMI_ID" `
+  --secrets "webexTokenDatabase=keyvaultref:$SECRET_URI_DB,identityref:$UAMI_ID" `
   --secret-volume-mount "/run/secrets" `
   --set-env-vars "THAUM_CREDS_DIR=/tmp/thaum-creds"
 ```
 
 Repeat additional `keyvaultref:` pairs in `--secrets` for each bot token (and any other file-backed secrets). If `create` is used instead of `update`, include the same flags together with `--image`, `--environment`, `--ingress`, and `--target-port 5165`.
 
-In **`thaum.toml`**, use `secret:webex_token_database` (etc.) so `resolve_secret` reads the file copied into `CREDENTIALS_DIRECTORY`.
+In **`thaum.toml`**, use `secret:webexTokenDatabase` (etc.) so `resolve_secret` reads the file copied into `CREDENTIALS_DIRECTORY`.
 
 ## Health checks
 
