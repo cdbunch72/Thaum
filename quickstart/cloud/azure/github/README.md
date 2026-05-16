@@ -12,6 +12,12 @@ Microsoft references for secrets and Key Vault:
 - [`az keyvault secret set`](https://learn.microsoft.com/en-us/cli/azure/keyvault/secret?view=azure-cli-latest#az-keyvault-secret-set)
 - [Key Vault secret names](https://learn.microsoft.com/en-us/azure/key-vault/general/about-keys-secrets-certificates#object-types) — alphanumeric characters and hyphens only (no underscores). **Azure Container Apps** secret names must be **lowercase only**, at most [**20 characters**](https://learn.microsoft.com/en-us/cli/azure/containerapp/secret?view=azure-cli-latest#az-containerapp-secret-set). Examples below use **kebab-case** so the same names work in Key Vault, Container Apps ([`az containerapp secret set`](https://learn.microsoft.com/en-us/cli/azure/containerapp/secret?view=azure-cli-latest#az-containerapp-secret-set) `--secrets`), and `secret:<name>` in `thaum.toml`.
 
+## Cloud deps in the deploy repo
+
+Official **`ghcr.io/.../thaum`** images are **cloud-neutral**: they do not ship `gemstone_utils[azure]` or other provider SDKs. For Azure Container Apps, the recommended path is **platform secret wiring** (Key Vault → `keyvaultref` → volume mount → **`secret:<name>`** in `thaum.toml`) on top of the stock image via [Dockerfile.example](Dockerfile.example).
+
+Optional **`azexp:`** references in TOML (in-process Key Vault via `gemstone_utils`) are a **deploy-repo** choice: pin `gemstone_utils[azure]`, build a custom image from Thaum source, and register the backend before startup—see [Optional: `azexp:` in TOML](#optional-azexp-in-toml).
+
 ## What you get
 
 | Aspect | Behavior |
@@ -311,6 +317,16 @@ Copy [deploy.yml.example](deploy.yml.example) to `.github/workflows/deploy.yml`.
 - **`--schema-check`**: safe in CI without resolving secrets or hitting the database.
 - **`--test-config`**: full validation + DB ping; run only where secrets and DB exist.
 
+## Optional: `azexp:` in TOML
+
+Most deployments should use [§4](#4-app-secrets-keyvaultref-and-file-mount-happy-path) (`secret:` + mounted files). Use **`azexp:`** only when you want Thaum to read Key Vault directly at runtime (experimental `gemstone_utils` backend).
+
+1. **Do not** rely on `pip install` on a published Thaum image—upstream removes `pip` from `/venv` after build.
+2. Add Thaum as a **pinned** git submodule or clone at `./thaum-src/` in your deploy repo.
+3. Build with [Dockerfile.azexp.example](Dockerfile.azexp.example) (`gemstone_utils[azure]==…` in the builder stage, `COPY thaum.toml` from the deploy repo).
+4. Register **`azexp_backend`** before the app loads config: copy [entrypoint-azexp.sh.example](entrypoint-azexp.sh.example), uncomment the `ENTRYPOINT` lines in `Dockerfile.azexp.example`, or set the Container App command to `/app/docker/entrypoint-azexp.sh`.
+5. **CI**: `--schema-check` works on any image; **`--test-config`** with `azexp:` in config requires the same custom image (and Azure credentials/identity available in that environment).
+
 ## Optional: external managed Postgres
 
 1. Create a managed Postgres instance and a database/user for Thaum.
@@ -323,6 +339,8 @@ Copy [deploy.yml.example](deploy.yml.example) to `.github/workflows/deploy.yml`.
 | File | Purpose |
 |------|---------|
 | [Dockerfile.example](Dockerfile.example) | `FROM` upstream Thaum image + `COPY` `thaum.toml` → `/etc/thaum/thaum.toml` |
+| [Dockerfile.azexp.example](Dockerfile.azexp.example) | Build from pinned `thaum-src/` with `gemstone_utils[azure]` for `azexp:` in TOML |
+| [entrypoint-azexp.sh.example](entrypoint-azexp.sh.example) | Wrapper entrypoint to register `azexp_backend` before stock `entrypoint.sh` |
 | [deploy.yml.example](deploy.yml.example) | Build → schema-check → push to ACR → update Container App image |
 | [scripts/keyvault-uri.ps1.example](scripts/keyvault-uri.ps1.example) | Print Key Vault `vaultUri` (build `keyvaultref` secret URIs) |
 | [scripts/set-keyvault-secret-from-file.ps1.example](scripts/set-keyvault-secret-from-file.ps1.example) | Set a vault secret from a file via `az keyvault secret set --file` |

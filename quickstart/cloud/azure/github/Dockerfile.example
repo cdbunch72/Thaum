@@ -6,6 +6,9 @@
 #
 # Upstream registry defaults to GitHub Container Registry for the Thaum project; replace ORG/REPO
 # if you fork or mirror the image.
+#
+# Default: extend the official cloud-neutral image (no Azure SDK). For experimental azexp: in TOML,
+# use Dockerfile.azexp.example instead (build from pinned Thaum source + gemstone_utils[azure]).
 
 ARG THAUM_BASE_IMAGE=ghcr.io/gemstone-software-dev/thaum:latest
 

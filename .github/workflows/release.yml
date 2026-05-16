@@ -72,9 +72,7 @@ jobs:
             REPO_LOWER=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
             IMAGE="${REGISTRY}/${REPO_LOWER}"
           fi
-          IMAGE_AZURE="${IMAGE}-azure"
           IMAGE_EXTERNAL="${IMAGE}-external-db"
-          IMAGE_AZURE_EXTERNAL="${IMAGE_AZURE}-external-db"
 
           VERSION=$(python - <<'PY'
           import tomllib
@@ -131,19 +129,9 @@ jobs:
               echo '__THAUM_TAGS__'
             } >> "$GITHUB_ENV"
             {
-              echo 'TAGS_AZURE<<__THAUM_TAGS_AZURE__'
-              echo "${IMAGE_AZURE}:${EDGE_TAG}"
-              echo '__THAUM_TAGS_AZURE__'
-            } >> "$GITHUB_ENV"
-            {
               echo 'TAGS_EXTERNAL<<__THAUM_TAGS_EXTERNAL__'
               echo "${IMAGE_EXTERNAL}:${EDGE_TAG}"
               echo '__THAUM_TAGS_EXTERNAL__'
-            } >> "$GITHUB_ENV"
-            {
-              echo 'TAGS_AZURE_EXTERNAL<<__THAUM_TAGS_AZURE_EXTERNAL__'
-              echo "${IMAGE_AZURE_EXTERNAL}:${EDGE_TAG}"
-              echo '__THAUM_TAGS_AZURE_EXTERNAL__'
             } >> "$GITHUB_ENV"
           elif [ "${{ github.event_name }}" = "push" ] && [ "${{ github.ref_name }}" = "debug" ]; then
             THAUM_IMAGE_CHANNEL="edge-debug"
@@ -153,19 +141,9 @@ jobs:
               echo '__THAUM_TAGS__'
             } >> "$GITHUB_ENV"
             {
-              echo 'TAGS_AZURE<<__THAUM_TAGS_AZURE__'
-              echo "${IMAGE_AZURE}:edge-debug"
-              echo '__THAUM_TAGS_AZURE__'
-            } >> "$GITHUB_ENV"
-            {
               echo 'TAGS_EXTERNAL<<__THAUM_TAGS_EXTERNAL__'
               echo "${IMAGE_EXTERNAL}:edge-debug"
               echo '__THAUM_TAGS_EXTERNAL__'
-            } >> "$GITHUB_ENV"
-            {
-              echo 'TAGS_AZURE_EXTERNAL<<__THAUM_TAGS_AZURE_EXTERNAL__'
-              echo "${IMAGE_AZURE_EXTERNAL}:edge-debug"
-              echo '__THAUM_TAGS_AZURE_EXTERNAL__'
             } >> "$GITHUB_ENV"
           elif [ "${{ github.event.release.prerelease }}" = "true" ]; then
             THAUM_IMAGE_CHANNEL="devel"
@@ -177,25 +155,11 @@ jobs:
               echo '__THAUM_TAGS__'
             } >> "$GITHUB_ENV"
             {
-              echo 'TAGS_AZURE<<__THAUM_TAGS_AZURE__'
-              echo "${IMAGE_AZURE}:${VERSION}"
-              echo "${IMAGE_AZURE}:devel"
-              echo "${IMAGE_AZURE}:edge"
-              echo '__THAUM_TAGS_AZURE__'
-            } >> "$GITHUB_ENV"
-            {
               echo 'TAGS_EXTERNAL<<__THAUM_TAGS_EXTERNAL__'
               echo "${IMAGE_EXTERNAL}:${VERSION}"
               echo "${IMAGE_EXTERNAL}:devel"
               echo "${IMAGE_EXTERNAL}:edge"
               echo '__THAUM_TAGS_EXTERNAL__'
-            } >> "$GITHUB_ENV"
-            {
-              echo 'TAGS_AZURE_EXTERNAL<<__THAUM_TAGS_AZURE_EXTERNAL__'
-              echo "${IMAGE_AZURE_EXTERNAL}:${VERSION}"
-              echo "${IMAGE_AZURE_EXTERNAL}:devel"
-              echo "${IMAGE_AZURE_EXTERNAL}:edge"
-              echo '__THAUM_TAGS_AZURE_EXTERNAL__'
             } >> "$GITHUB_ENV"
           else
             THAUM_IMAGE_CHANNEL="latest"
@@ -208,14 +172,6 @@ jobs:
               echo '__THAUM_TAGS__'
             } >> "$GITHUB_ENV"
             {
-              echo 'TAGS_AZURE<<__THAUM_TAGS_AZURE__'
-              echo "${IMAGE_AZURE}:${VERSION}"
-              echo "${IMAGE_AZURE}:latest"
-              echo "${IMAGE_AZURE}:devel"
-              echo "${IMAGE_AZURE}:edge"
-              echo '__THAUM_TAGS_AZURE__'
-            } >> "$GITHUB_ENV"
-            {
               echo 'TAGS_EXTERNAL<<__THAUM_TAGS_EXTERNAL__'
               echo "${IMAGE_EXTERNAL}:${VERSION}"
               echo "${IMAGE_EXTERNAL}:latest"
@@ -223,22 +179,12 @@ jobs:
               echo "${IMAGE_EXTERNAL}:edge"
               echo '__THAUM_TAGS_EXTERNAL__'
             } >> "$GITHUB_ENV"
-            {
-              echo 'TAGS_AZURE_EXTERNAL<<__THAUM_TAGS_AZURE_EXTERNAL__'
-              echo "${IMAGE_AZURE_EXTERNAL}:${VERSION}"
-              echo "${IMAGE_AZURE_EXTERNAL}:latest"
-              echo "${IMAGE_AZURE_EXTERNAL}:devel"
-              echo "${IMAGE_AZURE_EXTERNAL}:edge"
-              echo '__THAUM_TAGS_AZURE_EXTERNAL__'
-            } >> "$GITHUB_ENV"
           fi
 
           {
             echo "REGISTRY=${REGISTRY}"
             echo "IMAGE=${IMAGE}"
-            echo "IMAGE_AZURE=${IMAGE_AZURE}"
             echo "IMAGE_EXTERNAL=${IMAGE_EXTERNAL}"
-            echo "IMAGE_AZURE_EXTERNAL=${IMAGE_AZURE_EXTERNAL}"
             echo "VERSION=${VERSION}"
             echo "THAUM_IMAGE_VERSION=${VERSION}"
             echo "THAUM_IMAGE_CHANNEL=${THAUM_IMAGE_CHANNEL}"
@@ -250,21 +196,15 @@ jobs:
         run: |
           echo "REGISTRY=${{ env.REGISTRY }}"
           echo "IMAGE=${{ env.IMAGE }}"
-          echo "IMAGE_AZURE=${{ env.IMAGE_AZURE }}"
           echo "IMAGE_EXTERNAL=${{ env.IMAGE_EXTERNAL }}"
-          echo "IMAGE_AZURE_EXTERNAL=${{ env.IMAGE_AZURE_EXTERNAL }}"
           echo "VERSION=${{ env.VERSION }}"
           echo "THAUM_IMAGE_VERSION=${{ env.THAUM_IMAGE_VERSION }}"
           echo "THAUM_IMAGE_CHANNEL=${{ env.THAUM_IMAGE_CHANNEL }}"
           echo "PYTHON_VERSION=${{ env.PYTHON_VERSION }}"
           echo "TAGS:"
           printf '%s\n' "${{ env.TAGS }}"
-          echo "TAGS_AZURE:"
-          printf '%s\n' "${{ env.TAGS_AZURE }}"
           echo "TAGS_EXTERNAL:"
           printf '%s\n' "${{ env.TAGS_EXTERNAL }}"
-          echo "TAGS_AZURE_EXTERNAL:"
-          printf '%s\n' "${{ env.TAGS_AZURE_EXTERNAL }}"
 
       - name: Log in to GitHub Container Registry
         if: env.REGISTRY == 'ghcr.io'
@@ -301,25 +241,10 @@ jobs:
           build-args: |
             PYTHON_VERSION=${{ env.PYTHON_VERSION }}
             GEMSTONE_UTILS_REF=${{ env.GEMSTONE_UTILS_REF }}
-            THAUM_ENABLE_AZURE=0
             THAUM_BUNDLED_POSTGRES=1
             THAUM_IMAGE_VERSION=${{ env.THAUM_IMAGE_VERSION }}
             THAUM_IMAGE_CHANNEL=${{ env.THAUM_IMAGE_CHANNEL }}
           tags: ${{ env.TAGS }}
-
-      - name: Build and push azure image
-        uses: docker/build-push-action@v7
-        with:
-          context: .
-          push: true
-          build-args: |
-            PYTHON_VERSION=${{ env.PYTHON_VERSION }}
-            GEMSTONE_UTILS_REF=${{ env.GEMSTONE_UTILS_REF }}
-            THAUM_ENABLE_AZURE=1
-            THAUM_BUNDLED_POSTGRES=1
-            THAUM_IMAGE_VERSION=${{ env.THAUM_IMAGE_VERSION }}
-            THAUM_IMAGE_CHANNEL=${{ env.THAUM_IMAGE_CHANNEL }}
-          tags: ${{ env.TAGS_AZURE }}
 
       - name: Build and push external-db image
         uses: docker/build-push-action@v7
@@ -329,25 +254,10 @@ jobs:
           build-args: |
             PYTHON_VERSION=${{ env.PYTHON_VERSION }}
             GEMSTONE_UTILS_REF=${{ env.GEMSTONE_UTILS_REF }}
-            THAUM_ENABLE_AZURE=0
             THAUM_BUNDLED_POSTGRES=0
             THAUM_IMAGE_VERSION=${{ env.THAUM_IMAGE_VERSION }}
             THAUM_IMAGE_CHANNEL=${{ env.THAUM_IMAGE_CHANNEL }}
           tags: ${{ env.TAGS_EXTERNAL }}
-
-      - name: Build and push azure external-db image
-        uses: docker/build-push-action@v7
-        with:
-          context: .
-          push: true
-          build-args: |
-            PYTHON_VERSION=${{ env.PYTHON_VERSION }}
-            GEMSTONE_UTILS_REF=${{ env.GEMSTONE_UTILS_REF }}
-            THAUM_ENABLE_AZURE=1
-            THAUM_BUNDLED_POSTGRES=0
-            THAUM_IMAGE_VERSION=${{ env.THAUM_IMAGE_VERSION }}
-            THAUM_IMAGE_CHANNEL=${{ env.THAUM_IMAGE_CHANNEL }}
-          tags: ${{ env.TAGS_AZURE_EXTERNAL }}
 
   package-thaum-utils:
     if: github.event_name == 'release'

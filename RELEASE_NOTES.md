@@ -1,5 +1,25 @@
 # Thaum release notes
 
+## Unreleased
+
+### Breaking — cloud-neutral container images
+
+Upstream CI no longer publishes **`*-azure`** or **`*-azure-external-db`** image names. Published tags are the default image and **`*-external-db`** only (same `:latest`, `:edge`, version tags as before on those two names).
+
+| Was using | Migrate to |
+|-----------|------------|
+| `ghcr.io/.../thaum-azure:<tag>` | `ghcr.io/.../thaum:<tag>` + platform secret mounts and `secret:` in TOML (see [Azure ACA quickstart](quickstart/cloud/azure/github/README.md)) |
+| `ghcr.io/.../thaum-azure-external-db:<tag>` | `ghcr.io/.../thaum-external-db:<tag>` + same secret wiring |
+| `pip install ".[azure]"` | `pip install "gemstone_utils[azure]==0.4.0"` in your deploy repo or venv |
+| TOML with `azexp:` on the stock image | Custom deploy image per [Dockerfile.azexp.example](quickstart/cloud/azure/github/Dockerfile.azexp.example) |
+
+Existing **`-azure`** digests on GHCR are not deleted but will not receive new releases.
+
+- **Packaging** — Removed `pyproject.toml` `[project.optional-dependencies] azure` and `THAUM_ENABLE_AZURE` from the `Dockerfile`.
+- **`thaum_config_check`** — No longer imports `azexp_backend`; `--test-config` resolves `env:` / `file:` / `secret:` only unless your deploy environment registers other backends.
+
+---
+
 ## v0.7.0a2 (alpha 2) — 2026-05-07
 
 **`pyproject.toml`** is **`0.7.0a2`**.

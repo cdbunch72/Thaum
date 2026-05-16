@@ -21,14 +21,6 @@ if str(_ROOT) not in sys.path:
 logger = logging.getLogger("thaum_config_check")
 
 
-def _enable_azexp_backend() -> None:
-    """Register ``azexp:`` Key Vault backend before config validation (optional dependency)."""
-    try:
-        import gemstone_utils.experimental.azexp_backend  # noqa: F401
-    except ImportError:
-        pass
-
-
 def run_schema_check(config_path: str) -> None:
     from bootstrap import validate_config_after_load
     from config import load_and_validate
@@ -40,7 +32,6 @@ def run_schema_check(config_path: str) -> None:
 
 
 def run_test_config(config_path: str) -> None:
-    _enable_azexp_backend()
     from bootstrap import validate_config_after_load
     from config import load_and_validate
     from thaum.db_bootstrap import resolve_app_db_url, verify_app_db_connection
@@ -60,8 +51,10 @@ def main() -> None:
             epilog=(
                 "--schema-check: TOML + Pydantic validation only; secret references are not resolved "
                 "(suitable for CI without secrets).\n"
-                "--test-config: full validation including secret resolution and a SELECT 1 DB check; "
-                "run on the target host with secrets available.\n"
+                "--test-config: full validation including secret resolution (env:, file:, secret:) "
+                "and a SELECT 1 DB check; run on the target host with secrets available. "
+                "Experimental backends (e.g. azexp:) must be registered by your deploy image or "
+                "environment before running this check.\n"
                 "Encrypted config values still require set_keyctx_resolver at runtime.\n"
                 "[server].base_url is optional when THAUM_BASE_URL or a supported cloud env provides the URL; "
                 "when THAUM_BASE_URL is set it overrides base_url. CI may set THAUM_BASE_URL for --schema-check."

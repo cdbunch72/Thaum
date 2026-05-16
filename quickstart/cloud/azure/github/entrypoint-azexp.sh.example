@@ -1,0 +1,16 @@
+#!/bin/sh
+# SPDX-License-Identifier: MPL-2.0
+# Deploy-repo entrypoint wrapper: register azexp: Key Vault backend, then run stock Thaum entrypoint.
+#
+# Copy to your deploy repo as entrypoint-azexp.sh, chmod +x, and reference from Dockerfile.azexp.example
+# (uncomment COPY/RUN/ENTRYPOINT lines) or set as the Container App command:
+#   /app/docker/entrypoint-azexp.sh
+#
+# Requires gemstone_utils[azure] in the image (see Dockerfile.azexp.example). Not needed for the
+# default ACA path (keyvaultref + secret: file mounts).
+
+set -e
+
+/venv/bin/python -c "import gemstone_utils.experimental.azexp_backend"  # noqa: F401
+
+exec /app/docker/entrypoint.sh "$@"

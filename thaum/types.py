@@ -15,7 +15,7 @@ from dataclasses import dataclass, field
 if TYPE_CHECKING:
     from bots.base import BaseChatBot
 
-# When True, ResolvedSecret / OptionalResolvedSecret keep raw reference strings (no env/file/azexp I/O).
+# When True, ResolvedSecret / OptionalResolvedSecret keep raw reference strings (no env/file/secret I/O).
 config_schema_only: ContextVar[bool] = ContextVar("config_schema_only", default=False)
 
 
