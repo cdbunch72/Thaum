@@ -26,6 +26,7 @@ base_url = "https://thaum.example.com"
 # Bot driver module under bots.plugins (e.g. webex).
 bot_type = "webex"
 # Lookup plugin under lookup.plugins (null = no external directory).
+# Required when any bot uses team: or person: responder refs (see [lookup.atlassian] below).
 lookup_plugin = "null"
 # bot_url_prefix = "/bot"          # default; webhook path = {base_url}/bot/{bot_key}
 
@@ -155,10 +156,11 @@ alert_type = "jira"
 # incident_prompt_card_template = """{ "$schema": "http://adaptivecards.io/schemas/adaptive-card.json", "type": "AdaptiveCard", "version": "1.3", "body": [], "actions": [] }"""
 # Optional customer service message posted when a new incident room is created.
 # Set to an empty string ("") to disable sending this message.
-# customer_service_message_template = "Thank you for your patience.  The next available person from {{ team_description }} will be with you shortlly."
+# customer_service_message_template = "Thank you for your patience.  The next available person from {{ team_description }} will be with you shortly."
 # Who is invited into new incident rooms (lookup resolves team:/person: / email).
 # Each responders array element supports resolver prefixes (env:/file:/secret:).
-responders = ["team:DBA"]
+# secret:cio-email — mounted file body must be a plain email (e.g. cio@example.com), not person:…
+responders = ["team:DBA", "boss@example.com", "secret:cio-email"]
 emergency_warning_message = ""
 # Webex bot token (ResolvedSecret).
 token = "secret:webex-token-database"
@@ -166,6 +168,7 @@ token = "secret:webex-token-database"
 # hmac_secret = "secret:webex-hmac-database"
 
 [bots.database.alert]
+# Jira-only; incident room invites use [bots.database].responders above.
 # Jira alert responders (team IDs resolved via Jira + lookup). Merged over defaults.alert.jira.
 responders = ["team:DBA"]
 

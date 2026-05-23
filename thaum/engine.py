@@ -20,7 +20,7 @@ def _render_customer_service_message(bot: "BaseChatBot", context: dict) -> str:
     if template_raw is None:
         template_raw = (
             "Thank you for your patience.  The next available person from "
-            "{{ team_description }} will be with you shortlly."
+            "{{ team_description }} will be with you shortly."
         )
     template_text = str(template_raw)
     if not template_text.strip():

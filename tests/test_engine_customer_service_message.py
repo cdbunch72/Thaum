@@ -53,7 +53,7 @@ class CustomerServiceMessageTest(unittest.TestCase):
         self.assertEqual(room_id, "room-1")
         said_texts = [call.args[1] for call in bot.say.call_args_list]
         self.assertNotIn(
-            "Thank you for your patience.  The next available person from Helpdesk will be with you shortlly.",
+            "Thank you for your patience.  The next available person from Helpdesk will be with you shortly.",
             said_texts,
         )
         self.assertTrue(any(text.startswith("**Summary:**") for text in said_texts))

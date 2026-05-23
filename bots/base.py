@@ -182,7 +182,7 @@ class BaseChatBotConfig(BaseModel):
     room_title_template: Optional[str] = '{{requester_name}} - {{team_description}} {{date}}'
     customer_service_message_template: Optional[str] = (
         "Thank you for your patience.  The next available person from "
-        "{{ team_description }} will be with you shortlly."
+        "{{ team_description }} will be with you shortly."
     )
     incident_prompt_card_template: Optional[str] = None
     incident_prompt_card_template_path: Optional[str] = None
