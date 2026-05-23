@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+---
+
+## v0.7.0a3 (alpha 3) — 2026-05-23
+
+**`pyproject.toml`** is **`0.7.0a3`**.
+
+Third **0.7.x** alpha: cloud-neutral published images, **`gemstone_utils`** from PyPI, incident prompt cards using Adaptive Cards **`isVisible`**, and bundled static assets for card images.
+
 ### Breaking — cloud-neutral container images
 
 Upstream CI no longer publishes **`*-azure`** or **`*-azure-external-db`** image names. Published tags are the default image and **`*-external-db`** only (same `:latest`, `:edge`, version tags as before on those two names).
@@ -17,6 +25,29 @@ Existing **`-azure`** digests on GHCR are not deleted but will not receive new r
 
 - **Packaging** — Removed `pyproject.toml` `[project.optional-dependencies] azure` and `THAUM_ENABLE_AZURE` from the `Dockerfile`.
 - **`thaum_config_check`** — No longer imports `azexp_backend`; `--test-config` resolves `env:` / `file:` / `secret:` only unless your deploy environment registers other backends.
+
+### Highlights since v0.7.0a2
+
+- **Incident prompt cards** — Builtin default and [`incident_prompt_card.sample.j2`](incident_prompt_card.sample.j2) always include the priority `Input.Toggle` with Adaptive Cards **`isVisible`** driven by `show_priority_toggle` (no Jinja `{% if %}` blocks). Submit `data` is only `{ "action": "submit_incident" }`; missing `is_emergency` from a hidden toggle is treated as normal priority. Jinja context adds resolved **`base_url`** (`bot.base_url` from `[server].base_url`). Sample template includes a logo `Image` at `{{ base_url }}/static/Thaum_wizard_cgi.jpg`.
+- **Static assets** — Flask serves **`GET /static/<filename>`** from the repo [`static/`](static/) directory (bundled **`Thaum_wizard_cgi.jpg`** for the sample card).
+- **Azure quickstart** — Expanded ACA / Key Vault documentation; example **`Dockerfile.azexp.example`** and interactive Key Vault secret scripts (bash and PowerShell).
+- **CI** — Release workflow builds only the default and **`-external-db`** images; GitHub Actions updated to current action major versions.
+
+### Dependencies
+
+**`gemstone_utils`** **`0.4.0`** from **PyPI** (replaces the **`v0.4.0rc1`** git pin on the **`0.7.0a2`** tag). See **`pyproject.toml`**, **`requirements.txt`**, and **`GEMSTONE_UTILS_REF`** in **`Dockerfile`**.
+
+### Upgrade from v0.7.0a2
+
+- **pip / venv**: **`pip install -U .`** (or your lockfile workflow) to pick up **`0.7.0a3`**.
+- **Containers**: migrate off **`*-azure`** image names if used; rebuild or pull **`0.7.0a3`** (or **`:edge`** after publish).
+- **Custom incident cards**: if you relied on Jinja to omit the priority toggle or on `"is_emergency": "false"` in submit `data`, switch to **`isVisible`** and drop the submit fallback (handler behavior unchanged).
+
+No manual schema migration is required (**`init_db`** creates ORM tables on startup).
+
+### Alpha caveats
+
+- Breaking changes may occur before **v0.7.0** stable.
 
 ---
 
