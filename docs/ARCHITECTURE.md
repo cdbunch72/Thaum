@@ -106,6 +106,12 @@ Thaum uses a layered configuration model.
   - ``incident_prompt_card_template`` (inline Jinja template)
   - Inline template takes precedence if both are set.
   - Templates render to JSON and are parsed before send; use ``|tojson`` for interpolated values.
+  - Jinja context includes ``team_description``, ``default_high_priority``,
+    ``show_priority_toggle`` (maps to Adaptive Cards ``isVisible`` on optional inputs),
+    and ``base_url`` (resolved ``[server].base_url`` for absolute ``Image.url`` values).
+  - Bundled static assets are served at ``GET /static/<filename>`` (e.g.
+    ``{{ base_url }}/static/Thaum_wizard_cgi.jpg`` in the sample template); hosts
+    such as Webex require HTTPS URLs reachable from their network.
 
 ### **PluginConfig**
 

@@ -12,10 +12,17 @@ from thaum.handlers import _incident_prompt_card
 
 
 class IncidentPromptCardTemplateTest(unittest.TestCase):
-    def _mk_bot(self, inline: str | None = None, template_path: str | None = None):
+    def _mk_bot(
+        self,
+        inline: str | None = None,
+        template_path: str | None = None,
+        *,
+        base_url: str = "",
+    ):
         return SimpleNamespace(
             incident_prompt_card_template=inline,
             incident_prompt_card_template_path=template_path,
+            base_url=base_url,
         )
 
     def test_default_card_used_when_no_template_configured(self) -> None:
@@ -27,8 +34,23 @@ class IncidentPromptCardTemplateTest(unittest.TestCase):
             show_priority_toggle=False,
         )
         self.assertEqual(card["type"], "AdaptiveCard")
-        self.assertEqual(card["actions"][0]["data"]["is_emergency"], "false")
+        self.assertNotIn("is_emergency", card["actions"][0]["data"])
         self.assertEqual(card["body"][1]["id"], "summary")
+        toggle = card["body"][2]
+        self.assertEqual(toggle["type"], "Input.Toggle")
+        self.assertEqual(toggle["id"], "is_emergency")
+        self.assertFalse(toggle["isVisible"])
+
+    def test_default_card_toggle_visible_when_enabled(self) -> None:
+        bot = self._mk_bot()
+        card = _incident_prompt_card(
+            bot,
+            team_description="Database",
+            default_high_priority=False,
+            show_priority_toggle=True,
+        )
+        self.assertTrue(card["body"][2]["isVisible"])
+        self.assertNotIn("is_emergency", card["actions"][0]["data"])
 
     def test_renders_from_template_path(self) -> None:
         with TemporaryDirectory() as tmp:
@@ -53,6 +75,25 @@ class IncidentPromptCardTemplateTest(unittest.TestCase):
                 show_priority_toggle=False,
             )
         self.assertEqual(card["body"][0]["text"], "SRE")
+
+    def test_sample_template_renders_logo_url_from_base_url(self) -> None:
+        repo_root = Path(__file__).resolve().parents[1]
+        sample_path = repo_root / "incident_prompt_card.sample.j2"
+        bot = self._mk_bot(
+            template_path=str(sample_path),
+            base_url="https://thaum.example.com",
+        )
+        card = _incident_prompt_card(
+            bot,
+            team_description="SRE",
+            default_high_priority=False,
+            show_priority_toggle=True,
+        )
+        self.assertEqual(card["body"][0]["type"], "Image")
+        self.assertEqual(
+            card["body"][0]["url"],
+            "https://thaum.example.com/static/Thaum_wizard_cgi.jpg",
+        )
 
     def test_malformed_template_falls_back_to_default_card(self) -> None:
         inline = '{"$schema":"http://adaptivecards.io/schemas/adaptive-card.json","type":"AdaptiveCard","version":"1.3","body":[{"type":"TextBlock","text":{{ missing_var | tojson }}}],"actions":[]}'

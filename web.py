@@ -24,7 +24,7 @@ logger = logging.getLogger("thaum.web")
 
 def create_app(config: Dict[str, Any], *, run_leader_loop: bool = True) -> Flask:
     """Flask application factory; expects ``bootstrap()`` to have run first."""
-    app = Flask(__name__)
+    app = Flask(__name__, static_folder="static", static_url_path="/static")
     app.config["THAUM"] = config
 
     @app.get("/health")

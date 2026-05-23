@@ -56,6 +56,11 @@ class HealthEndpointsTest(unittest.TestCase):
         data = json.loads(rv.get_data(as_text=True))
         self.assertEqual(data.get("status"), "ok")
 
+    def test_static_wizard_logo_is_served(self) -> None:
+        rv = self.client.get("/static/Thaum_wizard_cgi.jpg")
+        self.assertEqual(rv.status_code, 200)
+        self.assertTrue(rv.mimetype and "image" in rv.mimetype)
+
     @patch("web.get_session")
     def test_ready_returns_503_when_session_fails(self, mock_get_session: object) -> None:
         mock_get_session.side_effect = RuntimeError("db down")

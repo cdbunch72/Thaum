@@ -41,6 +41,7 @@ def initialize_bots(bot_type: str, config: Dict[str, Any]) -> None:
 
             bot = create_bot_from_model(bot_type, validated_bot)
             bot.bot_key = bot_key
+            bot.base_url = server_cfg.base_url
             bot.lookup_plugin = get_lookup_plugin()
 
             resolved_responders = RespondersList()

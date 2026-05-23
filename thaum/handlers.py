@@ -35,17 +35,16 @@ DEFAULT_INCIDENT_PROMPT_CARD_TEMPLATE = """
       "placeholder": "Briefly describe what you need (if spaces fail in Webex, use +)",
       "isMultiline": true,
       "isRequired": true
-    }
-    {% if show_priority_toggle %},
+    },
     {
       "type": "Input.Toggle",
       "id": "is_emergency",
       "title": "High priority (emergency) alert",
       "value": {{ ("true" if default_high_priority else "false") | tojson }},
       "valueOn": "true",
-      "valueOff": "false"
+      "valueOff": "false",
+      "isVisible": {{ show_priority_toggle | tojson }}
     }
-    {% endif %}
   ],
   "actions": [
     {
@@ -53,9 +52,6 @@ DEFAULT_INCIDENT_PROMPT_CARD_TEMPLATE = """
       "title": "Submit",
       "data": {
         "action": "submit_incident"
-        {% if not show_priority_toggle %},
-        "is_emergency": "false"
-        {% endif %}
       }
     }
   ]
@@ -88,6 +84,7 @@ def _incident_prompt_card(
         "team_description": team_description,
         "default_high_priority": default_high_priority,
         "show_priority_toggle": show_priority_toggle,
+        "base_url": getattr(bot, "base_url", "") or "",
     }
 
     def _render_card(source: str) -> Dict[str, Any]:
@@ -240,7 +237,7 @@ def bind_thaum_handlers(bot: 'BaseChatBot') -> None:
         if action_type != "submit_incident":
             return
 
-        # 2. Extract inputs: summary from Input.Text; is_emergency from Toggle or submit data ("true"/"false").
+        # 2. Extract inputs: summary from Input.Text; is_emergency from Toggle when visible (missing => normal).
         summary = action.inputs.get("summary", "No summary provided")
         if " " not in summary and "+" in summary:
             normalized_summary = summary.replace("+", " ")
