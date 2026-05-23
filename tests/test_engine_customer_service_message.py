@@ -39,7 +39,10 @@ class CustomerServiceMessageTest(unittest.TestCase):
 
     def test_default_customer_service_message_is_sent(self) -> None:
         bot = self._bot()
-        bot.customer_service_message_template = None
+        bot.customer_service_message_template = (
+            "Thank you for your patience.  The next available person from "
+            "{{ team_description }} will be with you shortly."
+        )
         room_id = create_incident_room(bot, "Need help", self._speaker())
         self.assertEqual(room_id, "room-1")
         first_text = bot.say.call_args_list[0].args[1]

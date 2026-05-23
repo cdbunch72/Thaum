@@ -16,13 +16,7 @@ jinja_env = Environment(undefined=StrictUndefined)
 
 
 def _render_customer_service_message(bot: "BaseChatBot", context: dict) -> str:
-    template_raw = getattr(bot, "customer_service_message_template", None)
-    if template_raw is None:
-        template_raw = (
-            "Thank you for your patience.  The next available person from "
-            "{{ team_description }} will be with you shortly."
-        )
-    template_text = str(template_raw)
+    template_text = bot.customer_service_message_template or ""
     if not template_text.strip():
         return ""
     try:
