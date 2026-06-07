@@ -293,14 +293,16 @@ Configure Container Apps probes to hit `/ready` (or `/health`) on port **5165**.
 ## Configuration file
 
 1. Start from [systemd/thaum.conf.example](../../../systemd/thaum.conf.example).
-2. Set **`[server].base_url`** to your Container App’s public URL, **or** omit `base_url` and set **`THAUM_BASE_URL`** at runtime (env overrides TOML when both are set).
+2. Set **`[server].base_url`** to your Container App’s public URL, **or** omit `base_url` when ACA ingress is enabled (runtime auto-detection via **`CONTAINER_APP_NAME`** + **`CONTAINER_APP_ENV_DNS_SUFFIX`**), or set **`THAUM_BASE_URL`** at runtime (env overrides TOML when both are set). **Custom domains** still require an explicit URL in TOML or **`THAUM_BASE_URL`**.
 3. Save it in your deploy repo as **`thaum.toml`**. [Dockerfile.example](Dockerfile.example) copies it to **`/etc/thaum/thaum.toml`**.
 
 Keep sensitive values out of Git: use **`secret:<key>`** with the file-mount flow in [§4](#4-app-secrets-keyvaultref-and-file-mount-happy-path), or **`env:VAR`** if you chose the **`secretref:`** style in [File-mounted secrets vs environment variable secrets](#file-mounted-secrets-vs-environment-variable-secrets) (not inline tokens in `az containerapp secret set` for production).
 
 ### `THAUM_BASE_URL` in CI
 
-Pipelines often set **`THAUM_BASE_URL`** so the public URL does not live in Git; it **overrides** `[server].base_url` when both are set. **`--schema-check`** in `thaum_config_check.py` may rely on **`THAUM_BASE_URL`** when `base_url` is omitted from TOML; see that script’s epilog in the main repo.
+Omitting **`base_url`** in TOML works on ACA at runtime (platform env vars), but **GitHub Actions schema-check is not on ACA** — pass **`THAUM_BASE_URL`** into the `docker run` step. [deploy.yml.example](deploy.yml.example) queries the Container App ingress FQDN with **`az containerapp show`** and sets **`-e THAUM_BASE_URL=https://${FQDN}`** before **`--schema-check`**. That validates structure only; a **custom domain** at runtime still needs **`THAUM_BASE_URL`** (or TOML **`base_url`**) on the app revision.
+
+**Alternative:** keep **`base_url`** in **`thaum.toml`** and omit **`-e THAUM_BASE_URL`** in CI (URL lives in Git).
 
 ## Dockerfile (deploy repo)
 

@@ -20,8 +20,10 @@
 
 [server]
 # Public base URL of this Thaum deployment (used for bot webhooks and links).
-# Optional in TOML when THAUM_BASE_URL or a supported cloud PaaS env supplies it (see thaum.types._resolve_base_url).
-# If both are set, THAUM_BASE_URL overrides this value.
+# Optional in TOML when THAUM_BASE_URL or a supported cloud PaaS env supplies it
+# (see thaum.types._resolve_base_url): Azure Container Apps (CONTAINER_APP_NAME +
+# CONTAINER_APP_ENV_DNS_SUFFIX), Azure App Service (WEBSITE_HOSTNAME), Cloud Run,
+# AWS App Runner. If both are set, THAUM_BASE_URL overrides this value.
 base_url = "https://thaum.example.com"
 # Bot driver module under bots.plugins (e.g. webex).
 bot_type = "webex"

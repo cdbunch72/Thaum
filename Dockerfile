@@ -100,7 +100,9 @@ RUN chmod +x \
         /app/docker/pg_bootstrap.py
 
 USER root
-VOLUME ["/etc/thaum", "/var/lib/thaum"]
+# For persistent config/data, bind-mount /etc/thaum and/or /var/lib/thaum at run time
+# (docker run -v, Quadlet Volume=, K8s volumeMounts). Omitting mounts uses the container
+# writable layer (ephemeral).
 EXPOSE 5165
 
 # Default 0.0.0.0: reverse proxy reaches this container via its own IP.

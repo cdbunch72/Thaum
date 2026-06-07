@@ -16,6 +16,8 @@ _BASE_URL_ENV_KEYS = frozenset(
         "THAUM_BASE_URL",
         "K_SERVICE",
         "K_SERVICE_URL",
+        "CONTAINER_APP_NAME",
+        "CONTAINER_APP_ENV_DNS_SUFFIX",
         "WEBSITE_HOSTNAME",
         "AWS_APP_RUNNER_SERVICE_URL",
     }
@@ -80,6 +82,46 @@ class ServerConfigBaseUrlTest(unittest.TestCase):
         with _isolated_base_url_env({"WEBSITE_HOSTNAME": "app.azurewebsites.net"}):
             cfg = ServerConfig(bot_type="webex")
         self.assertEqual(cfg.base_url, "https://app.azurewebsites.net")
+        self.assertEqual(cfg.url_source, BaseUrlSource.AZURE)
+
+    def test_azure_container_apps_fqdn(self) -> None:
+        with _isolated_base_url_env(
+            {
+                "CONTAINER_APP_NAME": "my-thaum",
+                "CONTAINER_APP_ENV_DNS_SUFFIX": "eastus.azurecontainerapps.io",
+            }
+        ):
+            cfg = ServerConfig(bot_type="webex")
+        self.assertEqual(cfg.base_url, "https://my-thaum.eastus.azurecontainerapps.io")
+        self.assertEqual(cfg.url_source, BaseUrlSource.AZURE)
+
+    def test_azure_container_apps_suffix_with_leading_dot(self) -> None:
+        with _isolated_base_url_env(
+            {
+                "CONTAINER_APP_NAME": "my-thaum",
+                "CONTAINER_APP_ENV_DNS_SUFFIX": ".eastus.azurecontainerapps.io",
+            }
+        ):
+            cfg = ServerConfig(bot_type="webex")
+        self.assertEqual(cfg.base_url, "https://my-thaum.eastus.azurecontainerapps.io")
+        self.assertEqual(cfg.url_source, BaseUrlSource.AZURE)
+
+    def test_azure_container_apps_partial_env_falls_through(self) -> None:
+        with _isolated_base_url_env({"CONTAINER_APP_NAME": "my-thaum"}):
+            with self.assertRaises(ValueError) as ctx:
+                ServerConfig(bot_type="webex")
+        self.assertIn("public Base URL", str(ctx.exception))
+
+    def test_azure_aca_wins_over_website_hostname(self) -> None:
+        with _isolated_base_url_env(
+            {
+                "CONTAINER_APP_NAME": "my-thaum",
+                "CONTAINER_APP_ENV_DNS_SUFFIX": "eastus.azurecontainerapps.io",
+                "WEBSITE_HOSTNAME": "app.azurewebsites.net",
+            }
+        ):
+            cfg = ServerConfig(bot_type="webex")
+        self.assertEqual(cfg.base_url, "https://my-thaum.eastus.azurecontainerapps.io")
         self.assertEqual(cfg.url_source, BaseUrlSource.AZURE)
 
     def test_aws_app_runner_url(self) -> None:

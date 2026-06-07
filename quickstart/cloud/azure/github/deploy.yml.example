@@ -67,8 +67,18 @@ jobs:
 
       - name: Schema check (inside built image)
         run: |
+          set -euo pipefail
+          FQDN=$(az containerapp show \
+            --name "${{ env.CONTAINERAPP_NAME }}" \
+            --resource-group "${{ env.RESOURCE_GROUP }}" \
+            --query "properties.configuration.ingress.fqdn" -o tsv)
+          if [ -z "$FQDN" ]; then
+            echo "Container App ingress FQDN is empty; enable external ingress before CI schema-check, or set base_url in thaum.toml." >&2
+            exit 1
+          fi
           docker run --rm \
             --entrypoint /venv/bin/python \
+            -e "THAUM_BASE_URL=https://${FQDN}" \
             "${{ env.LOCAL_IMAGE }}" \
             /app/scripts/python/thaum_config_check.py \
             --schema-check \

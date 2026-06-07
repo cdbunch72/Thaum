@@ -2,6 +2,21 @@
 
 ## Unreleased
 
+### Containers
+
+- **Bundled PostgreSQL** — **supervisord** starts **`postgres`** with **`%(ENV_PGDATA)s`** so a custom **`PGDATA`** matches entrypoint init/bootstrap (no hardcoded data path).
+- **Image layout** — Removed **`VOLUME ["/etc/thaum", "/var/lib/thaum"]`** from the Dockerfile. Anonymous Docker volumes no longer mask baked config or block **`chown`** on ACA; bind-mount those paths explicitly when you need persistence (Quadlet, **`docker run -v`**, K8s).
+
+### Server / config
+
+- **Azure Container Apps** — **`[server].base_url`** may be omitted when **`CONTAINER_APP_NAME`** and **`CONTAINER_APP_ENV_DNS_SUFFIX`** are set (stable ingress FQDN). App Service **`WEBSITE_HOSTNAME`** detection unchanged. Custom domains still need explicit **`THAUM_BASE_URL`** or TOML **`base_url`**.
+
+### Docs / CI examples
+
+- **Azure deploy workflow** — [deploy.yml.example](quickstart/cloud/azure/github/deploy.yml.example) passes **`THAUM_BASE_URL`** from ingress FQDN into **`--schema-check`** when TOML omits **`base_url`**.
+
+Deploy repos can drop patched **`supervisord.conf`** copies after upgrading to an image that includes these fixes.
+
 ---
 
 ## v0.7.0a3 (alpha 3) — 2026-05-23

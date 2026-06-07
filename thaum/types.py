@@ -84,8 +84,9 @@ def _resolve_base_url(config_base_url: Optional[str]) -> tuple[str, BaseUrlSourc
 
     1. ``THAUM_BASE_URL`` — overrides ``[server].base_url`` when set.
     2. Non-empty ``[server].base_url`` from config (may be omitted in TOML).
-    3. PaaS: Cloud Run ``K_SERVICE`` + ``K_SERVICE_URL``, Azure ``WEBSITE_HOSTNAME``,
-       AWS App Runner ``AWS_APP_RUNNER_SERVICE_URL``.
+    3. PaaS: Cloud Run ``K_SERVICE`` + ``K_SERVICE_URL``, Azure Container Apps
+       ``CONTAINER_APP_NAME`` + ``CONTAINER_APP_ENV_DNS_SUFFIX``, Azure App Service
+       ``WEBSITE_HOSTNAME``, AWS App Runner ``AWS_APP_RUNNER_SERVICE_URL``.
 
     Raises ``ValueError`` if nothing yields a non-empty URL.
     """
@@ -98,6 +99,12 @@ def _resolve_base_url(config_base_url: Optional[str]) -> tuple[str, BaseUrlSourc
     if "K_SERVICE" in os.environ:
         if g_url := _strip_base_url_candidate(os.environ.get("K_SERVICE_URL")):
             return g_url.rstrip("/"), BaseUrlSource.GOOGLE
+
+    aca_name = _strip_base_url_candidate(os.environ.get("CONTAINER_APP_NAME"))
+    aca_suffix = _strip_base_url_candidate(os.environ.get("CONTAINER_APP_ENV_DNS_SUFFIX"))
+    if aca_name and aca_suffix:
+        suffix = aca_suffix.lstrip(".")
+        return f"https://{aca_name}.{suffix}".rstrip("/"), BaseUrlSource.AZURE
 
     if "WEBSITE_HOSTNAME" in os.environ:
         if az_host := _strip_base_url_candidate(os.environ.get("WEBSITE_HOSTNAME")):

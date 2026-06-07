@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import importlib.util
+import os
 import textwrap
 import unittest
 from pathlib import Path
@@ -22,6 +23,27 @@ MINIMAL_SCHEMA_TOML = textwrap.dedent(
     """\
     [server]
     base_url = "https://test.example.invalid"
+    bot_type = "webex_bot"
+    lookup_plugin = "null"
+
+    [server.database]
+    database_vault_passphrase = "env:THAUM_SCHEMA_CHECK_MISSING_VAULT"
+
+    [bots.testbot]
+    handle = "Test Bot"
+    token = "env:THAUM_SCHEMA_CHECK_MISSING_TOKEN"
+    send_alerts = false
+    high_pri_on = false
+    alert_type = "null"
+    responders = []
+    team_description = "Test"
+    emergency_warning_message = "none"
+    """
+)
+
+MINIMAL_SCHEMA_TOML_NO_BASE_URL = textwrap.dedent(
+    """\
+    [server]
     bot_type = "webex_bot"
     lookup_plugin = "null"
 
@@ -92,6 +114,30 @@ class SchemaCheckTest(unittest.TestCase):
                     validate_config_after_load(config)
             mock_create_engine.assert_not_called()
         finally:
+            Path(path).unlink(missing_ok=True)
+
+    def test_schema_check_omitted_base_url_with_thaum_base_url_env(self) -> None:
+        with NamedTemporaryFile(
+            mode="w",
+            suffix=".toml",
+            delete=False,
+            encoding="utf-8",
+        ) as tmp:
+            tmp.write(MINIMAL_SCHEMA_TOML_NO_BASE_URL)
+            path = tmp.name
+
+        saved = os.environ.get("THAUM_BASE_URL")
+        os.environ["THAUM_BASE_URL"] = "https://schema-check.example"
+        try:
+            mod = _load_thaum_config_check_module()
+            with patch("sqlalchemy.create_engine") as mock_create_engine:
+                mod.run_schema_check(path)
+            mock_create_engine.assert_not_called()
+        finally:
+            if saved is None:
+                os.environ.pop("THAUM_BASE_URL", None)
+            else:
+                os.environ["THAUM_BASE_URL"] = saved
             Path(path).unlink(missing_ok=True)
 
 

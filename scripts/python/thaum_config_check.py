@@ -56,8 +56,9 @@ def main() -> None:
                 "Experimental backends (e.g. azexp:) must be registered by your deploy image or "
                 "environment before running this check.\n"
                 "Encrypted config values still require set_keyctx_resolver at runtime.\n"
-                "[server].base_url is optional when THAUM_BASE_URL or a supported cloud env provides the URL; "
-                "when THAUM_BASE_URL is set it overrides base_url. CI may set THAUM_BASE_URL for --schema-check."
+                "[server].base_url is optional when THAUM_BASE_URL or a supported cloud env provides the URL "
+                "(Azure Container Apps, App Service, Cloud Run, App Runner); when THAUM_BASE_URL is set it "
+                "overrides base_url. CI may set THAUM_BASE_URL for --schema-check."
             ),
         )
         mode = parser.add_mutually_exclusive_group(required=True)
