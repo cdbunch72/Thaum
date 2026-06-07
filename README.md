@@ -17,7 +17,7 @@ Some code in this repository was written with the help of **Cursor** and **GitHu
 
 - [Architecture](docs/ARCHITECTURE.md) — bootstrap, config model, logging, plugins.
 - [Quickstart](quickstart/QUICKSTART.md) — Quadlet (Podman) or containerless (Unix socket + nginx), with encrypted credentials.
-- [Deployment quickstarts](docs/deployment-quickstarts.md) — cloud (Azure; AWS/GCP planned) and Kubernetes.
+- [Deployment quickstarts](docs/deployment-quickstarts.md) — [Thaum Cloud](https://gemstone-software-dev.github.io/thaum-cloud/) (public-cloud deploy template) and Kubernetes.
 - [Style guide](docs/STYLE_GUIDE.md) — code and test conventions.
 - [Admin log level API](docs/admin-log-level.md) — signed runtime log level changes.
 - [Release notes](RELEASE_NOTES.md)
@@ -26,7 +26,7 @@ Some code in this repository was written with the help of **Cursor** and **GitHu
 
 ## Container images (CI)
 
-Publishing runs from [`.github/workflows/release.yml`](.github/workflows/release.yml) when a **GitHub Release is published** or when you **Run workflow** manually (`workflow_dispatch`). The job runs the unit tests, then builds [`Dockerfile`](Dockerfile) and pushes **two** image name variants to your registry (same tag scheme on each): the default image (bundled PostgreSQL + supervisord) and **`<name>-external-db`** (gunicorn only; set `[server.database].db_url`). Cloud-specific Python extras (for example `gemstone_utils[azure]` for experimental `azexp:` references) belong in **deploy-repo** images, not in the published Thaum tags—see [Azure Container Apps quickstart](quickstart/cloud/azure/github/README.md).
+Publishing runs from [`.github/workflows/release.yml`](.github/workflows/release.yml) when a **GitHub Release is published** or when you **Run workflow** manually (`workflow_dispatch`). The job runs the unit tests, then builds [`Dockerfile`](Dockerfile) and pushes **two** image name variants to your registry (same tag scheme on each): the default image (bundled PostgreSQL + supervisord) and **`<name>-external-db`** (gunicorn only; set `[server.database].db_url`). Cloud-specific Python extras (for example `gemstone_utils[azure]` for experimental `azexp:` references) belong in **deploy-repo** images, not in the published Thaum tags—see [Thaum Cloud](https://gemstone-software-dev.github.io/thaum-cloud/).
 
 On **GitHub Release publish** (including **prereleases**), the workflow also uploads **`thaum-utils-<release-tag>.zip`** to that release. The archive contains a `thaum-utils/` folder with `quickstart/`, `docs/`, `scripts/`, `sample.thaum.toml`, and `incident_prompt_card.sample.j2`.
 

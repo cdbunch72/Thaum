@@ -100,6 +100,7 @@ lookup_plugin = "null"
 # Use secret:key for mounted secret files (systemd credentials, Azure Container Apps mounts, Kubernetes secrets).
 # Azure Key Vault: alphanumeric + hyphens only (no underscores). Azure Container Apps secret names: lowercase only,
 # max 20 characters ([az containerapp secret set](https://learn.microsoft.com/en-us/cli/azure/containerapp/secret?view=azure-cli-latest#az-containerapp-secret-set)).
+# Deploy wiring (Key Vault, ACA mounts, CI): see https://gemstone-software-dev.github.io/thaum-cloud/
 # Prefer lowercase kebab-case so one name works in Key Vault, ACA `--secrets`, and `secret:<key>` here.
 [connections.example-atlassian]
 plugin = "atlassian"

@@ -1,6 +1,6 @@
 # Thaum on Kubernetes
 
-Run Thaum on **any** conformant Kubernetes cluster (on-premises, EKS, GKE, AKS, or other). This guide targets **production-style** expectations: **multiple replicas**, **external PostgreSQL**, and **secrets** wired through the cluster—**not** the same “single cheap instance” story as [Azure App Service + GitHub Actions](../cloud/azure/github/README.md).
+Run Thaum on **any** conformant Kubernetes cluster (on-premises, EKS, GKE, AKS, or other). This guide targets **production-style** expectations: **multiple replicas**, **external PostgreSQL**, and **secrets** wired through the cluster—**not** the same “single cheap instance” story as [Thaum Cloud on Azure Container Apps](https://gemstone-software-dev.github.io/thaum-cloud/quickstart/azure/quickstart_aca.html).
 
 - Main quickstart index: [QUICKSTART.md](../QUICKSTART.md)
 - Example TOML (trim for ConfigMaps / secrets): [systemd/thaum.conf.example](../systemd/thaum.conf.example)

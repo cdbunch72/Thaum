@@ -13,7 +13,7 @@
 
 ### Docs / CI examples
 
-- **Azure deploy workflow** — [deploy.yml.example](quickstart/cloud/azure/github/deploy.yml.example) passes **`THAUM_BASE_URL`** from ingress FQDN into **`--schema-check`** when TOML omits **`base_url`**.
+- **Cloud deploy docs** — Removed duplicated Azure quickstart tree from upstream; use [Thaum Cloud](https://gemstone-software-dev.github.io/thaum-cloud/) ([ACA quickstart](https://gemstone-software-dev.github.io/thaum-cloud/quickstart/azure/quickstart_aca.html), [template repo](https://github.com/gemstone-software-dev/thaum-cloud)) for Dockerfile, workflows, and provisioning guides.
 
 Deploy repos can drop patched **`supervisord.conf`** copies after upgrading to an image that includes these fixes.
 
@@ -31,10 +31,10 @@ Upstream CI no longer publishes **`*-azure`** or **`*-azure-external-db`** image
 
 | Was using | Migrate to |
 |-----------|------------|
-| `ghcr.io/.../thaum-azure:<tag>` | `ghcr.io/.../thaum:<tag>` + platform secret mounts and `secret:` in TOML (see [Azure ACA quickstart](quickstart/cloud/azure/github/README.md)) |
+| `ghcr.io/.../thaum-azure:<tag>` | `ghcr.io/.../thaum:<tag>` + platform secret mounts and `secret:` in TOML (see [Thaum Cloud ACA quickstart](https://gemstone-software-dev.github.io/thaum-cloud/quickstart/azure/quickstart_aca.html)) |
 | `ghcr.io/.../thaum-azure-external-db:<tag>` | `ghcr.io/.../thaum-external-db:<tag>` + same secret wiring |
 | `pip install ".[azure]"` | `pip install "gemstone_utils[azure]==0.4.0"` in your deploy repo or venv |
-| TOML with `azexp:` on the stock image | Custom deploy image per [Dockerfile.azexp.example](quickstart/cloud/azure/github/Dockerfile.azexp.example) |
+| TOML with `azexp:` on the stock image | Custom deploy image per [Thaum Cloud](https://gemstone-software-dev.github.io/thaum-cloud/) template |
 
 Existing **`-azure`** digests on GHCR are not deleted but will not receive new releases.
 

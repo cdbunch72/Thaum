@@ -8,7 +8,7 @@
 #   docker build --build-arg THAUM_BUNDLED_POSTGRES=0 -t localhost/thaum-external-db:local .
 #
 # Cloud-specific deps (e.g. gemstone_utils[azure] for azexp:) belong in deploy-repo images;
-# see quickstart/cloud/azure/github/Dockerfile.azexp.example.
+# see https://gemstone-software-dev.github.io/thaum-cloud/
 #
 # Runtime:
 #   Bundled image (THAUM_BUNDLED_POSTGRES=1): unset THAUM_EXTERNAL_DB for Unix-socket Postgres + supervisord;

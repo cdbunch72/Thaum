@@ -1,19 +1,18 @@
 # Cloud deployment quickstarts
 
-Guides for running Thaum on **public-cloud managed platforms** (SaaS / IaaS): hosted load balancers, managed registries, cloud-specific identity and secrets. This is **not** the same as self-managed Kubernetes; for any cluster (on-prem or cloud), see **[Kubernetes](../kubernetes/README.md)**.
+Cloud deploy documentation and example artifacts (Dockerfile, CI workflows, Azure provisioning guides) live in the **[Thaum Cloud](https://gemstone-software-dev.github.io/thaum-cloud/)** template repository—not in this upstream tree.
 
-## Available
+| Resource | Link |
+|----------|------|
+| **Documentation hub** | https://gemstone-software-dev.github.io/thaum-cloud/ |
+| **Azure Container Apps quickstart** | https://gemstone-software-dev.github.io/thaum-cloud/quickstart/azure/quickstart_aca.html |
+| **Template repository** | https://github.com/gemstone-software-dev/thaum-cloud |
 
-| Path | Description |
-|------|-------------|
-| [**azure/github**](azure/github/README.md) | **Azure Container Apps** + **GitHub Actions** — build, schema-check, push to ACR, deploy |
+Fork or copy **thaum-cloud** for org-specific `thaum.toml`, Dockerfile, and GitHub Actions. Upstream Thaum publishes **cloud-neutral** container images (`thaum`, `thaum-external-db`); see the main [README](../../README.md) “Container images (CI)”.
 
-## Planned
-
-- **AWS** — quickstart not yet written (contributions welcome).
-- **GCP** — quickstart not yet written (contributions welcome).
+For **Kubernetes** (any cluster), use the in-repo guide: [quickstart/kubernetes/README.md](../kubernetes/README.md).
 
 ## See also
 
-- [Deployment quickstarts index](../../docs/deployment-quickstarts.md) (cloud + Kubernetes).
-- [Thaum quickstart index](../QUICKSTART.md) (all paths, including systemd).
+- [Deployment quickstarts index](../../docs/deployment-quickstarts.md)
+- [Thaum quickstart index](../QUICKSTART.md)
