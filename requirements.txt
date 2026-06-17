@@ -13,3 +13,8 @@ webexpythonsdk
 SQLAlchemy
 ldap3
 psycopg[binary]>=3.2
+
+# Optional: Sphinx HTML docs (see docs/sphinx_config/requirements.txt).
+#   pip install -r docs/sphinx_config/requirements.txt
+#   make -C docs/sphinx_config html
+# Or: pip install ".[docs]"

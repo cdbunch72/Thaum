@@ -15,6 +15,17 @@ Some code in this repository was written with the help of **Cursor** and **GitHu
 
 ## Documentation
 
+Narrative guides live under [`docs/`](docs/). Build a styled HTML site (Furo theme,
+Thaum branding) with Sphinx:
+
+```bash
+pip install -r docs/sphinx_config/requirements.txt
+make -C docs/sphinx_config html
+# open docs/_build/html/index.html
+```
+
+Or install doc extras with the package: `pip install ".[docs]"`.
+
 - [Architecture](docs/ARCHITECTURE.md) — bootstrap, config model, logging, plugins.
 - [Quickstart](quickstart/QUICKSTART.md) — Quadlet (Podman) or containerless (Unix socket + nginx), with encrypted credentials.
 - [Deployment quickstarts](docs/deployment-quickstarts.md) — [Thaum Cloud](https://gemstone-software-dev.github.io/thaum-cloud/) (public-cloud deploy template) and Kubernetes.

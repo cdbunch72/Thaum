@@ -55,6 +55,6 @@ using a single technical user and API token where possible.
 
 ## Secrets and Quadlet / systemd
 
-Prefer **`secret:credential-name`** in TOML (systemd **encrypted credentials**), not **`file:/run/secrets/...`**, for Quadlet and rootless-friendly layouts: the container entrypoint stages credentials into a path readable by the app user and sets **`CREDENTIALS_DIRECTORY`** (see [quadlet README](../quickstart/systemd/quadlet/README.md)).
+Prefer **`secret:credential-name`** in TOML (systemd **encrypted credentials**), not **`file:/run/secrets/...`**, for Quadlet and rootless-friendly layouts: the container entrypoint stages credentials into a path readable by the app user and sets **`CREDENTIALS_DIRECTORY`** (see [quadlet README](https://github.com/gemstone-software-dev/Thaum/blob/main/quickstart/systemd/quadlet/README.md)).
 
 The sample uses **`secret:atlassian-api-token`** in **`[connections.*]`** and **`connection_ref`** on Jira alert defaults so **one** credential file backs lookup and alerts when they share the same token value.

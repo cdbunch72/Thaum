@@ -1,0 +1,187 @@
+/* Open Sans, Source Code Pro, Cormorant Garamond SC (small caps face only) */
+@import url("https://fonts.googleapis.com/css2?family=Open+Sans:ital,wght@0,300..800;1,300..800&family=Source+Code+Pro:ital,wght@0,200..900;1,200..900&family=Vollkorn+SC:wght@400;600;700;900&display=swap");
+
+/* Sidebar logo: 128×128 (pre-scaled asset in _static/) */
+.sidebar-logo {
+  width: 128px;
+  height: 128px;
+  object-fit: cover;
+}
+
+/* Sidebar search: same background as main content, subtle rounding */
+.sidebar-search-container {
+  background: var(--color-background-primary);
+  border: 1px solid var(--color-sidebar-search-border);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.sidebar-search-container:hover,
+.sidebar-search-container:focus-within {
+  background: var(--color-background-primary);
+}
+
+.sidebar-search {
+  border: none;
+}
+
+/* Internal link targets: left accent bar (h1 excluded) */
+:target > h1:first-of-type,
+span:target ~ h1:first-of-type {
+  background-color: transparent !important;
+}
+
+:target > h2:first-of-type,
+:target > h3:first-of-type,
+:target > h4:first-of-type,
+:target > h5:first-of-type,
+:target > h6:first-of-type,
+span:target ~ h2:first-of-type,
+span:target ~ h3:first-of-type,
+span:target ~ h4:first-of-type,
+span:target ~ h5:first-of-type,
+span:target ~ h6:first-of-type,
+table:target > caption,
+figure:target,
+.literal-block-wrapper:target .code-block-caption,
+dt:target,
+.footnote > dt:target + dd,
+.footnote-reference:target {
+  background-color: transparent !important;
+  background-image: linear-gradient(
+    to bottom,
+    transparent,
+    var(--color-thaum-target-accent) 20%,
+    var(--color-thaum-target-accent) 80%,
+    transparent
+  );
+  background-repeat: no-repeat;
+  background-size: 4px 100%;
+  background-position: left top;
+  padding-left: 0.75rem;
+  border-radius: 0;
+}
+
+/*
+ * H1–H6: Cormorant Garamond SC — mixed case with true small caps.
+ * Keep normal Title Case in RST; this face renders lowercase letters as
+ * small caps and uppercase letters as full capitals. Do not force
+ * text-transform; use font-variant-caps: small-caps (not all-small-caps).
+ *
+ * Explicit rem scale overrides Furo’s em-based h4–h6 (which can exceed h3).
+ */
+article#furo-main-content h1,
+article#furo-main-content h2,
+article#furo-main-content h3,
+article#furo-main-content h4,
+article#furo-main-content h5,
+article#furo-main-content h6 {
+  font-family: "Vollkorn SC", serif !important;
+  font-weight: 600;
+  letter-spacing: normal;
+  font-synthesis: none;
+  text-transform: none;
+  font-variant-caps: small-caps;
+  font-feature-settings: "smcp" 1;
+}
+
+article#furo-main-content h1,
+article#furo-main-content h2,
+article#furo-main-content h3 {
+  border-bottom: 1px solid var(--color-thaum-heading-border);
+  padding-bottom: 0.3em;
+  border-radius: 0;
+}
+
+article#furo-main-content h1 {
+  font-size: 2.35rem !important;
+  line-height: 1.2;
+  border-bottom-width: 5px;
+  border-image: linear-gradient(
+        to right,
+        transparent,
+        var(--color-thaum-heading-border) 30%,
+        var(--color-thaum-heading-border) 70%,
+        transparent 100%
+  );
+  border-image-slice: 1;
+  text-align: center;
+}
+.highlight {
+  background-color: var(--color-code-background) !important;
+}
+
+/* sphinx-copybutton: match Furo light/dark */
+div.highlight {
+  position: relative;
+}
+
+button.copybtn {
+  opacity: 0.5;
+  border: 1px solid var(--color-background-border);
+  background: var(--color-background-primary);
+  color: var(--color-foreground-primary);
+  border-radius: 3px;
+}
+
+button.copybtn:hover {
+  opacity: 1;
+}
+
+button.copybtn.copybtn-success {
+  opacity: 1;
+  border-color: var(--color-thaum-heading-border);
+  color: var(--color-thaum-heading-border);
+}
+
+
+article#furo-main-content h2 {
+  font-size: 1.75rem !important;
+  line-height: 1.25;
+}
+
+article#furo-main-content h3 {
+  font-size: 1.4rem !important;
+  line-height: 1.3;
+}
+
+article#furo-main-content h4 {
+  font-size: 1.15rem !important;
+  line-height: 1.35;
+}
+
+article#furo-main-content h5 {
+  font-size: 1.05rem !important;
+  line-height: 1.35;
+}
+
+article#furo-main-content h6 {
+  font-size: 0.95rem !important;
+  line-height: 1.4;
+}
+
+/* Narrative tables: wrap cell text instead of horizontal scroll */
+article[role="main"] table.wrap-table,
+article[role="main"] table.docutils.list-table,
+article[role="main"] table.docutils.align-default:not(.highlighttable) {
+  width: 100%;
+  max-width: 100%;
+  table-layout: fixed;
+}
+
+article[role="main"] table.wrap-table td,
+article[role="main"] table.wrap-table th,
+article[role="main"] table.docutils.list-table td,
+article[role="main"] table.docutils.list-table th,
+article[role="main"] table.docutils.align-default:not(.highlighttable) td,
+article[role="main"] table.docutils.align-default:not(.highlighttable) th {
+  white-space: normal;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+
+/* Keep code blocks inside tabs scrollable */
+article[role="main"] .sd-tab-content pre {
+  white-space: pre;
+  overflow-x: auto;
+}
