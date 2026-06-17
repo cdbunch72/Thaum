@@ -2,8 +2,16 @@
 # SPDX-License-Identifier: MPL-2.0
 # Copyright 2026 Clinton Bunch
 # scripts/python/generate_webhook_bearer_token.py
-"""
-Generate a canonical JSON webhook bearer record for Thaum alert status webhooks.
+"""Generate a canonical JSON webhook bearer record for Thaum alert status webhooks.
+
+Produces the signed JSON payload expected by alert plugins that use static Bearer
+verification (see ``alerts.webhook_bearer``). Output is suitable for pasting into
+``[alerts.<plugin>].webhook_bearer`` in TOML.
+
+Example::
+
+    python scripts/python/generate_webhook_bearer_token.py --expire 180
+    python scripts/python/generate_webhook_bearer_token.py --expire never --include-bearer-line
 """
 
 from __future__ import annotations
@@ -43,6 +51,11 @@ def _parse_expire(value: str) -> int | None:
 
 
 def main() -> None:
+    """Parse CLI arguments and print canonical webhook bearer JSON to stdout.
+
+    Optionally prints a ready-to-use ``Authorization: Bearer ...`` header line
+    when ``--include-bearer-line`` is set.
+    """
     p = argparse.ArgumentParser(description="Generate Thaum webhook bearer token JSON.")
     p.add_argument("--warn-days", type=int, default=30)
     p.add_argument("--expire", type=_parse_expire, default=_parse_expire("180"))

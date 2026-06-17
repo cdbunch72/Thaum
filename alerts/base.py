@@ -15,6 +15,14 @@ if TYPE_CHECKING:
 
 
 class BaseAlertPluginConfig(BaseModel):
+    """Configuration model for alert plugins loaded from ``[alerts.<plugin_name>]``.
+
+    Attributes:
+        plugin: Alert plugin module name under ``alerts.plugins``.
+        status_mentions: When True, status webhook messages may use platform
+            @-mentions (driver-dependent).
+    """
+
     plugin: str
     # When True, status webhook messages may use platform @-mentions (driver-dependent).
     status_mentions: bool = True
@@ -23,15 +31,18 @@ class BaseAlertPluginConfig(BaseModel):
 
 
 class BaseAlertPlugin:
-    """
-    Base class for alert integrations.
+    """Base class for alert integrations.
 
     Plugins that expose status webhooks implement their own authorization logic.
     For integrations that only support a static Bearer value, use the canonical JSON
-    pattern via `_validate_static_webhook_bearer` (see `alerts.webhook_bearer`).
+    pattern via :meth:`_validate_static_webhook_bearer` (see ``alerts.webhook_bearer``).
 
-    ``supports_acknowledge``: when True, the chat ``ack`` command and tracking-ID help
-    text apply; integrations that cannot attribute ack to the requesting user should set False.
+    Attributes:
+        supports_status_webhooks: When True, the plugin registers inbound status
+            webhook routes via :meth:`get_webhook_handlers`.
+        supports_acknowledge: When True, the chat ``ack`` command and tracking-ID
+            help text apply; integrations that cannot attribute ack to the
+            requesting user should set False.
     """
 
     supports_status_webhooks: bool = False
@@ -39,18 +50,32 @@ class BaseAlertPlugin:
     _ALPHABET: Final[str] = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"
 
     def __init__(self, config: BaseAlertPluginConfig):
+        """Initialize the plugin with validated configuration.
+
+        Args:
+            config: Parsed alert plugin settings from TOML.
+        """
         self.cfg = config
         self.logger = logging.getLogger(f"plugin.{self.__class__.__name__}")
     # -- End Method __init__
 
     def attach_bot(self, bot: "BaseChatBot") -> None:
-        """Binds the bot and updates the logger context."""
+        """Bind the owning chat bot and update the logger context.
+
+        Args:
+            bot: The chat bot instance that owns this alert plugin.
+        """
         self.bot = bot
         self.logger = logging.getLogger(f"bot.{bot.handle}.plugin.{self.__class__.__name__}")
     # -- End Method attach_bot
 
     def get_webhook_handlers(self) -> Dict[str, Callable]:
-        """Returns a map of routes to methods."""
+        """Return HTTP route paths mapped to webhook handler callables.
+
+        Returns:
+            A dict of route suffix (e.g. ``"/webhook"``) to handler method.
+            Override when :attr:`supports_status_webhooks` is True.
+        """
         return {"/webhook": self.handle_status_webhook}
     # -- End Method get_webhook_handlers
 
@@ -59,12 +84,20 @@ class BaseAlertPlugin:
         authorization_header_value: Optional[str],
         configured_secret: str,
     ) -> bool:
-        """
-        Shared helper for static Bearer webhooks using canonical JSON (`webhook_bearer`).
+        """Validate a static Bearer webhook using canonical JSON.
 
-        `configured_secret` must be present in the plugin config when the plugin uses
-        this pattern: use an empty string to disable verification (webhook open).
-        Non-empty values are compared in constant time after canonicalization.
+        Shared helper for integrations that compare the ``Authorization`` header
+        against a configured secret (see ``alerts.webhook_bearer``).
+
+        Args:
+            authorization_header_value: Raw ``Authorization`` header value, or
+                ``None`` when absent.
+            configured_secret: Secret from plugin config. Use an empty string to
+                disable verification (webhook open). Non-empty values are compared
+                in constant time after canonicalization.
+
+        Returns:
+            True when verification passes or is disabled; False otherwise.
         """
         if configured_secret == "":
             return True
@@ -80,7 +113,14 @@ class BaseAlertPlugin:
     # -- End Method _validate_static_webhook_bearer
 
     def validate_connection(self) -> bool:
-        """Verify API connectivity at boot."""
+        """Verify third-party API connectivity at startup.
+
+        Returns:
+            True when the integration is reachable and credentials are valid.
+
+        Raises:
+            NotImplementedError: Subclasses must implement this method.
+        """
         raise NotImplementedError
     # -- End Method validate_connection
 
@@ -96,22 +136,47 @@ class BaseAlertPlugin:
         sender: ThaumPerson,
         priority=AlertPriority.NORMAL,
     ) -> Tuple[str, Optional[str]]:
-        """
-        Trigger an alert via the 3rd party API.
+        """Trigger an alert via the third-party API.
 
-        Returns ``(short_id, alert_id)``. ``alert_id`` is integration-specific (alias, vendor id, etc.)
-        and may be ``None`` when not available without blocking.
+        Args:
+            summary: Human-readable alert summary text.
+            room_id: Chat room identifier where the alert was requested.
+            sender: Person who initiated the alert.
+            priority: Alert priority level (defaults to ``AlertPriority.NORMAL``).
+
+        Returns:
+            A tuple of ``(short_id, alert_id)``. ``short_id`` is a bot-local
+            tracking token; ``alert_id`` is integration-specific (alias, vendor
+            id, etc.) and may be ``None`` when not available without blocking.
+
+        Raises:
+            NotImplementedError: Subclasses must implement this method.
         """
         raise NotImplementedError
     # -- End Method trigger_alert
 
     def acknowledge_alert(self, alias: str, person: ThaumPerson) -> None:
-        """Optional: integrations that support ack should override and may use full person identity."""
+        """Acknowledge an open alert on behalf of a person.
+
+        Optional hook for integrations that support ack. Override when
+        :attr:`supports_acknowledge` is True.
+
+        Args:
+            alias: Integration-specific alert identifier or short tracking id.
+            person: Person performing the acknowledgment.
+        """
         self.logger.debug("acknowledge_alert not implemented (%s, %s)", alias, person.for_display)
     # -- End Method acknowledge_alert
 
     def handle_status_webhook(self, request_data: Dict[str, Any]) -> None:
-        """Default handler for /webhook path."""
+        """Handle an inbound status webhook payload.
+
+        Default no-op handler for the ``/webhook`` route. Override when the
+        integration receives asynchronous status updates.
+
+        Args:
+            request_data: Parsed webhook body (structure is integration-specific).
+        """
         self.logger.debug("Received status webhook, but no handler implemented.")
     # -- End Method handle_status_webhook
 

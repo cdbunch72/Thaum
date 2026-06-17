@@ -2,7 +2,19 @@
 # SPDX-License-Identifier: MPL-2.0
 # Copyright 2026 Clinton Bunch
 # scripts/python/generate_admin_log_config.py
-"""Generate Thaum admin log-level route/secret config artifacts."""
+"""Generate Thaum admin log-level route and HMAC secret configuration artifacts.
+
+Creates a random ``route_id``, a 32-byte HMAC secret (base64url, no padding),
+and prints ``[server.admin]`` TOML plus client INI snippets for
+:mod:`scripts.python.thaum_log_override`.
+
+Example::
+
+    python scripts/python/generate_admin_log_config.py \\
+        --base-url https://thaum.example.com \\
+        --secret-file /run/secrets/admin-hmac.key \\
+        --profile-ini admin-client.ini
+"""
 
 from __future__ import annotations
 
@@ -22,6 +34,11 @@ def _new_route_id(length: int = 24) -> str:
 
 
 def main() -> int:
+    """Parse CLI arguments and emit admin log-level configuration snippets.
+
+    Returns:
+        Process exit code (0 on success).
+    """
     p = argparse.ArgumentParser(description="Generate admin log-level route/secret and config snippets.")
     p.add_argument("--base-url", default="https://thaum.example.com", help="BaseUrl for client profile output")
     p.add_argument("--route-id", help="Optional explicit route id; random generated if omitted")

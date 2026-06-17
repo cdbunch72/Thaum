@@ -29,19 +29,22 @@ ONE_WEEK = 604800
 
 
 class BaseLookupPluginConfig(BaseModel):
-    """
-    Shared lookup cache configuration for all lookup plugins.
+    """Shared lookup cache configuration for all lookup plugins.
 
     The process-global DB is opened via :func:`gemstone_utils.db.init_db` (see
-    :func:`thaum.db_bootstrap.init_app_db` / server bootstrap). Configure the URL under
-    ``[server.database].db_url``, not here.
+    :func:`thaum.db_bootstrap.init_app_db` / server bootstrap). Configure the URL
+    under ``[server.database].db_url``, not here.
 
-    Expected TOML:
-      [lookup]
-      default_team_ttl_seconds = 14400
+    Expected TOML::
 
-    Plugin-specific overrides go under:
-      [lookup.<plugin_name>]
+        [lookup]
+        default_team_ttl_seconds = 14400
+
+    Plugin-specific overrides go under ``[lookup.<plugin_name>]``.
+
+    Attributes:
+        default_team_ttl_seconds: Default TTL (seconds) for cached team membership
+            snapshots before refresh.
     """
 
     default_team_ttl_seconds: int = 14400
@@ -88,6 +91,12 @@ class BaseLookupPlugin(ABC):
         *,
         default_team_ttl_seconds: int = 14400,
     ):
+        """Initialize lookup plugin state.
+
+        Args:
+            default_team_ttl_seconds: Default TTL for cached team rows when a
+                team does not specify its own ``ttl``.
+        """
         self.logger = logging.getLogger(f"lookup.{self.plugin_name}")
         self._default_team_ttl_seconds = default_team_ttl_seconds
 
@@ -96,10 +105,14 @@ class BaseLookupPlugin(ABC):
     def get_person_by_id(
         self, bot_plugin_name: str, person_id: str
     ) -> Optional[ThaumPerson]:
-        """
-        Return a cached ThaumPerson for a bot/agent plugin id.
+        """Return a cached person for a bot or agent platform id.
 
-        Cache lookup key is the bot/plugin name (e.g. `webex`, `jira`, `ldap`).
+        Args:
+            bot_plugin_name: Bot/plugin key (e.g. ``"webex"``, ``"jira"``, ``"ldap"``).
+            person_id: Platform-specific person identifier.
+
+        Returns:
+            Cached :class:`thaum.types.ThaumPerson`, or ``None`` on cache miss.
         """
         with get_session() as session:
             row = session.scalar(
@@ -141,20 +154,31 @@ class BaseLookupPlugin(ABC):
             return self._get_person_by_email(session, key)
 
     def get_person_by_email(self, email: str) -> Optional[ThaumPerson]:
-        """
-        Return a :class:`ThaumPerson` for *email*, using the cache and optionally a
-        plugin-specific resolution path.
+        """Return a person for an email address.
 
-        Default behavior is cache-only (same as :meth:`_get_cached_person_by_email`).
-        Subclasses override this to query their directory or API on miss, merge
-        fragments with :meth:`merge_person`, and return the merged row.
+        Default behavior is cache-only (same as
+        :meth:`_get_cached_person_by_email`). Subclasses override this to query
+        their directory or API on miss, merge fragments with
+        :meth:`merge_person`, and return the merged row.
+
+        Args:
+            email: Canonical email address to resolve.
+
+        Returns:
+            Resolved :class:`thaum.types.ThaumPerson`, or ``None`` when not found.
         """
         return self._get_cached_person_by_email(email)
 
     def merge_person(self, fragment: ThaumPerson) -> ThaumPerson:
-        """
-        Merge a partial ThaumPerson fragment into the canonical cache row
-        by email, then return the fully merged ThaumPerson.
+        """Merge a partial person fragment into the canonical cache row.
+
+        Merges by email and persists any new platform ids.
+
+        Args:
+            fragment: Partial :class:`thaum.types.ThaumPerson` from a platform lookup.
+
+        Returns:
+            Fully merged person record after persistence.
         """
         now = time.time()
 
@@ -211,16 +235,26 @@ class BaseLookupPlugin(ABC):
         source_plugin: str = "config",
         team_name_normalizer: Optional[Callable[[str], str]] = None,
     ) -> RespondersList:
-        """
-        Resolve responder references into a typed RespondersList via cached people/teams.
+        """Resolve responder reference strings into a :class:`thaum.types.RespondersList`.
 
-        Supported refs:
-          - person:<email>
-          - team:<team_name>
-          - id:team:<team_id>
-          - id:person:<person_id>
-          - plain email (contains '@')
-          - bare team name
+        Supported reference forms:
+
+        * ``person:<email>``
+        * ``team:<team_name>``
+        * ``id:team:<team_id>``
+        * ``id:person:<person_id>``
+        * plain email (contains ``@``)
+        * bare team name
+
+        Args:
+            bot: Chat bot instance used when resolving team membership.
+            refs: List of responder reference strings from config.
+            source_plugin: ``source_plugin`` value for synthetic person rows.
+            team_name_normalizer: Optional callable to normalize team names before
+                lookup (defaults to strip whitespace).
+
+        Returns:
+            Typed list of resolved people and teams.
         """
         out = RespondersList()
         normalize = team_name_normalizer or (lambda s: s.strip())
@@ -287,6 +321,18 @@ class BaseLookupPlugin(ABC):
     # --- Teams ---------------------------------------------------------------
 
     def get_team_by_name(self, bot: Any, team_name: str) -> Optional[ThaumTeam]:
+        """Return a cached team by canonical team name.
+
+        Performs fuzzy name matching (cutoff 0.88) when an exact cache key is
+        not found.
+
+        Args:
+            bot: Chat bot instance attached to the returned :class:`thaum.types.ThaumTeam`.
+            team_name: Team name to look up in the identity cache.
+
+        Returns:
+            Cached team with member snapshot, or ``None`` when not found.
+        """
         with get_session() as session:
             row = session.get(SchemaTeam, team_name)
             resolved_key = team_name
@@ -343,6 +389,16 @@ class BaseLookupPlugin(ABC):
     def get_team_by_id(
         self, bot: Any, bot_plugin_name: str, team_id: str
     ) -> Optional[ThaumTeam]:
+        """Return a cached team by platform team id.
+
+        Args:
+            bot: Chat bot instance attached to the returned team.
+            bot_plugin_name: Platform key for the team id (e.g. ``"jira"``).
+            team_id: Platform-specific team identifier.
+
+        Returns:
+            Cached :class:`thaum.types.ThaumTeam`, or ``None`` when unmapped.
+        """
         with get_session() as session:
             name = session.scalar(
                 select(SchemaTeamPlatformId.team_name).where(
@@ -362,11 +418,19 @@ class BaseLookupPlugin(ABC):
         bot_plugin_name: Optional[str] = None,
         team_id: Optional[str] = None,
     ) -> ThaumTeam:
-        """
-        Persist the team's member snapshot into the identity cache.
+        """Persist a team membership snapshot into the identity cache.
 
-        If `bot_plugin_name` and `team_id` are provided, also store a lookup
-        mapping so callers can do `get_team_by_id(...)` by (plugin,id).
+        When ``bot_plugin_name`` and ``team_id`` are provided, also stores a
+        platform id mapping so callers can resolve the team via
+        :meth:`get_team_by_id`.
+
+        Args:
+            team: Team object whose members and metadata should be cached.
+            bot_plugin_name: Optional platform key for ``team_id`` mapping.
+            team_id: Optional platform team id to associate with ``team``.
+
+        Returns:
+            The same ``team`` instance after persistence.
         """
         with get_session() as session:
             with session.begin():
@@ -420,9 +484,18 @@ class BaseLookupPlugin(ABC):
         bot_plugin_name: Optional[str] = None,
         team_id: Optional[str] = None,
     ) -> ThaumTeam:
-        """
-        Merge team members into the people cache (by email), then persist the team
-        membership snapshot.
+        """Merge team members into the people cache, then persist the team snapshot.
+
+        Each member is merged via :meth:`merge_person` before the team row is
+        written with :meth:`cache_team`.
+
+        Args:
+            team: Team whose ``_members`` should be merged and cached.
+            bot_plugin_name: Optional platform key for ``team_id`` mapping.
+            team_id: Optional platform team id to associate with ``team``.
+
+        Returns:
+            The team after member merge and cache persistence.
         """
         members = list(getattr(team, "_members", []))
         merged: List[ThaumPerson] = []
@@ -442,10 +515,16 @@ class BaseLookupPlugin(ABC):
         return team
 
     def lookup_team_members(self, team: ThaumTeam) -> List[ThaumPerson]:
-        """
-        Fetch current team members from the backing source and persist them.
+        """Fetch current team members from the backing source and persist them.
 
-        Return value is a merged list of ThaumPerson objects.
+        Calls :meth:`fetch_team_members`, then :meth:`merge_team` to update the
+        identity cache.
+
+        Args:
+            team: Team to refresh from the remote directory or API.
+
+        Returns:
+            Merged list of :class:`thaum.types.ThaumPerson` objects for the team.
         """
         members = self.fetch_team_members(team)
         team._members = members
@@ -453,7 +532,17 @@ class BaseLookupPlugin(ABC):
 
     @abstractmethod
     def fetch_team_members(self, team: ThaumTeam) -> List[ThaumPerson]:
-        """Fetch team members from the backing system (LDAP/Jira/...)."""
+        """Fetch team members from the backing system (LDAP, Jira, etc.).
+
+        Args:
+            team: Team to query in the remote source.
+
+        Returns:
+            List of person fragments to merge via :meth:`merge_team`.
+
+        Raises:
+            NotImplementedError: Subclasses must implement this method.
+        """
         ...
 
 # -- End Class BaseLookupPlugin

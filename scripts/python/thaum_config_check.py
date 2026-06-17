@@ -2,9 +2,20 @@
 # SPDX-License-Identifier: MPL-2.0
 # Copyright 2026 Clinton Bunch
 # scripts/python/thaum_config_check.py
-"""
-Validate Thaum configuration: ``--schema-check`` (no secret resolution) or
-``--test-config`` (full resolution + DB connectivity test).
+"""Validate Thaum TOML configuration from the command line.
+
+Two mutually exclusive modes:
+
+* ``--schema-check``: structure and Pydantic validation only; secret references
+  (``env:``, ``file:``, ``secret:``) are not resolved. Suitable for CI without
+  secrets.
+* ``--test-config``: full validation including secret resolution and a ``SELECT 1``
+  database connectivity check. Run on the target host with secrets available.
+
+Example::
+
+    python scripts/python/thaum_config_check.py --schema-check -c thaum.toml
+    python scripts/python/thaum_config_check.py --test-config
 """
 
 from __future__ import annotations
@@ -22,6 +33,14 @@ logger = logging.getLogger("thaum_config_check")
 
 
 def run_schema_check(config_path: str) -> None:
+    """Load and validate config structure without resolving secrets.
+
+    Args:
+        config_path: Path to the Thaum TOML configuration file.
+
+    Raises:
+        Exception: Propagates validation errors from config loading.
+    """
     from bootstrap import validate_config_after_load
     from config import load_and_validate
     from thaum.types import schema_only_validation
@@ -32,6 +51,14 @@ def run_schema_check(config_path: str) -> None:
 
 
 def run_test_config(config_path: str) -> None:
+    """Load config with full secret resolution and verify database connectivity.
+
+    Args:
+        config_path: Path to the Thaum TOML configuration file.
+
+    Raises:
+        Exception: Propagates validation, secret resolution, or DB errors.
+    """
     from bootstrap import validate_config_after_load
     from config import load_and_validate
     from thaum.db_bootstrap import resolve_app_db_url, verify_app_db_connection
@@ -44,6 +71,10 @@ def run_test_config(config_path: str) -> None:
 
 
 def main() -> None:
+    """Parse CLI arguments and run the selected validation mode.
+
+    Exits with code 0 on success, 1 on validation or runtime errors.
+    """
     try:
         parser = argparse.ArgumentParser(
             description="Validate Thaum TOML configuration.",
