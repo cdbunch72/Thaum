@@ -5,8 +5,6 @@ conventions used throughout the Thaum codebase. These rules exist to
 preserve clarity, maintainability, and operational safety in a system
 that handles real-world alerting, plugins, and lifecycle orchestration.
 
-------------------------------------------------------------------------
-
 ## 1. Purpose and Philosophy
 
 Thaum's style guide is built around these principles:
@@ -25,8 +23,6 @@ Thaum's style guide is built around these principles:
 
 These rules ensure that future contributors-and future you-can
 understand the system quickly and safely.
-
-------------------------------------------------------------------------
 
 ## 2. Line Length Standard
 
@@ -53,8 +49,6 @@ Thaum uses a **132-column line limit**.
 
 - Auto-generated code
 
-------------------------------------------------------------------------
-
 ## 3. End-of-Block Comments
 
 Python lacks explicit block delimiters, so Thaum uses end-of-block
@@ -64,15 +58,15 @@ comments to make structure visible.
 
 - Every **function**, **method**, and **class** ends with:
 
-  - \# end def function_name
+  - `# end def function_name`
 
-  - \# end class ClassName
+  - `# end class ClassName`
 
 ### Conditional and Loop Blocks
 
 Use end-of-block comments for:
 
-- Blocks longer than \~15 lines
+- Blocks longer than ~15 lines
 
 - Blocks nested 3+ levels deep
 
@@ -80,15 +74,11 @@ Use end-of-block comments for:
 
 Examples:
 
-  -----------------------------------------------------------------------
-  \# end if plugin_enabled\
-  \# end for bot in bots\
-  \# end try: DB initialization
-  -----------------------------------------------------------------------
-
-  -----------------------------------------------------------------------
-
-------------------------------------------------------------------------
+```text
+# end if plugin_enabled
+# end for bot in bots
+# end try: DB initialization
+```
 
 ## 4. Logging Conventions
 
@@ -131,8 +121,6 @@ This ensures consistent indentation and readability.
 
 - Deliberate multiline dumps (blob helper at SPAM) remain the style for discretionary detail.
 
-------------------------------------------------------------------------
-
 ## 5. Exception Handling
 
 Exceptions must be used sparingly and intentionally.
@@ -150,23 +138,19 @@ Exceptions must be used sparingly and intentionally.
 
 ### Canonical Pattern
 
-  -----------------------------------------------------------------------
-  try:\
-  \...\
-  except KnownError as e:\
-  logger.log(LogLevel.NOTICE, \"Known error occurred: %s\", e)\
-  return\
-  except Exception as e:\
-  logger.error(\"Unexpected exception: %s\", e)\
-  if logger.isEnabledFor(LogLevel.SPAM):\
-  logger.log(LogLevel.SPAM, \"%s\", blob(e))\
-  return\
-  \# end try
-  -----------------------------------------------------------------------
-
-  -----------------------------------------------------------------------
-
-------------------------------------------------------------------------
+```python
+try:
+    ...
+except KnownError as e:
+    logger.log(LogLevel.NOTICE, "Known error occurred: %s", e)
+    return
+except Exception as e:
+    logger.error("Unexpected exception: %s", e)
+    if logger.isEnabledFor(LogLevel.SPAM):
+        logger.log(LogLevel.SPAM, "%s", blob(e))
+    return
+# end try
+```
 
 ## 6. Import-Time Side-Effect Rules
 
@@ -192,8 +176,6 @@ To maintain deterministic startup:
 
 Importing a plugin module must be a **pure operation**.
 
-------------------------------------------------------------------------
-
 ## 7. Plugin Constructor Rules
 
 Plugin constructors may:
@@ -218,8 +200,6 @@ Plugin constructors must **not**:
 
 - Trigger background tasks before initialization completes
 
-------------------------------------------------------------------------
-
 ## 8. Naming Conventions
 
 ### Modules
@@ -240,34 +220,28 @@ Plugin constructors must **not**:
 
 ### Private Members
 
-- Leading underscore: \_load_config()
-
-------------------------------------------------------------------------
+- Leading underscore: `_load_config()`
 
 ## 9. Directory Layout
 
 A typical Thaum project uses:
 
-  -----------------------------------------------------------------------
-  app.py\
-  bootstrap.py\
-  web.py\
-  config.py\
-  bots/\
-  ....plugins/\
-  alerts/\
-  ....plugins/\
-  ..lookup/\
-  ....plugins\
-  tests/\
-  thaum/
-  -----------------------------------------------------------------------
-
-  -----------------------------------------------------------------------
+```text
+app.py
+bootstrap.py
+web.py
+config.py
+bots/
+    plugins/
+alerts/
+    plugins/
+lookup/
+    plugins/
+tests/
+thaum/
+```
 
 This structure keeps concerns isolated and predictable.
-
-------------------------------------------------------------------------
 
 ## 10. Code Structure and Readability
 
@@ -291,8 +265,6 @@ This structure keeps concerns isolated and predictable.
 
 - Avoid redundant comments.
 
-------------------------------------------------------------------------
-
 ## 11. Docstring Conventions
 
 Thaum docstrings exist to improve maintainability and onboarding, not to
@@ -305,7 +277,7 @@ generate exhaustive API documentation.
 - Require docstrings for public classes, public functions, and public
   methods.
 
-- Allow private helper docstrings (\_name) to be optional unless behavior
+- Allow private helper docstrings (`_name`) to be optional unless behavior
   is non-obvious or surprising.
 
 - Keep test docstrings optional; prefer descriptive test names first.
@@ -323,34 +295,32 @@ generate exhaustive API documentation.
 
 Module docstring:
 
-  -----------------------------------------------------------------------
-  \"\"\"Leader election and maintenance orchestration.
+```python
+"""Leader election and maintenance orchestration.
 
-  Runs heartbeat/election logic and executes registered maintenance tasks
-  when this node is leader.
-  \"\"\"
-  -----------------------------------------------------------------------
+Runs heartbeat/election logic and executes registered maintenance tasks
+when this node is leader.
+"""
+```
 
 Function/method docstring:
 
-  -----------------------------------------------------------------------
-  \"\"\"Resolve a Jira account ID for an email address.
+```python
+"""Resolve a Jira account ID for an email address.
 
-  Notes:
-  - Side effects: may query remote API and update lookup cache.
-  - Returns: account ID when resolved, otherwise None.
-  - Raises: only for invalid caller input; operational failures are
-    logged and handled by caller policy.
-  \"\"\"
-  -----------------------------------------------------------------------
+Notes:
+- Side effects: may query remote API and update lookup cache.
+- Returns: account ID when resolved, otherwise None.
+- Raises: only for invalid caller input; operational failures are
+  logged and handled by caller policy.
+"""
+```
 
 ### When to Omit
 
 Docstrings may be omitted for one-line, self-explanatory private helpers
 where intent is obvious from naming, signature, and immediate context.
 If behavior is subtle, include a docstring even for private code.
-
-------------------------------------------------------------------------
 
 ## 12. Operational Safety Rules
 
@@ -363,8 +333,6 @@ If behavior is subtle, include a docstring even for private code.
 - All webhook handlers must be exception-safe.
 
 - DB writes must be atomic and consistent.
-
-------------------------------------------------------------------------
 
 ## 13. Summary
 

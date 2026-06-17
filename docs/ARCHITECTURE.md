@@ -9,8 +9,6 @@ strict avoidance of import-time side effects. The system is composed of
 a central server process, a shared database, a plugin layer, and one or
 more bot instances.
 
-------------------------------------------------------------------------
-
 ## 1. Bootstrap Sequence
 
 Bootstrap is implemented in `bootstrap.py` and invoked from `app.py` before the
@@ -66,8 +64,6 @@ Flask app is created.
 
 - `web.create_app()` registers Flask routes (e.g. `POST /bot/<bot_key>`) and
   calls `register_all_bot_webhooks()`.
-
-------------------------------------------------------------------------
 
 ## 2. Configuration Model
 
@@ -126,8 +122,6 @@ Each plugin config contains:
 This structure mirrors the plugin object hierarchy and ensures clean
 separation between configuration and instantiation.
 
-------------------------------------------------------------------------
-
 ## 3. Plugin Architecture
 
 Plugins are first-class components in Thaum.
@@ -169,8 +163,6 @@ Plugins must not:
 
 - Trigger background tasks before initialization completes
 
-------------------------------------------------------------------------
-
 ## 4. Database Layer
 
 Thaum uses a shared database for:
@@ -192,8 +184,6 @@ Thaum uses a shared database for:
 - No plugin may create tables independently.
 
 - All migrations (future) must run after plugin import.
-
-------------------------------------------------------------------------
 
 ## 5. Event Processing and Lifecycle
 
@@ -224,8 +214,6 @@ in a deterministic manner.
 - When the create webhook arrives, the alert is activated.
 
 - A watchdog timer marks alerts as failed if creation does not complete.
-
-------------------------------------------------------------------------
 
 ## 6. Logging and Diagnostics
 
@@ -270,8 +258,6 @@ typically use `scripts/powershell/Set-ThaumLogLevel.ps1` or
 `scripts/python/thaum_log_override.py` with a small INI profile. Full details:
 [admin-log-level.md](admin-log-level.md).
 
-------------------------------------------------------------------------
-
 ## 7. Import-Time Side-Effect Rules
 
 To maintain deterministic startup:
@@ -290,30 +276,25 @@ To maintain deterministic startup:
 
   - expose plugin class
 
-------------------------------------------------------------------------
-
 ## 8. Directory Structure
 
 A typical Thaum deployment uses:
 
-  ------------
-  thaum/\
-  app.py\
-  bootstrap.py\
-  web.py\
-  config.py\
-  bots/\
-  plugins/\
-  db/\
-  utils/\
-  logging/\
-  docs/
-
-  ------------
+```text
+thaum/
+app.py
+bootstrap.py
+web.py
+config.py
+bots/
+plugins/
+db/
+utils/
+logging/
+docs/
+```
 
 This structure keeps concerns isolated and predictable.
-
-------------------------------------------------------------------------
 
 ## 9. Operational Philosophy
 
@@ -334,8 +315,6 @@ Thaum is designed around:
 - Low-noise logging
 
 - Safe, humane on-call workflows
-
-------------------------------------------------------------------------
 
 ## 10. Summary
 

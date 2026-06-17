@@ -8,6 +8,7 @@ from __future__ import annotations
 import os
 import sys
 from datetime import datetime
+from pathlib import Path
 
 try:
     import tomllib
@@ -170,7 +171,7 @@ def _ensure_logo_asset() -> None:
 def _neutralize_markdown_rules(app, docname, source) -> None:
     """Replace Markdown thematic-break lines so docutils does not emit transitions."""
     try:
-        if not app.env.doc2path(docname).endswith(".md"):
+        if Path(app.env.doc2path(docname)).suffix != ".md":
             return
     except Exception:
         return
