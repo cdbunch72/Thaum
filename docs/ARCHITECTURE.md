@@ -42,6 +42,8 @@ Flask app is created.
 
 - `thaum.db_bootstrap.init_app_db()` calls `gemstone_utils.db.init_db()` with the URL from `[server.database].db_url` (via `thaum.db_bootstrap.resolve_app_db_url`).
 
+- When `[server.database].database_vault_passphrase` is set, **gemstone key rows** (`gemstone_key_kdf`, active `gemstone_key_record`) are created by the **election leader** during leader init (`thaum_vault_key_rows`); non-leader workers wait on the leader init barrier, then each worker wires in-memory field encryption via `wire_database_crypto()` (no row inserts).
+
 #### Database URL resolution (`resolve_app_db_url`)
 
 - If **`db_url`** is set (after secret resolution), that URL is used (PostgreSQL, SQLite, etc.).

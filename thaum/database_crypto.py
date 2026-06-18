@@ -121,60 +121,87 @@ def _insert_initial_keys(session, passphrase: str) -> None:
     )
 
 
-def apply_database_crypto(server_cfg: ServerConfig) -> None:
-    """
-    Configure key_mgmt, bootstrap GemstoneKey* rows on first run, and wire
-    :class:`EncryptedString` for the process.
-    """
-    global _crypto_ready
-    passphrase = _resolved_vault_passphrase(server_cfg)
-    if not passphrase:
-        _crypto_ready = False
-        return
-
+def _init_key_mgmt() -> None:
     key_mgmt_init(
         THAUM_VAULT_SECRET_NAME,
         THAUM_KEK_CHECK_PLAINTEXT,
         env_allowed=False,
     )
 
-    active_id: str
-    ctx = None
+
+def ensure_vault_key_rows(server_cfg: ServerConfig) -> None:
+    """
+    Leader-only: create ``gemstone_key_kdf`` and active DEK rows on first run.
+
+    Call during leader init before non-leader workers wire in-memory crypto.
+    """
+    passphrase = _resolved_vault_passphrase(server_cfg)
+    if not passphrase:
+        return
+
+    _init_key_mgmt()
+
     for attempt in range(4):
         session = get_session()
         try:
             if not list(iter_kek_slots(session)):
                 _insert_initial_keys(session, passphrase)
             session.commit()
-
-            kdf_row = _single_kek_slot(session)
-            wrap_key_id = kdf_row.key_id
-            kdf_params = get_kdf_params(session, wrap_key_id)
-            kek = derive_kek(passphrase, kdf_params)
-            if kdf_row.canary_wrapped is None:
-                raise RuntimeError("gemstone_key_kdf row has no KEK canary (canary_wrapped)")
-            derive_and_verify_kek(
-                passphrase,
-                kdf_params,
-                wire_to_keyrecord(None, kdf_row.canary_wrapped),
-                last_updated=kdf_row.updated_at,
-            )
-
-            row_active = active_dek_row(session)
-            if row_active is None:
+            _single_kek_slot(session)
+            if active_dek_row(session) is None:
                 raise RuntimeError("no active DEK row (gemstone_key_record is_active)")
-            active_id = row_active.key_id
-
-            rec = wire_to_keyrecord(active_id, row_active.wrapped)
-            ctx = load_keyctx(kek, rec)
-            break
+            return
         except (IntegrityError, ValueError):
             session.rollback()
-            logger.debug("vault bootstrap race (attempt %s); retrying", attempt + 1)
+            logger.debug("vault row ensure race (attempt %s); retrying", attempt + 1)
             if attempt == 3:
                 raise
         finally:
             session.close()
+
+
+def wire_database_crypto(server_cfg: ServerConfig) -> None:
+    """
+    Per-process: load KEK/DEK from the database and wire :class:`EncryptedString`.
+
+    Does not insert rows; expects :func:`ensure_vault_key_rows` to have run on the leader.
+    """
+    global _crypto_ready
+    passphrase = _resolved_vault_passphrase(server_cfg)
+    if not passphrase:
+        _crypto_ready = False
+        return
+    if _crypto_ready:
+        return
+
+    _init_key_mgmt()
+
+    active_id: str
+    ctx = None
+    session = get_session()
+    try:
+        kdf_row = _single_kek_slot(session)
+        wrap_key_id = kdf_row.key_id
+        kdf_params = get_kdf_params(session, wrap_key_id)
+        kek = derive_kek(passphrase, kdf_params)
+        if kdf_row.canary_wrapped is None:
+            raise RuntimeError("gemstone_key_kdf row has no KEK canary (canary_wrapped)")
+        derive_and_verify_kek(
+            passphrase,
+            kdf_params,
+            wire_to_keyrecord(None, kdf_row.canary_wrapped),
+            last_updated=kdf_row.updated_at,
+        )
+
+        row_active = active_dek_row(session)
+        if row_active is None:
+            raise RuntimeError("no active DEK row (gemstone_key_record is_active)")
+        active_id = row_active.key_id
+
+        rec = wire_to_keyrecord(active_id, row_active.wrapped)
+        ctx = load_keyctx(kek, rec)
+    finally:
+        session.close()
 
     if ctx is None:
         raise RuntimeError("database crypto bootstrap did not produce a KeyContext")
@@ -188,6 +215,11 @@ def apply_database_crypto(server_cfg: ServerConfig) -> None:
     EncryptedString.set_current_keyctx(ctx)
     _crypto_ready = True
     logger.info("Database field encryption initialized (active_dek_key_id=%s)", active_id)
+
+
+def apply_database_crypto(server_cfg: ServerConfig) -> None:
+    """Wire in-memory database field encryption for this process (no row inserts)."""
+    wire_database_crypto(server_cfg)
 
 
 def rotate_data_encryption_key_if_due(server_cfg: ServerConfig) -> None:

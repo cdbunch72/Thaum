@@ -15,8 +15,30 @@ from thaum.types import LogLevel, ServerConfig
 logger = logging.getLogger("thaum.maintenance_bootstrap")
 
 
+def register_builtin_leader_init_tasks(
+    registry: Any,
+    *,
+    server_cfg: ServerConfig,
+    config: Dict[str, Any],
+) -> None:
+    """Register built-in one-shot leader init tasks (before plugin hooks)."""
+    from thaum.database_crypto import ensure_vault_key_rows
+
+    vp = server_cfg.database.database_vault_passphrase
+    if vp is None or not str(vp).strip():
+        return
+
+    def _ensure_vault_rows(_server_cfg: ServerConfig, _config: Dict[str, Any]) -> None:
+        ensure_vault_key_rows(_server_cfg)
+
+    registry.register_init_task("thaum_vault_key_rows", _ensure_vault_rows)
+    logger.log(LogLevel.VERBOSE, "Leader init: registered builtin task thaum_vault_key_rows")
+
+
 def register_all_leader_init_tasks(server_cfg: ServerConfig, config: Dict[str, Any]) -> None:
     """Call ``leader_init_tasks_register`` on lookup, bot, and alert plugins (one-shot bootstrap hooks)."""
+    register_builtin_leader_init_tasks(leader_init, server_cfg=server_cfg, config=config)
+
     lookup_type = server_cfg.lookup_plugin
     bot_type = server_cfg.bot_type
     alert_types: set[str] = {"null"}

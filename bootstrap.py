@@ -128,7 +128,6 @@ def _bootstrap_inner(config_path: str) -> Dict[str, Any]:
 
     db_url = resolve_app_db_url(server)
     init_app_db(db_url)
-    apply_database_crypto(server)
     register_all_maintenance_tasks(server, config)
 
     apply_runtime_log_level_from_db()
@@ -149,6 +148,8 @@ def _bootstrap_inner(config_path: str) -> Dict[str, Any]:
         "Bootstrap: leader bootstrap finished; worker_candidate_id=%s",
         leader_candidate_id,
     )
+
+    apply_database_crypto(server)
 
     logger.log(LogLevel.VERBOSE, "Bootstrap: initializing bots (bot_type=%r)", bot_type)
     initialize_bots(bot_type, config)
