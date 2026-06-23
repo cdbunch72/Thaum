@@ -3,7 +3,7 @@
 # gemstone_utils v0.4.x (UUID key ids, KEK canary on GemstoneKeyKdf). PyPI pin for reproducible installs.
 # Local dev: pip install -e ../gemstone_utils
 # Install from metadata: pip install .
-gemstone_utils==0.4.0
+gemstone_utils==0.4.1
 tzdata; platform_system == "Windows"
 Flask
 gunicorn
