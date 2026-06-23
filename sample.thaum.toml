@@ -142,6 +142,8 @@ responders = []
 # status_ack_template = """..."""
 # status_unack_template = """..."""
 # status_escalate_template = """..."""
+# status_accidental_close_minutes = 10
+# status_accidental_close_template = """..."""
 
 # =============================================================================
 # Bot: database — Jira on-call for DBA team

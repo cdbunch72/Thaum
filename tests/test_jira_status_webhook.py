@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import logging
 import unittest
+from datetime import datetime, timedelta, timezone
 from unittest.mock import MagicMock
 
 from pydantic import SecretStr
@@ -164,6 +165,10 @@ class JiraPayloadTest(unittest.TestCase):
 # -- End Class JiraPayloadTest
 
 
+def _created_at_ms_ago(offset: timedelta) -> int:
+    return int((datetime.now(timezone.utc) - offset).timestamp() * 1000)
+
+
 class JiraStatusWebhookSayTest(unittest.TestCase):
     def setUp(self) -> None:
         init_app_db("sqlite:///:memory:")
@@ -213,7 +218,7 @@ class JiraStatusWebhookSayTest(unittest.TestCase):
         self.assertNotIn("markdown", kwargs)
     # -- End Method test_acknowledge_says_to_room
 
-    def test_acknowledge_status_mentions_false_uses_plain_markdown_flag(self) -> None:
+    def test_acknowledge_status_mentions_false_no_markdown_kwarg(self) -> None:
         bot = MagicMock()
         bot.bot_key = "bk1"
         bot.team_description = "Platform"
@@ -244,7 +249,51 @@ class JiraStatusWebhookSayTest(unittest.TestCase):
         )
         _args, kwargs = bot.say.call_args
         self.assertNotIn("markdown", kwargs)
-    # -- End Method test_acknowledge_status_mentions_false_uses_plain_markdown_flag
+    # -- End Method test_acknowledge_status_mentions_false_no_markdown_kwarg
+
+    def test_acknowledge_status_mentions_dual_render(self) -> None:
+        responder = ThaumPerson(
+            email="responder@example.com",
+            display_name="Pat Responder",
+            platform_ids={"webex": "Y2lzY29zcGFyazo"},
+        )
+        lookup = MagicMock()
+        lookup.get_person_by_email.return_value = responder
+
+        bot = MagicMock()
+        bot.bot_key = "bk1"
+        bot.team_description = "Platform"
+        bot.lookup_plugin = lookup
+        bot.format_mention = MagicMock(return_value="<@personId:Y2lzY29zcGFyazo>")
+        cfg = JiraAlertPluginConfig.model_construct(
+            plugin="jira",
+            site_url="https://example.atlassian.net",
+            cloud_id="c",
+            user="u",
+            api_token=SecretStr("t"),
+            responders=[],
+            status_webhook_bearer="",
+            send_escalate_msg=False,
+            status_ack_template="{{ responder_mention }} acknowledged",
+        )
+        log = logging.getLogger("test.ack.mention")
+        handle_jira_status_webhook(
+            bot=bot,
+            cfg=cfg,
+            logger=log,
+            payload={
+                "action": "Acknowledge",
+                "alert": {"alertId": "alert-uuid-99", "username": "responder@example.com"},
+            },
+        )
+        bot.say.assert_called_once()
+        args, kwargs = bot.say.call_args
+        self.assertEqual(args[0], "space-9")
+        self.assertIn("Pat Responder", args[1])
+        self.assertNotIn("personId", args[1])
+        self.assertIn("markdown", kwargs)
+        self.assertIn("personId", kwargs["markdown"])
+    # -- End Method test_acknowledge_status_mentions_dual_render
 
     def test_escalate_respects_send_flag(self) -> None:
         bot = MagicMock()
@@ -346,7 +395,94 @@ class JiraStatusWebhookSayTest(unittest.TestCase):
         )
         args, _kwargs = bot.say.call_args
         self.assertIn("Casey", args[1])
-    # -- End Method test_acknowledge_falls_back_to_alias_short_mapping_when_alert_id_unmapped
+    # -- End Method test_acknowledge_uses_cached_sender_name
+
+    def test_close_recent_says_to_room(self) -> None:
+        bot = MagicMock()
+        bot.bot_key = "bk1"
+        bot.team_description = "Platform"
+        bot.lookup_plugin = None
+        cfg = JiraAlertPluginConfig.model_construct(
+            plugin="jira",
+            site_url="https://example.atlassian.net",
+            cloud_id="c",
+            user="u",
+            api_token=SecretStr("t"),
+            responders=[],
+            status_webhook_bearer="",
+            send_escalate_msg=False,
+        )
+        log = logging.getLogger("test.close.recent")
+        handle_jira_status_webhook(
+            bot=bot,
+            cfg=cfg,
+            logger=log,
+            payload={
+                "action": "Close",
+                "alert": {
+                    "alertId": "alert-uuid-99",
+                    "username": "responder@example.com",
+                    "createdAt": _created_at_ms_ago(timedelta(minutes=2)),
+                },
+            },
+        )
+        bot.say.assert_called_once()
+        args, _kwargs = bot.say.call_args
+        self.assertEqual(args[0], "space-9")
+        self.assertIn("closed", args[1].lower())
+    # -- End Method test_close_recent_says_to_room
+
+    def test_close_old_is_silent(self) -> None:
+        bot = MagicMock()
+        bot.bot_key = "bk1"
+        cfg = JiraAlertPluginConfig.model_construct(
+            plugin="jira",
+            site_url="https://example.atlassian.net",
+            cloud_id="c",
+            user="u",
+            api_token=SecretStr("t"),
+            responders=[],
+            status_webhook_bearer="",
+            send_escalate_msg=False,
+        )
+        log = logging.getLogger("test.close.old")
+        handle_jira_status_webhook(
+            bot=bot,
+            cfg=cfg,
+            logger=log,
+            payload={
+                "action": "Close",
+                "alert": {
+                    "alertId": "alert-uuid-99",
+                    "createdAt": _created_at_ms_ago(timedelta(hours=2)),
+                },
+            },
+        )
+        bot.say.assert_not_called()
+    # -- End Method test_close_old_is_silent
+
+    def test_close_missing_created_at_is_silent(self) -> None:
+        bot = MagicMock()
+        bot.bot_key = "bk1"
+        cfg = JiraAlertPluginConfig.model_construct(
+            plugin="jira",
+            site_url="https://example.atlassian.net",
+            cloud_id="c",
+            user="u",
+            api_token=SecretStr("t"),
+            responders=[],
+            status_webhook_bearer="",
+            send_escalate_msg=False,
+        )
+        log = logging.getLogger("test.close.no_created")
+        handle_jira_status_webhook(
+            bot=bot,
+            cfg=cfg,
+            logger=log,
+            payload={"action": "Close", "alert": {"alertId": "alert-uuid-99"}},
+        )
+        bot.say.assert_not_called()
+    # -- End Method test_close_missing_created_at_is_silent
 # -- End Class JiraStatusWebhookSayTest
 
 

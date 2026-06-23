@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import logging
+from datetime import datetime, timedelta, timezone
 from typing import Any, Optional
 
 from jinja2 import Environment, StrictUndefined
@@ -88,6 +89,44 @@ def _render_status_template(template_str: str, context: dict[str, Any]) -> str:
 # -- End Function _render_status_template
 
 
+def _alert_created_at_utc(alert: dict[str, Any]) -> Optional[datetime]:
+    raw = alert.get("createdAt")
+    if raw is None:
+        return None
+    try:
+        ms = int(raw)
+    except (TypeError, ValueError):
+        return None
+    return datetime.fromtimestamp(ms / 1000, tz=timezone.utc)
+# -- End Function _alert_created_at_utc
+
+
+def _is_recent_alert(alert: dict[str, Any], window: timedelta) -> bool:
+    created = _alert_created_at_utc(alert)
+    if created is None:
+        return False
+    return datetime.now(timezone.utc) - created < window
+# -- End Function _is_recent_alert
+
+
+def _say_status_message(
+    bot: BaseChatBot,
+    room_id: str,
+    cfg: JiraAlertPluginConfig,
+    template_str: str,
+    ctx: dict[str, Any],
+) -> None:
+    markdown = _render_status_template(template_str, ctx)
+    mention_differs = ctx.get("responder_mention") != ctx.get("responder_name")
+    if cfg.status_mentions and mention_differs:
+        plain_ctx = {**ctx, "responder_mention": ctx["responder_name"]}
+        text = _render_status_template(template_str, plain_ctx)
+        bot.say(room_id, text, markdown=markdown)
+    else:
+        bot.say(room_id, markdown)
+# -- End Function _say_status_message
+
+
 def handle_jira_status_webhook(
     *,
     bot: BaseChatBot,
@@ -148,19 +187,22 @@ def handle_jira_status_webhook(
     ctx = _status_message_context(bot, cfg, logger, sender_name, alert)
 
     if action == "Acknowledge":
-        text = _render_status_template(cfg.status_ack_template, ctx)
-        bot.say(room_id, text)
+        _say_status_message(bot, room_id, cfg, cfg.status_ack_template, ctx)
         return
 
     if action == "UnAcknowledge":
-        text = _render_status_template(cfg.status_unack_template, ctx)
-        bot.say(room_id, text)
+        _say_status_message(bot, room_id, cfg, cfg.status_unack_template, ctx)
         return
 
     if action == "Escalate":
         if cfg.send_escalate_msg:
-            text = _render_status_template(cfg.status_escalate_template, ctx)
-            bot.say(room_id, text)
+            _say_status_message(bot, room_id, cfg, cfg.status_escalate_template, ctx)
+        return
+
+    if action == "Close":
+        window = timedelta(minutes=cfg.status_accidental_close_minutes)
+        if _is_recent_alert(alert, window):
+            _say_status_message(bot, room_id, cfg, cfg.status_accidental_close_template, ctx)
         return
 
     logger.debug("Jira status webhook unhandled action=%s", action)

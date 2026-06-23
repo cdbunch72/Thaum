@@ -19,6 +19,11 @@ _DEFAULT_STATUS_UNACK = (
     "Thank you for your patience."
 )
 _DEFAULT_STATUS_ESCALATE = "The alert has been escalated, thank you for your patience."
+_DEFAULT_STATUS_ACCIDENTAL_CLOSE = (
+    "{{ responder_mention }} closed the alert shortly after it was opened. "
+    "If you meant to respond, please use **Acknowledge** in the Jira app so "
+    "{{ sender_mention }} knows you are on the way."
+)
 
 
 class JiraAlertPluginConfig(BaseAlertPluginConfig):
@@ -45,6 +50,8 @@ class JiraAlertPluginConfig(BaseAlertPluginConfig):
     status_ack_template: str = Field(default=_DEFAULT_STATUS_ACK)
     status_unack_template: str = Field(default=_DEFAULT_STATUS_UNACK)
     status_escalate_template: str = Field(default=_DEFAULT_STATUS_ESCALATE)
+    status_accidental_close_minutes: int = 10
+    status_accidental_close_template: str = Field(default=_DEFAULT_STATUS_ACCIDENTAL_CLOSE)
 
     model_config = ConfigDict(extra="allow")
 # -- End Class JiraAlertPluginConfig
