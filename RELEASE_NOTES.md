@@ -2,20 +2,73 @@
 
 ## Unreleased
 
-### Containers
+---
 
-- **Bundled PostgreSQL** — **supervisord** starts **`postgres`** with **`%(ENV_PGDATA)s`** so a custom **`PGDATA`** matches entrypoint init/bootstrap (no hardcoded data path).
-- **Image layout** — Removed **`VOLUME ["/etc/thaum", "/var/lib/thaum"]`** from the Dockerfile. Anonymous Docker volumes no longer mask baked config or block **`chown`** on ACA; bind-mount those paths explicitly when you need persistence (Quadlet, **`docker run -v`**, K8s).
+## v0.7.0rc1 (release candidate 1) — 2026-06-29
 
-### Server / config
+**`pyproject.toml`** is **`0.7.0rc1`**.
 
-- **Azure Container Apps** — **`[server].base_url`** may be omitted when **`CONTAINER_APP_NAME`** and **`CONTAINER_APP_ENV_DNS_SUFFIX`** are set (stable ingress FQDN). App Service **`WEBSITE_HOSTNAME`** detection unchanged. Custom domains still need explicit **`THAUM_BASE_URL`** or TOML **`base_url`**.
+First **0.7.0** release candidate. Rolls up **v0.7.0a1** through **v0.7.0a3** plus post-alpha fixes and documentation. Breaking changes are unlikely but not impossible before **v0.7.0** stable.
 
-### Docs / CI examples
+### Breaking changes
 
-- **Cloud deploy docs** — Removed duplicated Azure quickstart tree from upstream; use [Thaum Cloud](https://gemstone-software-dev.github.io/thaum-cloud/) ([ACA quickstart](https://gemstone-software-dev.github.io/thaum-cloud/quickstart/azure/quickstart_aca.html), [template repo](https://github.com/gemstone-software-dev/thaum-cloud)) for Dockerfile, workflows, and provisioning guides.
+| Change | Migration |
+|--------|-----------|
+| Bot config **`name` → `handle`** (a1) | Update every **`[bots.<id>]`** table; no **`name`** alias. |
+| Cloud-neutral images (a3) | `thaum-azure` → `thaum`; `thaum-azure-external-db` → `thaum-external-db`. `pip install ".[azure]"` → `pip install "gemstone_utils[azure]==0.4.x"` in deploy repo. TOML with `azexp:` on stock image → custom deploy image per [Thaum Cloud](https://gemstone-software-dev.github.io/thaum-cloud/). |
+| Removed **`THAUM_ENABLE_AZURE`** / **`[azure]`** extra (a3) | Use Thaum Cloud deploy template for `azexp:` backends. |
+| **`thaum_config_check`** (a3) | No longer imports `azexp_backend`; resolves `env:` / `file:` / `secret:` only unless deploy env registers other backends. |
+| Incident card submit `data` (a3) | Only `{ "action": "submit_incident" }`; hidden priority toggle omission = normal priority. Switch custom cards to Adaptive Cards **`isVisible`**. |
+| Docker **`VOLUME`** removed (post-a3) | Bind-mount **`/etc/thaum`** and **`/var/lib/thaum`** explicitly (Quadlet, **`docker run -v`**, K8s). |
+| In-repo Azure quickstart removed (post-a3) | Use [Thaum Cloud](https://gemstone-software-dev.github.io/thaum-cloud/) ([ACA quickstart](https://gemstone-software-dev.github.io/thaum-cloud/quickstart/azure/quickstart_aca.html), [template repo](https://github.com/gemstone-software-dev/thaum-cloud)). |
 
-Deploy repos can drop patched **`supervisord.conf`** copies after upgrading to an image that includes these fixes.
+### Highlights
+
+**Logging and startup (a1)**
+- Optional JSON structured logs (`[logging]`, `python-json-logger`); **SPAM** diagnostics behind **`THAUM_LOG_SPAM=1`**.
+- Irrecoverable bootstrap failures terminate via **`fail_fast_fatal`** (missing config, **`init_db`**, leader preflight, Webex webhook registration, invalid plugins).
+
+**Chat and Jira alerts (a2, a3, post-a3)**
+- **`alert!`** high-priority command gated by per-bot **`high_pri_on`**; Jira adds **`HighPriority`** tag alongside **`OverrideQuietHours`**.
+- Resolved secrets for Atlassian connection fields and Jira **`responders`** (`env:` / `file:` / `secret:`).
+- **Accidental close** status webhook: alerts closed within **`status_accidental_close_minutes`** (default 10) prompt the responder in chat via **`status_accidental_close_template`**.
+
+**Config and deployment (a2, post-a3)**
+- **`[server].base_url`** may be omitted when env or PaaS auto-detection applies: **`THAUM_BASE_URL`**, App Service **`WEBSITE_HOSTNAME`**, ACA **`CONTAINER_APP_NAME`** + **`CONTAINER_APP_ENV_DNS_SUFFIX`**, etc. Custom domains still need explicit **`base_url`**.
+- Cloud-neutral published images: default + **`-external-db`** only on GHCR.
+
+**Incident cards and static assets (a3)**
+- Adaptive Cards **`isVisible`** for priority toggle; **`GET /static/<filename>`** serves bundled assets (e.g. wizard logo on sample card).
+
+**Bootstrap, containers, and crypto (post-a3)**
+- Database encryption init refactored: **`ensure_vault_key_rows`** as leader init task; cleaner multi-worker ordering.
+- **supervisord** starts **`postgres`** with **`%(ENV_PGDATA)s`** for custom **`PGDATA`**.
+
+**Documentation (post-a3)**
+- Sphinx docs site (narrative guides + autodoc API reference); optional **`[docs]`** extra; expanded docstrings. Published to **GitHub Pages** with this RC.
+
+### Fixes (post-a3)
+
+- Customer service message template typo ("shortlly" → "shortly") and simplified template retrieval.
+
+### Dependencies
+
+**`gemstone_utils`** **`0.4.1`** from **PyPI** (was **`0.4.0`** on the **`0.7.0a3`** tag). See **`pyproject.toml`**, **`requirements.txt`**, and **`GEMSTONE_UTILS_REF`** in **`Dockerfile`**.
+
+### Upgrade from v0.7.0a3
+
+- **pip / venv**: **`pip install -U .`** (or your lockfile workflow) to pick up **`0.7.0rc1`**.
+- **Containers**: pull **`0.7.0rc1`**, **`:devel`**, or **`:edge`** on **`thaum`** / **`thaum-external-db`** (not **`:latest`** — RC is a prerelease).
+- Migrate bot **`handle`**, image names, and bind-mount paths if not already done.
+- Deploy repos can drop patched **`supervisord.conf`** copies after upgrading.
+- Custom incident cards: use **`isVisible`** for the priority toggle if not already updated.
+
+No manual schema migration is required (**`init_db`** creates ORM tables on startup).
+
+### Release candidate caveats
+
+- Breaking changes are unlikely but not impossible before **v0.7.0** stable.
+- See sections below for per-alpha detail (**v0.7.0a1**–**a3**).
 
 ---
 
