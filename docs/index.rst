@@ -6,8 +6,9 @@ alerting. A central server process loads bot, alert, lookup, and connection
 plugins from TOML configuration, coordinates incident rooms in chat platforms,
 and pages on-call responders through third-party alerting integrations.
 
-This site combines narrative guides (Markdown) with API reference pages
-generated from Python docstrings on plugin base classes and utility scripts.
+This site combines narrative guides (Markdown), :doc:`release notes <release-notes>`
+for version history and migration notes, and API reference pages generated from
+Python docstrings on plugin base classes and utility scripts.
 
 
 Documentation map
@@ -31,6 +32,8 @@ Documentation map
      - :doc:`LDAP-AD-lookup`
    * - Code conventions
      - :doc:`STYLE_GUIDE`
+   * - Release notes
+     - :doc:`release-notes`
    * - Plugin base classes
      - :doc:`api/index`
 
@@ -48,6 +51,19 @@ Guides
    Atlassian-Jira
    LDAP-AD-lookup
    STYLE_GUIDE
+
+
+Release notes
+-------------
+
+Version history, breaking changes, and migration notes (synced from ``RELEASE_NOTES.md`` at
+the repository root on each docs build).
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Release notes
+
+   release-notes
 
 
 API reference

@@ -19,12 +19,13 @@ Narrative guides live under [`docs/`](docs/). Build a styled HTML site (Furo the
 Thaum branding) with Sphinx:
 
 ```bash
-pip install -r docs/sphinx_config/requirements.txt
+pip install ".[docs]"
 make -C docs/sphinx_config html
 # open docs/_build/html/index.html
 ```
 
-Or install doc extras with the package: `pip install ".[docs]"`.
+This installs Thaum runtime dependencies so Sphinx autodoc can import plugin base
+classes, plus Sphinx and the Furo theme.
 
 - [Architecture](docs/ARCHITECTURE.md) — bootstrap, config model, logging, plugins.
 - [Quickstart](quickstart/QUICKSTART.md) — Quadlet (Podman) or containerless (Unix socket + nginx), with encrypted credentials.

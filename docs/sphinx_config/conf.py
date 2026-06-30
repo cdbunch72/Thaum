@@ -18,6 +18,8 @@ except ImportError:  # pragma: no cover
 _conf_dir = os.path.dirname(os.path.abspath(__file__))
 _doc_root = os.path.abspath(os.path.join(_conf_dir, ".."))
 _repo_root = os.path.abspath(os.path.join(_doc_root, ".."))
+_RELEASE_NOTES_SRC = os.path.join(_repo_root, "RELEASE_NOTES.md")
+_RELEASE_NOTES_DST = os.path.join(_doc_root, "release-notes.md")
 
 sys.path.insert(0, _repo_root)
 sys.path.insert(0, os.path.join(_repo_root, "scripts", "python"))
@@ -168,6 +170,25 @@ def _ensure_logo_asset() -> None:
     _resize_logo(_LOGO_SRC, _LOGO_DST, _LOGO_SIZE)
 
 
+def _neutralize_thematic_break_lines(lines: list[str]) -> None:
+    """Replace Markdown ``---`` rules; docutils rejects them as section transitions."""
+    for i, line in enumerate(lines):
+        stripped = line.strip()
+        if len(stripped) >= 3 and set(stripped) <= {"-"}:
+            lines[i] = "\n"
+
+
+def _sync_release_notes_doc() -> None:
+    """Materialize docs/release-notes.md from repo-root RELEASE_NOTES.md for Sphinx."""
+    if not os.path.isfile(_RELEASE_NOTES_SRC):
+        return
+    with open(_RELEASE_NOTES_SRC, encoding="utf-8") as f:
+        lines = f.read().splitlines(keepends=True)
+    _neutralize_thematic_break_lines(lines)
+    with open(_RELEASE_NOTES_DST, "w", encoding="utf-8", newline="\n") as f:
+        f.writelines(lines)
+
+
 def _neutralize_markdown_rules(app, docname, source) -> None:
     """Replace Markdown thematic-break lines so docutils does not emit transitions."""
     try:
@@ -175,10 +196,7 @@ def _neutralize_markdown_rules(app, docname, source) -> None:
             return
     except Exception:
         return
-    for i, line in enumerate(source):
-        stripped = line.strip()
-        if len(stripped) >= 4 and set(stripped) <= {"-"}:
-            source[i] = "\n"
+    _neutralize_thematic_break_lines(source)
 
 
 def _on_builder_inited(app) -> None:
@@ -190,6 +208,7 @@ def _on_builder_inited(app) -> None:
 
 def setup(app):
     _ensure_logo_asset()
+    _sync_release_notes_doc()
     app.connect("source-read", _neutralize_markdown_rules)
     app.connect("builder-inited", _on_builder_inited)
     return {

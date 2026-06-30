@@ -31,10 +31,12 @@ jobs:
         with:
           python-version: "3.12"
           cache: pip
-          cache-dependency-path: docs/sphinx_config/requirements.txt
+          cache-dependency-path: |
+            pyproject.toml
+            docs/sphinx_config/requirements.txt
 
-      - name: Install doc dependencies
-        run: pip install -r docs/sphinx_config/requirements.txt
+      - name: Install package and doc dependencies
+        run: pip install ".[docs]"
 
       - name: Build HTML docs
         run: make -C docs/sphinx_config html
