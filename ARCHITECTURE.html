@@ -1,0 +1,695 @@
+<!doctype html>
+<html class="no-js" lang="en" data-content_root="./">
+  <head><meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="index" title="Index" href="genindex.html"><link rel="search" title="Search" href="search.html"><link rel="next" title="Deployment quickstarts" href="deployment-quickstarts.html"><link rel="prev" title="Thaum" href="index.html">
+        <link rel="prefetch" href="_static/Thaum_wizard_cgi.jpg" as="image">
+        <link rel="prefetch" href="_static/Thaum_wizard_cgi.jpg" as="image">
+
+    <!-- Generated with Sphinx 8.2.3 and Furo 2025.12.19 -->
+        <title>Thaum System Architecture - Thaum</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=03e43079" />
+    <link rel="stylesheet" type="text/css" href="_static/styles/furo.css?v=7bdb33bb" />
+    <link rel="stylesheet" type="text/css" href="_static/copybutton.css?v=76b2166b" />
+    <link rel="stylesheet" type="text/css" href="_static/sphinx-design.min.css?v=95c83b7e" />
+    <link rel="stylesheet" type="text/css" href="_static/custom.css?v=35210c4e" />
+    <link rel="stylesheet" type="text/css" href="_static/styles/furo-extensions.css?v=8dab3a3b" />
+    
+    
+
+
+<style>
+  body {
+    --color-code-background: #eeffcc;
+  --color-code-foreground: black;
+  --font-stack: "Open Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-stack--monospace: "Source Code Pro", ui-monospace, monospace;
+  --color-thaum-heading-border: #2e7d4a;
+  --color-sidebar-background: #eaf5ef;
+  --color-table-header-background: var(--color-sidebar-background);
+  --color-code-background: #eef0f3;
+  --color-thaum-target-accent: #6D28D9;
+  
+  }
+  @media not print {
+    body[data-theme="dark"] {
+      --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  --font-stack: "Open Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-stack--monospace: "Source Code Pro", ui-monospace, monospace;
+  --color-thaum-heading-border: #5cb87a;
+  --color-sidebar-background: #0d1a12;
+  --color-table-header-background: #15241b;
+  --color-thaum-target-accent: #C4B5FD;
+  
+    }
+    @media (prefers-color-scheme: dark) {
+      body:not([data-theme="light"]) {
+        --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  --font-stack: "Open Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-stack--monospace: "Source Code Pro", ui-monospace, monospace;
+  --color-thaum-heading-border: #5cb87a;
+  --color-sidebar-background: #0d1a12;
+  --color-table-header-background: #15241b;
+  --color-thaum-target-accent: #C4B5FD;
+  
+      }
+    }
+  }
+</style></head>
+  <body>
+    
+    <script>
+      document.body.dataset.theme = localStorage.getItem("theme") || "auto";
+    </script>
+    
+
+<svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+  <symbol id="svg-toc" viewBox="0 0 24 24">
+    <title>Contents</title>
+    <svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 1024 1024">
+      <path d="M408 442h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8zm-8 204c0 4.4 3.6 8 8 8h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56zm504-486H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zm0 632H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zM115.4 518.9L271.7 642c5.8 4.6 14.4.5 14.4-6.9V388.9c0-7.4-8.5-11.5-14.4-6.9L115.4 505.1a8.74 8.74 0 0 0 0 13.8z"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-menu" viewBox="0 0 24 24">
+    <title>Menu</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-menu">
+      <line x1="3" y1="12" x2="21" y2="12"></line>
+      <line x1="3" y1="6" x2="21" y2="6"></line>
+      <line x1="3" y1="18" x2="21" y2="18"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-arrow-right" viewBox="0 0 24 24">
+    <title>Expand</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-chevron-right">
+      <polyline points="9 18 15 12 9 6"></polyline>
+    </svg>
+  </symbol>
+  <symbol id="svg-sun" viewBox="0 0 24 24">
+    <title>Light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="feather-sun">
+      <circle cx="12" cy="12" r="5"></circle>
+      <line x1="12" y1="1" x2="12" y2="3"></line>
+      <line x1="12" y1="21" x2="12" y2="23"></line>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+      <line x1="1" y1="12" x2="3" y2="12"></line>
+      <line x1="21" y1="12" x2="23" y2="12"></line>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon" viewBox="0 0 24 24">
+    <title>Dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-moon">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 0 7.92 12.446a9 9 0 1 1 -8.313 -12.454z" />
+    </svg>
+  </symbol>
+  <symbol id="svg-sun-with-moon" viewBox="0 0 24 24">
+    <title>Auto light/dark, in light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path style="opacity: 50%" d="M 5.411 14.504 C 5.471 14.504 5.532 14.504 5.591 14.504 C 3.639 16.319 4.383 19.569 6.931 20.352 C 7.693 20.586 8.512 20.551 9.25 20.252 C 8.023 23.207 4.056 23.725 2.11 21.184 C 0.166 18.642 1.702 14.949 4.874 14.536 C 5.051 14.512 5.231 14.5 5.411 14.5 L 5.411 14.504 Z"/>
+      <line x1="14.5" y1="3.25" x2="14.5" y2="1.25"/>
+      <line x1="14.5" y1="15.85" x2="14.5" y2="17.85"/>
+      <line x1="10.044" y1="5.094" x2="8.63" y2="3.68"/>
+      <line x1="19" y1="14.05" x2="20.414" y2="15.464"/>
+      <line x1="8.2" y1="9.55" x2="6.2" y2="9.55"/>
+      <line x1="20.8" y1="9.55" x2="22.8" y2="9.55"/>
+      <line x1="10.044" y1="14.006" x2="8.63" y2="15.42"/>
+      <line x1="19" y1="5.05" x2="20.414" y2="3.636"/>
+      <circle cx="14.5" cy="9.55" r="3.6"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon-with-sun" viewBox="0 0 24 24">
+    <title>Auto light/dark, in dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path d="M 8.282 7.007 C 8.385 7.007 8.494 7.007 8.595 7.007 C 5.18 10.184 6.481 15.869 10.942 17.24 C 12.275 17.648 13.706 17.589 15 17.066 C 12.851 22.236 5.91 23.143 2.505 18.696 C -0.897 14.249 1.791 7.786 7.342 7.063 C 7.652 7.021 7.965 7 8.282 7 L 8.282 7.007 Z"/>
+      <line style="opacity: 50%" x1="18" y1="3.705" x2="18" y2="2.5"/>
+      <line style="opacity: 50%" x1="18" y1="11.295" x2="18" y2="12.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="4.816" x2="14.464" y2="3.964"/>
+      <line style="opacity: 50%" x1="20.711" y1="10.212" x2="21.563" y2="11.063"/>
+      <line style="opacity: 50%" x1="14.205" y1="7.5" x2="13.001" y2="7.5"/>
+      <line style="opacity: 50%" x1="21.795" y1="7.5" x2="23" y2="7.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="10.184" x2="14.464" y2="11.036"/>
+      <line style="opacity: 50%" x1="20.711" y1="4.789" x2="21.563" y2="3.937"/>
+      <circle style="opacity: 50%" cx="18" cy="7.5" r="2.169"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-pencil" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-pencil-code">
+      <path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" />
+      <path d="M13.5 6.5l4 4" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+  <symbol id="svg-eye" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-eye-code">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M10 12a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" />
+      <path
+        d="M11.11 17.958c-3.209 -.307 -5.91 -2.293 -8.11 -5.958c2.4 -4 5.4 -6 9 -6c3.6 0 6.6 2 9 6c-.21 .352 -.427 .688 -.647 1.008" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+</svg>
+
+<input type="checkbox" class="sidebar-toggle" name="__navigation" id="__navigation" aria-label="Toggle site navigation sidebar">
+<input type="checkbox" class="sidebar-toggle" name="__toc" id="__toc" aria-label="Toggle table of contents sidebar">
+<label class="overlay sidebar-overlay" for="__navigation"></label>
+<label class="overlay toc-overlay" for="__toc"></label>
+
+<a class="skip-to-content muted-link" href="#furo-main-content">Skip to content</a>
+
+
+
+<div class="page">
+  <header class="mobile-header">
+    <div class="header-left">
+      <label class="nav-overlay-icon" for="__navigation">
+        <span class="icon"><svg><use href="#svg-menu"></use></svg></span>
+      </label>
+    </div>
+    <div class="header-center">
+      <a href="index.html"><div class="brand">Thaum</div></a>
+    </div>
+    <div class="header-right">
+      <div class="theme-toggle-container theme-toggle-header">
+        <button class="theme-toggle" aria-label="Toggle Light / Dark / Auto color theme">
+          <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+          <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+          <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+          <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+        </button>
+      </div>
+      <label class="toc-overlay-icon toc-header-icon" for="__toc">
+        <span class="icon"><svg><use href="#svg-toc"></use></svg></span>
+      </label>
+    </div>
+  </header>
+  <aside class="sidebar-drawer">
+    <div class="sidebar-container">
+      
+      <div class="sidebar-sticky"><a class="sidebar-brand" href="index.html">
+  <div class="sidebar-logo-container">
+    <img class="sidebar-logo only-light" src="_static/Thaum_wizard_cgi.jpg" alt="Light Logo"/>
+    <img class="sidebar-logo only-dark" src="_static/Thaum_wizard_cgi.jpg" alt="Dark Logo"/>
+  </div>
+  
+  <span class="sidebar-brand-text">Thaum</span>
+  
+</a><form class="sidebar-search-container" method="get" action="search.html" role="search">
+  <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
+  <input type="hidden" name="check_keywords" value="yes">
+  <input type="hidden" name="area" value="default">
+</form>
+<div id="searchbox"></div><div class="sidebar-scroll"><div class="sidebar-tree">
+  <p class="caption" role="heading"><span class="caption-text">Guides</span></p>
+<ul class="current">
+<li class="toctree-l1 current current-page"><a class="current reference internal" href="#">Thaum System Architecture</a></li>
+<li class="toctree-l1"><a class="reference internal" href="deployment-quickstarts.html">Deployment quickstarts</a></li>
+<li class="toctree-l1"><a class="reference internal" href="admin-log-level.html">Admin log level (signed HTTP)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="Atlassian-Jira.html">Atlassian Cloud and Jira (Thaum)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="LDAP-AD-lookup.html">LDAP / Active Directory lookup (<code class="docutils literal notranslate"><span class="pre">lookup.plugins.ldap_ad</span></code>)</a></li>
+<li class="toctree-l1"><a class="reference internal" href="STYLE_GUIDE.html">Thaum Style Guide</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">API reference</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="api/index.html">API reference</a></li>
+</ul>
+
+</div>
+</div>
+
+      </div>
+      
+    </div>
+  </aside>
+  <div class="main">
+    <div class="content">
+      <div class="article-container">
+        <a href="#" class="back-to-top muted-link">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8v12z"></path>
+          </svg>
+          <span>Back to top</span>
+        </a>
+        <div class="content-icon-container">
+          <div class="view-this-page">
+  <a class="muted-link" href="_sources/ARCHITECTURE.md.txt" title="View this page">
+    <svg><use href="#svg-eye"></use></svg>
+    <span class="visually-hidden">View this page</span>
+  </a>
+</div>
+<div class="theme-toggle-container theme-toggle-content">
+            <button class="theme-toggle" aria-label="Toggle Light / Dark / Auto color theme">
+              <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+              <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+              <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+              <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+            </button>
+          </div>
+          <label class="toc-overlay-icon toc-content-icon" for="__toc">
+            <span class="icon"><svg><use href="#svg-toc"></use></svg></span>
+          </label>
+        </div>
+        <article role="main" id="furo-main-content">
+          <section id="thaum-system-architecture">
+<h1>Thaum System Architecture<a class="headerlink" href="#thaum-system-architecture" title="Link to this heading">¶</a></h1>
+<section id="overview">
+<h2>Overview<a class="headerlink" href="#overview" title="Link to this heading">¶</a></h2>
+<p>Thaum is a modular, plugin-driven orchestration framework designed for
+deterministic, admin-friendly operations. Its architecture emphasizes
+predictable lifecycle sequencing, clean separation of concerns, and
+strict avoidance of import-time side effects. The system is composed of
+a central server process, a shared database, a plugin layer, and one or
+more bot instances.</p>
+</section>
+<section id="bootstrap-sequence">
+<h2>1. Bootstrap Sequence<a class="headerlink" href="#bootstrap-sequence" title="Link to this heading">¶</a></h2>
+<p>Bootstrap is implemented in <code class="docutils literal notranslate"><span class="pre">bootstrap.py</span></code> and invoked from <code class="docutils literal notranslate"><span class="pre">app.py</span></code> before the
+Flask app is created.</p>
+<section id="phase-1-load-and-validate-core-config">
+<h3><strong>Phase 1 - Load and validate core config</strong><a class="headerlink" href="#phase-1-load-and-validate-core-config" title="Link to this heading">¶</a></h3>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">config.load_and_validate()</span></code> reads the resolved TOML config path (canonical filename: <code class="docutils literal notranslate"><span class="pre">thaum.toml</span></code>) and builds <code class="docutils literal notranslate"><span class="pre">ServerConfig</span></code> and
+<code class="docutils literal notranslate"><span class="pre">LogConfig</span></code>.</p></li>
+<li><p>Bot tables are kept as dicts: each <code class="docutils literal notranslate"><span class="pre">[bots.&lt;id&gt;]</span></code> includes <strong><code class="docutils literal notranslate"><span class="pre">handle</span></code></strong> (platform mention
+identifier, e.g. Webex bot username), <code class="docutils literal notranslate"><span class="pre">alert_type</span></code>, and an optional nested <code class="docutils literal notranslate"><span class="pre">[bots.&lt;id&gt;.alert]</span></code>
+table for per-bot alert options.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">log_setup.configure_logging()</span></code> runs next.</p></li>
+</ul>
+</section>
+<section id="phase-2-import-plugin-modules-and-validate-typed-configs">
+<h3><strong>Phase 2 - Import plugin modules and validate typed configs</strong><a class="headerlink" href="#phase-2-import-plugin-modules-and-validate-typed-configs" title="Link to this heading">¶</a></h3>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">plugin_loader.ensure_plugin_loaded(family,</span> <span class="pre">name)</span></code> imports lookup, bot driver,
+and every distinct <code class="docutils literal notranslate"><span class="pre">alert_type</span></code> module.</p></li>
+<li><p>Lookup, each bot driver row, and each merged alert config (defaults +
+<code class="docutils literal notranslate"><span class="pre">[bots.&lt;id&gt;.alert]</span></code>) are validated with the plugin’s <code class="docutils literal notranslate"><span class="pre">get_config_model()</span></code>.</p></li>
+<li><p>ORM models used by lookup live in <code class="docutils literal notranslate"><span class="pre">lookup/models.py</span></code> as subclasses of
+<code class="docutils literal notranslate"><span class="pre">GemstoneDB</span></code>; importing plugins before <code class="docutils literal notranslate"><span class="pre">init_db</span></code> registers metadata.</p></li>
+<li><p><strong>No bot or alert plugin instances</strong> exist yet.</p></li>
+</ul>
+</section>
+<section id="phase-3-initialize-database">
+<h3><strong>Phase 3 - Initialize database</strong><a class="headerlink" href="#phase-3-initialize-database" title="Link to this heading">¶</a></h3>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">thaum.db_bootstrap.init_app_db()</span></code> calls <code class="docutils literal notranslate"><span class="pre">gemstone_utils.db.init_db()</span></code> with the URL from <code class="docutils literal notranslate"><span class="pre">[server.database].db_url</span></code> (via <code class="docutils literal notranslate"><span class="pre">thaum.db_bootstrap.resolve_app_db_url</span></code>).</p></li>
+<li><p>When <code class="docutils literal notranslate"><span class="pre">[server.database].database_vault_passphrase</span></code> is set, <strong>gemstone key rows</strong> (<code class="docutils literal notranslate"><span class="pre">gemstone_key_kdf</span></code>, active <code class="docutils literal notranslate"><span class="pre">gemstone_key_record</span></code>) are created by the <strong>election leader</strong> during leader init (<code class="docutils literal notranslate"><span class="pre">thaum_vault_key_rows</span></code>); non-leader workers wait on the leader init barrier, then each worker wires in-memory field encryption via <code class="docutils literal notranslate"><span class="pre">wire_database_crypto()</span></code> (no row inserts).</p></li>
+</ul>
+<section id="database-url-resolution-resolve-app-db-url">
+<h4>Database URL resolution (<code class="docutils literal notranslate"><span class="pre">resolve_app_db_url</span></code>)<a class="headerlink" href="#database-url-resolution-resolve-app-db-url" title="Link to this heading">¶</a></h4>
+<ul class="simple">
+<li><p>If <strong><code class="docutils literal notranslate"><span class="pre">db_url</span></code></strong> is set (after secret resolution), that URL is used (PostgreSQL, SQLite, etc.).</p></li>
+<li><p>If <strong><code class="docutils literal notranslate"><span class="pre">db_url</span></code></strong> is empty:</p>
+<ul>
+<li><p><strong><code class="docutils literal notranslate"><span class="pre">THAUM_EXTERNAL_DB</span></code></strong> true (<code class="docutils literal notranslate"><span class="pre">1</span></code>, <code class="docutils literal notranslate"><span class="pre">true</span></code>, <code class="docutils literal notranslate"><span class="pre">yes</span></code>, <code class="docutils literal notranslate"><span class="pre">on</span></code>): <strong>error</strong> — set an explicit <code class="docutils literal notranslate"><span class="pre">db_url</span></code> for your external or dev database.</p></li>
+<li><p>Otherwise (unset/false): <strong>bundled PostgreSQL</strong> — the URL is built by <code class="docutils literal notranslate"><span class="pre">default_bundled_db_url()</span></code> as <code class="docutils literal notranslate"><span class="pre">postgresql+psycopg://…</span></code> over a <strong>Unix socket</strong> (<code class="docutils literal notranslate"><span class="pre">host</span></code> query parameter), using <strong>peer</strong> authentication (no password in the URL; the process OS user must match the role, e.g. <code class="docutils literal notranslate"><span class="pre">thaum</span></code> in the container). Optional: <strong><code class="docutils literal notranslate"><span class="pre">THAUM_PG_USER</span></code></strong> (default <code class="docutils literal notranslate"><span class="pre">thaum</span></code>), <strong><code class="docutils literal notranslate"><span class="pre">THAUM_PG_DATABASE</span></code></strong> (default <code class="docutils literal notranslate"><span class="pre">thaum</span></code>), <strong><code class="docutils literal notranslate"><span class="pre">THAUM_PG_SOCKET_DIR</span></code></strong> (default <code class="docutils literal notranslate"><span class="pre">/tmp/postgres</span></code>).</p></li>
+</ul>
+</li>
+<li><p><strong>Container images</strong> are built from one <code class="docutils literal notranslate"><span class="pre">Dockerfile</span></code> with build arg <strong><code class="docutils literal notranslate"><span class="pre">THAUM_BUNDLED_POSTGRES</span></code></strong> (install PostgreSQL + supervisord when <code class="docutils literal notranslate"><span class="pre">1</span></code>). CI publishes two name suffixes on the same registry base: default and <strong><code class="docutils literal notranslate"><span class="pre">-external-db</span></code></strong>. Cloud provider SDKs and optional secret backends (for example <code class="docutils literal notranslate"><span class="pre">gemstone_utils[azure]</span></code> for <code class="docutils literal notranslate"><span class="pre">azexp:</span></code>) are installed in <strong>deploy-repo</strong> images (<a class="reference external" href="https://gemstone-software-dev.github.io/thaum-cloud/">Thaum Cloud</a>), not in upstream Thaum CI.</p></li>
+<li><p><strong><code class="docutils literal notranslate"><span class="pre">THAUM_IMAGE_BUNDLED_POSTGRES</span></code></strong> is set at image build time from <strong><code class="docutils literal notranslate"><span class="pre">THAUM_BUNDLED_POSTGRES</span></code></strong>. In <code class="docutils literal notranslate"><span class="pre">entrypoint.sh</span></code>, if it is <strong>0</strong> (external-db image), the process always runs <strong>gunicorn</strong> only. Otherwise <strong><code class="docutils literal notranslate"><span class="pre">THAUM_EXTERNAL_DB</span></code></strong> selects runtime mode: external DB → <strong>gunicorn</strong> only; bundled → <strong>supervisord</strong> (PostgreSQL + app). See the <code class="docutils literal notranslate"><span class="pre">Dockerfile</span></code> and <code class="docutils literal notranslate"><span class="pre">docker/</span></code> assets.</p></li>
+</ul>
+</section>
+</section>
+<section id="phase-4-instantiate-lookup-bots-and-alert-plugins">
+<h3><strong>Phase 4 - Instantiate lookup, bots, and alert plugins</strong><a class="headerlink" href="#phase-4-instantiate-lookup-bots-and-alert-plugins" title="Link to this heading">¶</a></h3>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">initialize_lookup_plugin()</span></code> then <code class="docutils literal notranslate"><span class="pre">thaum.factory.initialize_bots()</span></code> build
+runtime objects, attach alert plugins, and <code class="docutils literal notranslate"><span class="pre">bind_thaum_handlers()</span></code>.</p></li>
+</ul>
+</section>
+<section id="phase-5-http">
+<h3><strong>Phase 5 - HTTP</strong><a class="headerlink" href="#phase-5-http" title="Link to this heading">¶</a></h3>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">web.create_app()</span></code> registers Flask routes (e.g. <code class="docutils literal notranslate"><span class="pre">POST</span> <span class="pre">/bot/&lt;bot_key&gt;</span></code>) and
+calls <code class="docutils literal notranslate"><span class="pre">register_all_bot_webhooks()</span></code>.</p></li>
+</ul>
+</section>
+</section>
+<section id="configuration-model">
+<h2>2. Configuration Model<a class="headerlink" href="#configuration-model" title="Link to this heading">¶</a></h2>
+<p>Thaum uses a layered configuration model.</p>
+<section id="serverconfig">
+<h3><strong>ServerConfig</strong><a class="headerlink" href="#serverconfig" title="Link to this heading">¶</a></h3>
+<ul class="simple">
+<li><p>Core deployment fields under <code class="docutils literal notranslate"><span class="pre">[server]</span></code> (base URL, bot driver, lookup plugin name, state dir)</p></li>
+<li><p>Nested <code class="docutils literal notranslate"><span class="pre">[server.database]</span></code> (SQLAlchemy <code class="docutils literal notranslate"><span class="pre">db_url</span></code> via secret resolver, vault passphrase, DEK rotation; see <strong>Database URL resolution</strong> under §1 Phase 3)</p></li>
+<li><p>Nested <code class="docutils literal notranslate"><span class="pre">[server.election]</span></code> (namespace, lease, heartbeat interval)</p></li>
+<li><p>Nested <code class="docutils literal notranslate"><span class="pre">[server.admin]</span></code> (signed HTTP admin for runtime log level)</p></li>
+<li><p>Separate <code class="docutils literal notranslate"><span class="pre">[logging]</span></code> table → <code class="docutils literal notranslate"><span class="pre">LogConfig</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">[lookup]</span></code> merged with <code class="docutils literal notranslate"><span class="pre">[lookup.&lt;plugin&gt;]</span></code> for cache paths and plugin-specific options (not the DB URL)</p></li>
+<li><p>Lookup plugins: public contract includes <code class="docutils literal notranslate"><span class="pre">get_person_by_email</span></code> (default: DB cache only); implementations may override to query their source of truth, then <code class="docutils literal notranslate"><span class="pre">merge_person</span></code>. See <code class="docutils literal notranslate"><span class="pre">lookup/base.py</span></code>.</p></li>
+</ul>
+</section>
+<section id="botconfig">
+<h3><strong>BotConfig</strong><a class="headerlink" href="#botconfig" title="Link to this heading">¶</a></h3>
+<ul class="simple">
+<li><p>Driver-specific model (e.g. Webex) extending <code class="docutils literal notranslate"><span class="pre">BaseChatBotConfig</span></code></p></li>
+<li><p>Required <code class="docutils literal notranslate"><span class="pre">alert_type</span></code> (alert plugin module name; use <code class="docutils literal notranslate"><span class="pre">null</span></code> when
+<code class="docutils literal notranslate"><span class="pre">send_alerts</span></code> is false)</p></li>
+<li><p>Optional <code class="docutils literal notranslate"><span class="pre">[bots.&lt;id&gt;.alert]</span></code> table merged with <code class="docutils literal notranslate"><span class="pre">[defaults.alert.&lt;alert_type&gt;]</span></code>
+for that bot’s alert instance (e.g. responders)</p></li>
+<li><p>Responder lists, room templates, and other bot fields</p></li>
+<li><p>Help/emergency incident prompt card templating via either:</p>
+<ul>
+<li><p><code class="docutils literal notranslate"><span class="pre">incident_prompt_card_template_path</span></code> (path to a <code class="docutils literal notranslate"><span class="pre">.j2</span></code> file)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">incident_prompt_card_template</span></code> (inline Jinja template)</p></li>
+<li><p>Inline template takes precedence if both are set.</p></li>
+<li><p>Templates render to JSON and are parsed before send; use <code class="docutils literal notranslate"><span class="pre">|tojson</span></code> for interpolated values.</p></li>
+<li><p>Jinja context includes <code class="docutils literal notranslate"><span class="pre">team_description</span></code>, <code class="docutils literal notranslate"><span class="pre">default_high_priority</span></code>,
+<code class="docutils literal notranslate"><span class="pre">show_priority_toggle</span></code> (maps to Adaptive Cards <code class="docutils literal notranslate"><span class="pre">isVisible</span></code> on optional inputs),
+and <code class="docutils literal notranslate"><span class="pre">base_url</span></code> (resolved <code class="docutils literal notranslate"><span class="pre">[server].base_url</span></code> for absolute <code class="docutils literal notranslate"><span class="pre">Image.url</span></code> values).</p></li>
+<li><p>Bundled static assets are served at <code class="docutils literal notranslate"><span class="pre">GET</span> <span class="pre">/static/&lt;filename&gt;</span></code> (e.g.
+<code class="docutils literal notranslate"><span class="pre">{{</span> <span class="pre">base_url</span> <span class="pre">}}/static/Thaum_wizard_cgi.jpg</span></code> in the sample template); hosts
+such as Webex require HTTPS URLs reachable from their network.</p></li>
+</ul>
+</li>
+</ul>
+</section>
+<section id="pluginconfig">
+<h3><strong>PluginConfig</strong><a class="headerlink" href="#pluginconfig" title="Link to this heading">¶</a></h3>
+<p>Each plugin config contains:</p>
+<ul class="simple">
+<li><p>Typed Pydantic config</p></li>
+<li><p>Reference to plugin ClassType</p></li>
+<li><p>Raw configuration for plugin-specific behavior</p></li>
+</ul>
+<p>This structure mirrors the plugin object hierarchy and ensures clean
+separation between configuration and instantiation.</p>
+</section>
+</section>
+<section id="plugin-architecture">
+<h2>3. Plugin Architecture<a class="headerlink" href="#plugin-architecture" title="Link to this heading">¶</a></h2>
+<p>Plugins are first-class components in Thaum.</p>
+<section id="plugin-module-requirements">
+<h3><strong>Plugin Module Requirements</strong><a class="headerlink" href="#plugin-module-requirements" title="Link to this heading">¶</a></h3>
+<p>Each plugin module must:</p>
+<ul class="simple">
+<li><p>Define ORM models as subclasses of GemstoneDB.</p></li>
+<li><p>Expose <code class="docutils literal notranslate"><span class="pre">get_config_model()</span></code> (and the family-specific factory:
+<code class="docutils literal notranslate"><span class="pre">create_instance_plugin</span></code> / <code class="docutils literal notranslate"><span class="pre">create_instance_bot</span></code> / <code class="docutils literal notranslate"><span class="pre">create_instance_lookup</span></code>).</p></li>
+<li><p>Avoid import-time side effects.</p></li>
+<li><p>Keep constructors free of DB access until after Phase 3.</p></li>
+</ul>
+</section>
+<section id="plugin-object-lifecycle">
+<h3><strong>Plugin Object Lifecycle</strong><a class="headerlink" href="#plugin-object-lifecycle" title="Link to this heading">¶</a></h3>
+<p>Plugin constructors may:</p>
+<ul class="simple">
+<li><p>Open DB sessions</p></li>
+<li><p>Load cached state</p></li>
+<li><p>Register webhook handlers</p></li>
+<li><p>Schedule periodic tasks</p></li>
+<li><p>Load secrets</p></li>
+<li><p>Attach themselves to bots</p></li>
+</ul>
+<p>Plugins must not:</p>
+<ul class="simple">
+<li><p>Perform DB operations before Phase 3</p></li>
+<li><p>Register handlers before bot instantiation</p></li>
+<li><p>Trigger background tasks before initialization completes</p></li>
+</ul>
+</section>
+</section>
+<section id="database-layer">
+<h2>4. Database Layer<a class="headerlink" href="#database-layer" title="Link to this heading">¶</a></h2>
+<p>Thaum uses a shared database for:</p>
+<ul class="simple">
+<li><p>Alert lifecycle tracking</p></li>
+<li><p>Pending event buffering</p></li>
+<li><p>Plugin state</p></li>
+<li><p>Identity cache</p></li>
+<li><p>Leader election metadata</p></li>
+</ul>
+<section id="db-initialization-rules">
+<h3><strong>DB Initialization Rules</strong><a class="headerlink" href="#db-initialization-rules" title="Link to this heading">¶</a></h3>
+<ul class="simple">
+<li><p>All ORM models must be imported before init_db().</p></li>
+<li><p>No plugin may create tables independently.</p></li>
+<li><p>All migrations (future) must run after plugin import.</p></li>
+</ul>
+</section>
+</section>
+<section id="event-processing-and-lifecycle">
+<h2>5. Event Processing and Lifecycle<a class="headerlink" href="#event-processing-and-lifecycle" title="Link to this heading">¶</a></h2>
+<p>Thaum processes events from external systems (e.g., alerting platforms)
+in a deterministic manner.</p>
+<section id="alert-lifecycle">
+<h3><strong>Alert Lifecycle</strong><a class="headerlink" href="#alert-lifecycle" title="Link to this heading">¶</a></h3>
+<ul class="simple">
+<li><p>Alerts are created with a short_id stored in extraProperties.</p></li>
+<li><p>Webhooks may arrive out of order.</p></li>
+<li><p>Thaum uses a DB-backed pending-event buffer to handle:</p>
+<ul>
+<li><p>ack before create</p></li>
+<li><p>escalate before ack</p></li>
+<li><p>delayed create events</p></li>
+</ul>
+</li>
+</ul>
+</section>
+<section id="pending-create-handling">
+<h3><strong>Pending Create Handling</strong><a class="headerlink" href="#pending-create-handling" title="Link to this heading">¶</a></h3>
+<ul class="simple">
+<li><p>When an alert is sent, Thaum immediately notifies the room with the
+short_id.</p></li>
+<li><p>A DB row is created with state = pending_create.</p></li>
+<li><p>When the create webhook arrives, the alert is activated.</p></li>
+<li><p>A watchdog timer marks alerts as failed if creation does not complete.</p></li>
+</ul>
+</section>
+</section>
+<section id="logging-and-diagnostics">
+<h2>6. Logging and Diagnostics<a class="headerlink" href="#logging-and-diagnostics" title="Link to this heading">¶</a></h2>
+<p>Thaum uses structured logging with multiple levels:</p>
+<ul class="simple">
+<li><p>INFO - normal operational messages</p></li>
+<li><p>NOTICE - important but non-urgent events</p></li>
+<li><p>VERBOSE - routine status messages</p></li>
+<li><p>DEBUG - developer-level detail</p></li>
+<li><p>SPAM - full diagnostics, including JSON bodies and stack traces</p></li>
+</ul>
+<p>Multi-line output uses the blob helper for readability.</p>
+<p>Exception tracebacks (<code class="docutils literal notranslate"><span class="pre">exc_info</span></code>): <strong>human-readable</strong> sinks (stdout and the optional rotated text file under <code class="docutils literal notranslate"><span class="pre">[logging].file</span></code>) append formatted traceback and <code class="docutils literal notranslate"><span class="pre">stack_info</span></code> text <strong>only when</strong> the effective root level enables <strong>SPAM</strong>. The optional <strong><code class="docutils literal notranslate"><span class="pre">[logging].json_log</span></code></strong> sink (stderr or file), when enabled, <strong>always serializes traceback data</strong> present on the log record—for example from <code class="docutils literal notranslate"><span class="pre">logging.exception(...)</span></code> or <code class="docutils literal notranslate"><span class="pre">logging.error(...,</span> <span class="pre">exc_info=True)</span></code>—regardless of whether SPAM is enabled, so failures can be diagnosed without raising the console level.</p>
+<p>Optional <strong>file logging</strong> under <code class="docutils literal notranslate"><span class="pre">[logging]</span></code> is opt-in via <code class="docutils literal notranslate"><span class="pre">file</span></code>: boolean <code class="docutils literal notranslate"><span class="pre">true</span></code>, integer <code class="docutils literal notranslate"><span class="pre">1</span></code>, or strings <code class="docutils literal notranslate"><span class="pre">yes</span></code> / <code class="docutils literal notranslate"><span class="pre">true</span></code> / <code class="docutils literal notranslate"><span class="pre">1</span></code> select the default path <code class="docutils literal notranslate"><span class="pre">/var/log/thaum/thaum.log</span></code>; any other non-empty string is a custom path. The log file’s parent directory must already exist (otherwise a message is written to stderr and only stdout logging is used). The file sink uses a timed-rotating handler; timestamps on file lines are controlled per formatter instance (file output always includes timestamps by default, independent of <code class="docutils literal notranslate"><span class="pre">no_timestamp</span></code> on the console formatter). At runtime, <strong><code class="docutils literal notranslate"><span class="pre">THAUM_LOG_TO_VAR_LOG</span></code></strong> (<code class="docutils literal notranslate"><span class="pre">1</span></code> / <code class="docutils literal notranslate"><span class="pre">true</span></code> / <code class="docutils literal notranslate"><span class="pre">yes</span></code> / <code class="docutils literal notranslate"><span class="pre">on</span></code>) enables that same default file path when <code class="docutils literal notranslate"><span class="pre">[logging].file</span></code> was not set in TOML (explicit TOML wins).</p>
+<p>Optional JSON logging uses a single <code class="docutils literal notranslate"><span class="pre">[logging].json_log</span></code> selector:</p>
+<ul class="simple">
+<li><p>falsy/missing (<code class="docutils literal notranslate"><span class="pre">false</span></code>, <code class="docutils literal notranslate"><span class="pre">0</span></code>, <code class="docutils literal notranslate"><span class="pre">no</span></code>, <code class="docutils literal notranslate"><span class="pre">off</span></code>, empty, missing) -&gt; disabled</p></li>
+<li><p>truthy (<code class="docutils literal notranslate"><span class="pre">true</span></code>, <code class="docutils literal notranslate"><span class="pre">1</span></code>, <code class="docutils literal notranslate"><span class="pre">yes</span></code>, <code class="docutils literal notranslate"><span class="pre">on</span></code>, <code class="docutils literal notranslate"><span class="pre">truthy</span></code>) -&gt; <code class="docutils literal notranslate"><span class="pre">/var/log/thaum/thaum.json</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">stderr</span></code> -&gt; stderr sink</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">file:/path/to/file</span></code> -&gt; explicit file sink</p></li>
+</ul>
+<p>Environment precedence for JSON is controlled by <code class="docutils literal notranslate"><span class="pre">[logging].override_env</span></code>:</p>
+<ul class="simple">
+<li><p>falsy/missing (default): truthy <code class="docutils literal notranslate"><span class="pre">THAUM_JSON_LOG</span></code> can force JSON logging to stderr in final config</p></li>
+<li><p>truthy: TOML is authoritative for final JSON logging existence (<code class="docutils literal notranslate"><span class="pre">[logging].json_log</span></code>)</p></li>
+</ul>
+<p><code class="docutils literal notranslate"><span class="pre">THAUM_LOG_LEVEL</span></code> overrides <code class="docutils literal notranslate"><span class="pre">[logging].level</span></code> when set to a valid level name, unless <code class="docutils literal notranslate"><span class="pre">[logging].override_env</span></code> is truthy (in that case TOML level is authoritative for final config).</p>
+<section id="runtime-log-level-admin-api">
+<h3>Runtime log level (admin API)<a class="headerlink" href="#runtime-log-level-admin-api" title="Link to this heading">¶</a></h3>
+<p>Changing the process root log level at runtime is <strong>not</strong> done via a local file. When
+<code class="docutils literal notranslate"><span class="pre">[server.admin].route_id</span></code> and a valid HMAC secret are configured, Thaum exposes
+<code class="docutils literal notranslate"><span class="pre">POST</span> <span class="pre">/{route_id}/log-level</span></code> with an <strong>HS256</strong> request signature over a
+documented canonical string. State is stored in the shared DB (<code class="docutils literal notranslate"><span class="pre">admin_log_level_state</span></code>
+and <code class="docutils literal notranslate"><span class="pre">admin_log_nonce</span></code>); optional polling keeps multiple workers aligned. Operators
+typically use <code class="docutils literal notranslate"><span class="pre">scripts/powershell/Set-ThaumLogLevel.ps1</span></code> or
+<code class="docutils literal notranslate"><span class="pre">scripts/python/thaum_log_override.py</span></code> with a small INI profile. Full details:
+<a class="reference internal" href="admin-log-level.html"><span class="std std-doc">admin-log-level.md</span></a>.</p>
+</section>
+</section>
+<section id="import-time-side-effect-rules">
+<h2>7. Import-Time Side-Effect Rules<a class="headerlink" href="#import-time-side-effect-rules" title="Link to this heading">¶</a></h2>
+<p>To maintain deterministic startup:</p>
+<ul class="simple">
+<li><p>No plugin may perform DB access during import.</p></li>
+<li><p>No plugin may register handlers during import.</p></li>
+<li><p>No plugin may start background tasks during import.</p></li>
+<li><p>Importing a plugin module must only:</p>
+<ul>
+<li><p>define ORM models</p></li>
+<li><p>define config models</p></li>
+<li><p>expose plugin class</p></li>
+</ul>
+</li>
+</ul>
+</section>
+<section id="directory-structure">
+<h2>8. Directory Structure<a class="headerlink" href="#directory-structure" title="Link to this heading">¶</a></h2>
+<p>A typical Thaum deployment uses:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>thaum/
+app.py
+bootstrap.py
+web.py
+config.py
+bots/
+plugins/
+db/
+utils/
+logging/
+docs/
+</pre></div>
+</div>
+<p>This structure keeps concerns isolated and predictable.</p>
+</section>
+<section id="operational-philosophy">
+<h2>9. Operational Philosophy<a class="headerlink" href="#operational-philosophy" title="Link to this heading">¶</a></h2>
+<p>Thaum is designed around:</p>
+<ul class="simple">
+<li><p>Deterministic behavior</p></li>
+<li><p>Admin-friendly operations</p></li>
+<li><p>Predictable concurrency</p></li>
+<li><p>Clear separation of concerns</p></li>
+<li><p>Minimal magic</p></li>
+<li><p>Explicit lifecycle sequencing</p></li>
+<li><p>Low-noise logging</p></li>
+<li><p>Safe, humane on-call workflows</p></li>
+</ul>
+</section>
+<section id="summary">
+<h2>10. Summary<a class="headerlink" href="#summary" title="Link to this heading">¶</a></h2>
+<p>Thaum’s architecture is built to be:</p>
+<ul class="simple">
+<li><p>Modular</p></li>
+<li><p>Predictable</p></li>
+<li><p>Maintainable</p></li>
+<li><p>Extensible</p></li>
+<li><p>Operationally safe</p></li>
+</ul>
+<p>By enforcing strict bootstrap sequencing, clean plugin boundaries, and
+disciplined logging and exception handling, Thaum provides a stable
+foundation for complex operational automation.</p>
+</section>
+</section>
+
+        </article>
+      </div>
+      <footer>
+        
+        <div class="related-pages">
+          <a class="next-page" href="deployment-quickstarts.html">
+              <div class="page-info">
+                <div class="context">
+                  <span>Next</span>
+                </div>
+                <div class="title">Deployment quickstarts</div>
+              </div>
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+            </a>
+          <a class="prev-page" href="index.html">
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+              <div class="page-info">
+                <div class="context">
+                  <span>Previous</span>
+                </div>
+                
+                <div class="title">Home</div>
+                
+              </div>
+            </a>
+        </div>
+        <div class="bottom-of-page">
+          <div class="left-details">
+            <div class="copyright">
+                Copyright &#169; 2026, Gemstone Software
+            </div>
+            Made with <a href="https://www.sphinx-doc.org/">Sphinx</a> and <a class="muted-link" href="https://pradyunsg.me">@pradyunsg</a>'s
+            
+            <a href="https://github.com/pradyunsg/furo">Furo</a>
+            
+          </div>
+          <div class="right-details">
+            
+          </div>
+        </div>
+        
+      </footer>
+    </div>
+    <aside class="toc-drawer">
+      
+      
+      <div class="toc-sticky toc-scroll">
+        <div class="toc-title-container">
+          <span class="toc-title">
+            On this page
+          </span>
+        </div>
+        <div class="toc-tree-container">
+          <div class="toc-tree">
+            <ul>
+<li><a class="reference internal" href="#">Thaum System Architecture</a><ul>
+<li><a class="reference internal" href="#overview">Overview</a></li>
+<li><a class="reference internal" href="#bootstrap-sequence">1. Bootstrap Sequence</a><ul>
+<li><a class="reference internal" href="#phase-1-load-and-validate-core-config"><strong>Phase 1 - Load and validate core config</strong></a></li>
+<li><a class="reference internal" href="#phase-2-import-plugin-modules-and-validate-typed-configs"><strong>Phase 2 - Import plugin modules and validate typed configs</strong></a></li>
+<li><a class="reference internal" href="#phase-3-initialize-database"><strong>Phase 3 - Initialize database</strong></a><ul>
+<li><a class="reference internal" href="#database-url-resolution-resolve-app-db-url">Database URL resolution (<code class="docutils literal notranslate"><span class="pre">resolve_app_db_url</span></code>)</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#phase-4-instantiate-lookup-bots-and-alert-plugins"><strong>Phase 4 - Instantiate lookup, bots, and alert plugins</strong></a></li>
+<li><a class="reference internal" href="#phase-5-http"><strong>Phase 5 - HTTP</strong></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#configuration-model">2. Configuration Model</a><ul>
+<li><a class="reference internal" href="#serverconfig"><strong>ServerConfig</strong></a></li>
+<li><a class="reference internal" href="#botconfig"><strong>BotConfig</strong></a></li>
+<li><a class="reference internal" href="#pluginconfig"><strong>PluginConfig</strong></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#plugin-architecture">3. Plugin Architecture</a><ul>
+<li><a class="reference internal" href="#plugin-module-requirements"><strong>Plugin Module Requirements</strong></a></li>
+<li><a class="reference internal" href="#plugin-object-lifecycle"><strong>Plugin Object Lifecycle</strong></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#database-layer">4. Database Layer</a><ul>
+<li><a class="reference internal" href="#db-initialization-rules"><strong>DB Initialization Rules</strong></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#event-processing-and-lifecycle">5. Event Processing and Lifecycle</a><ul>
+<li><a class="reference internal" href="#alert-lifecycle"><strong>Alert Lifecycle</strong></a></li>
+<li><a class="reference internal" href="#pending-create-handling"><strong>Pending Create Handling</strong></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#logging-and-diagnostics">6. Logging and Diagnostics</a><ul>
+<li><a class="reference internal" href="#runtime-log-level-admin-api">Runtime log level (admin API)</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#import-time-side-effect-rules">7. Import-Time Side-Effect Rules</a></li>
+<li><a class="reference internal" href="#directory-structure">8. Directory Structure</a></li>
+<li><a class="reference internal" href="#operational-philosophy">9. Operational Philosophy</a></li>
+<li><a class="reference internal" href="#summary">10. Summary</a></li>
+</ul>
+</li>
+</ul>
+
+          </div>
+        </div>
+      </div>
+      
+      
+    </aside>
+  </div>
+</div><script src="_static/documentation_options.js?v=61228ca7"></script>
+    <script src="_static/doctools.js?v=9bcbadda"></script>
+    <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="_static/scripts/furo.js?v=46bd48cc"></script>
+    <script src="_static/clipboard.min.js?v=a7894cd8"></script>
+    <script src="_static/copybutton.js?v=f281be69"></script>
+    <script src="_static/design-tabs.js?v=f930bc37"></script>
+    </body>
+</html>
