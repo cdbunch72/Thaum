@@ -3,7 +3,7 @@
   <head><meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width, initial-scale=1" />
-<link rel="index" title="Index" href="../genindex.html"><link rel="search" title="Search" href="../search.html"><link rel="prev" title="Thaum Style Guide" href="../STYLE_GUIDE.html">
+<link rel="index" title="Index" href="../genindex.html"><link rel="search" title="Search" href="../search.html"><link rel="prev" title="Thaum release notes" href="../release-notes.html">
         <link rel="prefetch" href="../_static/Thaum_wizard_cgi.jpg" as="image">
         <link rel="prefetch" href="../_static/Thaum_wizard_cgi.jpg" as="image">
 
@@ -227,6 +227,10 @@
 <li class="toctree-l1"><a class="reference internal" href="../LDAP-AD-lookup.html">LDAP / Active Directory lookup (<code class="docutils literal notranslate"><span class="pre">lookup.plugins.ldap_ad</span></code>)</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../STYLE_GUIDE.html">Thaum Style Guide</a></li>
 </ul>
+<p class="caption" role="heading"><span class="caption-text">Release notes</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../release-notes.html">Thaum release notes</a></li>
+</ul>
 <p class="caption" role="heading"><span class="caption-text">API reference</span></p>
 <ul class="current">
 <li class="toctree-l1 current current-page"><a class="current reference internal" href="#">API reference</a></li>
@@ -274,15 +278,1216 @@
 alert integrations, and lookup plugins.</p>
 <section id="alert-plugins">
 <h2>Alert plugins<a class="headerlink" href="#alert-plugins" title="Link to this heading">¶</a></h2>
+<dl class="py class">
+<dt class="sig sig-object py">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">alerts.base.</span></span><span class="sig-name descname"><span class="pre">BaseAlertPluginConfig</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">plugin</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">status_mentions</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">extra_data</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/alerts/base.html#BaseAlertPluginConfig"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">BaseModel</span></code></p>
+<p>Configuration model for alert plugins loaded from <code class="docutils literal notranslate"><span class="pre">[alerts.&lt;plugin_name&gt;]</span></code>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>plugin</strong> (<em>str</em>)</p></li>
+<li><p><strong>status_mentions</strong> (<em>bool</em>)</p></li>
+<li><p><strong>extra_data</strong> (<em>Any</em>)</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py attribute">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">plugin</span></span></dt>
+<dd><p>Alert plugin module name under <code class="docutils literal notranslate"><span class="pre">alerts.plugins</span></code>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>str</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">status_mentions</span></span></dt>
+<dd><p>When True, status webhook messages may use platform
+&#64;-mentions (driver-dependent).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>bool</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">plugin</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></em></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">status_mentions</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">bool</span></em></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">model_config</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">ClassVar</span><span class="p"><span class="pre">[</span></span><span class="pre">ConfigDict</span><span class="p"><span class="pre">]</span></span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">{'extra':</span> <span class="pre">'allow'}</span></em></dt>
+<dd><p>Configuration for the model, should be a dictionary conforming to [<cite>ConfigDict</cite>][pydantic.config.ConfigDict].</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">alerts.base.</span></span><span class="sig-name descname"><span class="pre">BaseAlertPlugin</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">config</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/alerts/base.html#BaseAlertPlugin"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Base class for alert integrations.</p>
+<p>Plugins that expose status webhooks implement their own authorization logic.
+For integrations that only support a static Bearer value, use the canonical JSON
+pattern via <code class="xref py py-meth docutils literal notranslate"><span class="pre">_validate_static_webhook_bearer()</span></code> (see <code class="docutils literal notranslate"><span class="pre">alerts.webhook_bearer</span></code>).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>config</strong> (<em>BaseAlertPluginConfig</em>)</p>
+</dd>
+</dl>
+<dl class="py attribute">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">supports_status_webhooks</span></span></dt>
+<dd><p>When True, the plugin registers inbound status
+webhook routes via <code class="xref py py-meth docutils literal notranslate"><span class="pre">get_webhook_handlers()</span></code>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>bool</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">supports_acknowledge</span></span></dt>
+<dd><p>When True, the chat <code class="docutils literal notranslate"><span class="pre">ack</span></code> command and tracking-ID
+help text apply; integrations that cannot attribute ack to the
+requesting user should set False.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>bool</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">supports_status_webhooks</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">bool</span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">False</span></em></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">supports_acknowledge</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">bool</span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">True</span></em></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">config</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/alerts/base.html#BaseAlertPlugin.__init__"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+<dd><p>Initialize the plugin with validated configuration.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>config</strong> (<em>BaseAlertPluginConfig</em>) – Parsed alert plugin settings from TOML.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">attach_bot</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">bot</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/alerts/base.html#BaseAlertPlugin.attach_bot"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+<dd><p>Bind the owning chat bot and update the logger context.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>bot</strong> (<em>BaseChatBot</em>) – The chat bot instance that owns this alert plugin.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">get_webhook_handlers</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/alerts/base.html#BaseAlertPlugin.get_webhook_handlers"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+<dd><p>Return HTTP route paths mapped to webhook handler callables.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>A dict of route suffix (e.g. <code class="docutils literal notranslate"><span class="pre">&quot;/webhook&quot;</span></code>) to handler method.
+Override when <code class="xref py py-attr docutils literal notranslate"><span class="pre">supports_status_webhooks</span></code> is True.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><em>Dict</em>[str, <em>Callable</em>]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">validate_connection</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/alerts/base.html#BaseAlertPlugin.validate_connection"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+<dd><p>Verify third-party API connectivity at startup.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>True when the integration is reachable and credentials are valid.</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>NotImplementedError</strong> – Subclasses must implement this method.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>bool</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">trigger_alert</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">summary</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">room_id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">sender</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">priority</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">AlertPriority.NORMAL</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/alerts/base.html#BaseAlertPlugin.trigger_alert"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+<dd><p>Trigger an alert via the third-party API.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>summary</strong> (<em>str</em>) – Human-readable alert summary text.</p></li>
+<li><p><strong>room_id</strong> (<em>str</em>) – Chat room identifier where the alert was requested.</p></li>
+<li><p><strong>sender</strong> (<em>ThaumPerson</em>) – Person who initiated the alert.</p></li>
+<li><p><strong>priority</strong> – Alert priority level (defaults to <code class="docutils literal notranslate"><span class="pre">AlertPriority.NORMAL</span></code>).</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>A tuple of <code class="docutils literal notranslate"><span class="pre">(short_id,</span> <span class="pre">alert_id)</span></code>. <code class="docutils literal notranslate"><span class="pre">short_id</span></code> is a bot-local
+tracking token; <code class="docutils literal notranslate"><span class="pre">alert_id</span></code> is integration-specific (alias, vendor
+id, etc.) and may be <code class="docutils literal notranslate"><span class="pre">None</span></code> when not available without blocking.</p>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>NotImplementedError</strong> – Subclasses must implement this method.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><em>Tuple</em>[str, str | None]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">acknowledge_alert</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">alias</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">person</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/alerts/base.html#BaseAlertPlugin.acknowledge_alert"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+<dd><p>Acknowledge an open alert on behalf of a person.</p>
+<p>Optional hook for integrations that support ack. Override when
+<code class="xref py py-attr docutils literal notranslate"><span class="pre">supports_acknowledge</span></code> is True.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>alias</strong> (<em>str</em>) – Integration-specific alert identifier or short tracking id.</p></li>
+<li><p><strong>person</strong> (<em>ThaumPerson</em>) – Person performing the acknowledgment.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">handle_status_webhook</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">request_data</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/alerts/base.html#BaseAlertPlugin.handle_status_webhook"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+<dd><p>Handle an inbound status webhook payload.</p>
+<p>Default no-op handler for the <code class="docutils literal notranslate"><span class="pre">/webhook</span></code> route. Override when the
+integration receives asynchronous status updates.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>request_data</strong> (<em>Dict</em><em>[</em><em>str</em><em>, </em><em>Any</em><em>]</em>) – Parsed webhook body (structure is integration-specific).</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
 </section>
 <section id="chat-bot-drivers">
 <h2>Chat bot drivers<a class="headerlink" href="#chat-bot-drivers" title="Link to this heading">¶</a></h2>
+<dl class="py class">
+<dt class="sig sig-object py">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">bots.base.</span></span><span class="sig-name descname"><span class="pre">MessageContext</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">room_id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">person</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">message</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">message_id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">raw_event=&lt;factory&gt;</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/bots/base.html#MessageContext"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></p>
+<p>Canonical message envelope passed to every <code class="docutils literal notranslate"><span class="pre">hears()</span></code> handler.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>room_id</strong> (<em>str</em>)</p></li>
+<li><p><strong>person</strong> (<em>ThaumPerson</em>)</p></li>
+<li><p><strong>message</strong> (<em>str</em>)</p></li>
+<li><p><strong>message_id</strong> (<em>str</em>)</p></li>
+<li><p><strong>raw_event</strong> (<em>Dict</em><em>[</em><em>str</em><em>, </em><em>Any</em><em>]</em>)</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py attribute">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">room_id</span></span></dt>
+<dd><p>Platform room or space identifier.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>str</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">person</span></span></dt>
+<dd><p>Resolved sender as a <code class="xref py py-class docutils literal notranslate"><span class="pre">thaum.types.ThaumPerson</span></code>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>thaum.types.ThaumPerson</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">message</span></span></dt>
+<dd><p>Plain-text message body.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>str</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">message_id</span></span></dt>
+<dd><p>Platform-specific message identifier.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>str</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">raw_event</span></span></dt>
+<dd><p>Original platform event payload for driver-specific use.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Dict[str, Any]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">room_id</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></em></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">person</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">ThaumPerson</span></em></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">message</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></em></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">message_id</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></em></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">raw_event</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">Dict</span><span class="p"><span class="pre">[</span></span><span class="pre">str</span><span class="p"><span class="pre">,</span></span><span class="w"> </span><span class="pre">Any</span><span class="p"><span class="pre">]</span></span></em></dt>
+<dd></dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">bots.base.</span></span><span class="sig-name descname"><span class="pre">BotHearsHandler</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="o"><span class="pre">*</span></span><span class="n"><span class="pre">args</span></span></em>, <em class="sig-param"><span class="o"><span class="pre">**</span></span><span class="n"><span class="pre">kwargs</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/bots/base.html#BotHearsHandler"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">Protocol</span></code></p>
+<p>Callable signature for methods registered with <code class="xref py py-meth docutils literal notranslate"><span class="pre">BaseChatBot.hears()</span></code>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>bot</strong> – The chat bot instance handling the message.</p></li>
+<li><p><strong>ctx</strong> – Parsed message context.</p></li>
+<li><p><strong>match</strong> – Regex match object from the registered pattern.</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">bots.base.</span></span><span class="sig-name descname"><span class="pre">BaseChatBot</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">config</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/bots/base.html#BaseChatBot"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">ABC</span></code></p>
+<p>Abstract base contract for all Thaum chat bot drivers.</p>
+<p>Platform-specific drivers (Webex, Teams, Slack, etc.) must implement the
+abstract messaging, room, identity, and webhook methods defined here.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>config</strong> (<em>BaseChatBotConfig</em>)</p>
+</dd>
+</dl>
+<dl class="py attribute">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">plugin_name</span></span></dt>
+<dd><p>Short plugin key used in platform id maps (e.g. <code class="docutils literal notranslate"><span class="pre">&quot;webex&quot;</span></code>).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>str</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">plugin_name</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'base'</span></em></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">config</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/bots/base.html#BaseChatBot.__init__"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+<dd><p>Initialize bot state from validated configuration.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>config</strong> (<em>BaseChatBotConfig</em>) – Parsed bot settings from <code class="docutils literal notranslate"><span class="pre">[[bots]]</span></code> in TOML.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py">
+<em class="property"><span class="k"><span class="pre">abstractmethod</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">say</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">room_id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">text</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">markdown</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/bots/base.html#BaseChatBot.say"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+<dd><p>Send a text message to a room.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>room_id</strong> (<em>str</em>) – Target room identifier.</p></li>
+<li><p><strong>text</strong> (<em>str</em>) – Plain-text fallback body.</p></li>
+<li><p><strong>markdown</strong> (<em>str</em><em> | </em><em>None</em>) – Optional platform-specific markdown; when omitted, <code class="docutils literal notranslate"><span class="pre">text</span></code> is used.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py">
+<em class="property"><span class="k"><span class="pre">abstractmethod</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">send_card</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">room_id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">card_content</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">fallback_text</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/bots/base.html#BaseChatBot.send_card"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+<dd><p>Send an Adaptive Card (or platform equivalent) to a room.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>room_id</strong> (<em>str</em>) – Target room identifier.</p></li>
+<li><p><strong>card_content</strong> (<em>dict</em>) – Structured card payload for the platform API.</p></li>
+<li><p><strong>fallback_text</strong> (<em>str</em>) – Plain-text message when the client cannot render the card.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py">
+<em class="property"><span class="k"><span class="pre">abstractmethod</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">create_room</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">title</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/bots/base.html#BaseChatBot.create_room"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+<dd><p>Create a new chat room.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>title</strong> (<em>str</em>) – Display title for the new room.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Platform room identifier for the created room.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>str</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">room_title</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">room_id</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/bots/base.html#BaseChatBot.room_title"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+<dd><p>Return a room’s display title.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>room_id</strong> (<em>str</em>) – Platform room identifier.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Human-readable room title, or <code class="docutils literal notranslate"><span class="pre">room_id</span></code> when the title is unknown.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>str</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py">
+<em class="property"><span class="k"><span class="pre">abstractmethod</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">add_members</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">room_id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">members</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/bots/base.html#BaseChatBot.add_members"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+<dd><p>Add people to an existing room.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>room_id</strong> (<em>str</em>) – Target room identifier.</p></li>
+<li><p><strong>members</strong> (<em>List</em><em>[</em><em>ThaumPerson</em><em>]</em>) – People to invite or add to the room.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py">
+<em class="property"><span class="k"><span class="pre">abstractmethod</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">delete_room</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">room_id</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">person</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/bots/base.html#BaseChatBot.delete_room"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+<dd><p>Permanently remove or archive a room.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>room_id</strong> (<em>str</em>) – Room to delete.</p></li>
+<li><p><strong>person</strong> (<em>ThaumPerson</em>) – Person initiating deletion (for audit or platform requirements).</p></li>
+</ul>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">delete_message</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">message_id</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/bots/base.html#BaseChatBot.delete_message"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+<dd><p>Remove a chat message by platform id.</p>
+<p>Default no-op. Override to delete Adaptive Card messages or similar.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>message_id</strong> (<em>str</em>) – Platform-specific message identifier.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py">
+<em class="property"><span class="k"><span class="pre">abstractmethod</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">get_person</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">person_id</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/bots/base.html#BaseChatBot.get_person"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+<dd><p>Resolve a platform person id to a <code class="xref py py-class docutils literal notranslate"><span class="pre">thaum.types.ThaumPerson</span></code>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>person_id</strong> (<em>str</em>) – Native person identifier for this bot’s <code class="docutils literal notranslate"><span class="pre">plugin_name</span></code>.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Resolved person record for the given platform id.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><em>ThaumPerson</em></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">format_mention</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">person_or_id</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/bots/base.html#BaseChatBot.format_mention"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+<dd><p>Format a platform &#64;-mention token for markdown messages.</p>
+<p>Accepts a <code class="xref py py-class docutils literal notranslate"><span class="pre">thaum.types.ThaumPerson</span></code> or a native chat <code class="docutils literal notranslate"><span class="pre">person_id</span></code>
+string for this bot’s <code class="docutils literal notranslate"><span class="pre">plugin_name</span></code>. Returns plain display text when
+mentions are unsupported.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>person_or_id</strong> (<em>ThaumPerson</em><em> | </em><em>str</em><em> | </em><em>None</em>) – Person object, platform person id, or <code class="docutils literal notranslate"><span class="pre">None</span></code>.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Mention markdown for the platform, display name fallback, or empty
+string when <code class="docutils literal notranslate"><span class="pre">person_or_id</span></code> is <code class="docutils literal notranslate"><span class="pre">None</span></code>.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>str</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py">
+<em class="property"><span class="k"><span class="pre">abstractmethod</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">handle_event</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">event</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/bots/base.html#BaseChatBot.handle_event"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+<dd><p>Process an inbound platform webhook event.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>event</strong> (<em>Dict</em><em>[</em><em>str</em><em>, </em><em>Any</em><em>]</em>) – Parsed event payload from the chat platform.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py">
+<em class="property"><span class="k"><span class="pre">abstractmethod</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">authenticate_request</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">request</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/bots/base.html#BaseChatBot.authenticate_request"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+<dd><p>Verify an incoming webhook request before processing.</p>
+<p>Subclasses should extract required auth material from the request
+(headers, raw body, signatures, etc.) and return True on success.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>request</strong> (<em>FlaskRequest</em>) – Flask request object for the inbound webhook.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>True when the request is authentic; False otherwise.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>bool</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py">
+<em class="property"><span class="k"><span class="pre">abstractmethod</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">register_bot_webhook</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/bots/base.html#BaseChatBot.register_bot_webhook"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+<dd><p>Register inbound webhooks with the chat platform.</p>
+<p>Called after HTTP routes are live (e.g. <code class="docutils literal notranslate"><span class="pre">POST</span> <span class="pre">.../bot/&lt;bot_key&gt;</span></code>).
+Default no-op; some drivers register webhooks from the leader maintenance
+loop instead.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">hears</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">pattern</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">priority</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">50</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/bots/base.html#BaseChatBot.hears"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+<dd><p>Register a regex pattern handler for incoming messages.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>pattern</strong> (<em>str</em>) – Case-insensitive regex matched against message text.</p></li>
+<li><p><strong>priority</strong> (<em>int</em>) – Lower values run first when multiple patterns match (default 50).</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Decorator that registers a <code class="xref py py-class docutils literal notranslate"><span class="pre">BotHearsHandler</span></code> on this bot.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">on_action</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">handler</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/bots/base.html#BaseChatBot.on_action"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+<dd><p>Register a callback for Adaptive Card action submissions.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>handler</strong> – Callable invoked when a card action is received.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The same <code class="docutils literal notranslate"><span class="pre">handler</span></code> (allows use as a decorator).</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">bots.base.</span></span><span class="sig-name descname"><span class="pre">BaseChatBotConfig</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">handle</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">endpoint</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">high_pri_on</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">send_alerts</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">True</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">responders</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">room_title_template</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'{{requester_name}}</span> <span class="pre">-</span> <span class="pre">{{team_description}}</span> <span class="pre">{{date}}'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">customer_service_message_template</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'Thank</span> <span class="pre">you</span> <span class="pre">for</span> <span class="pre">your</span> <span class="pre">patience.</span>&#160; <span class="pre">The</span> <span class="pre">next</span> <span class="pre">available</span> <span class="pre">person</span> <span class="pre">from</span> <span class="pre">{{</span> <span class="pre">team_description</span> <span class="pre">}}</span> <span class="pre">will</span> <span class="pre">be</span> <span class="pre">with</span> <span class="pre">you</span> <span class="pre">shortly.'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">incident_prompt_card_template</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">incident_prompt_card_template_path</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">alert_type</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'null'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">team_description</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">emergency_warning_message</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/bots/base.html#BaseChatBotConfig"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">BaseModel</span></code></p>
+<p>Configuration model for a single bot entry under <code class="docutils literal notranslate"><span class="pre">[[bots]]</span></code> in TOML.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>handle</strong> (<em>str</em>)</p></li>
+<li><p><strong>endpoint</strong> (<em>str</em>)</p></li>
+<li><p><strong>high_pri_on</strong> (<em>bool</em><em> | </em><em>None</em>)</p></li>
+<li><p><strong>send_alerts</strong> (<em>bool</em><em> | </em><em>None</em>)</p></li>
+<li><p><strong>responders</strong> (<em>List</em><em>[</em><em>Annotated</em><em>[</em><em>str</em><em>, </em><em>BeforeValidator</em><em>(</em><em>func=~thaum.types._resolved_list_entry</em><em>, </em><em>json_schema_input_type=PydanticUndefined</em><em>)</em><em>]</em><em>]</em>)</p></li>
+<li><p><strong>room_title_template</strong> (<em>str</em><em> | </em><em>None</em>)</p></li>
+<li><p><strong>customer_service_message_template</strong> (<em>str</em><em> | </em><em>None</em>)</p></li>
+<li><p><strong>incident_prompt_card_template</strong> (<em>str</em><em> | </em><em>None</em>)</p></li>
+<li><p><strong>incident_prompt_card_template_path</strong> (<em>str</em><em> | </em><em>None</em>)</p></li>
+<li><p><strong>alert_type</strong> (<em>str</em>)</p></li>
+<li><p><strong>team_description</strong> (<em>str</em>)</p></li>
+<li><p><strong>emergency_warning_message</strong> (<em>str</em><em> | </em><em>None</em>)</p></li>
+</ul>
+</dd>
+</dl>
+<dl class="py attribute">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">handle</span></span></dt>
+<dd><p>Web-style <strong>mention</strong> identifier for this bot (e.g. Webex Bot
+username); used for logging context, not display.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>str</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">endpoint</span></span></dt>
+<dd><p>Public HTTPS URL for this bot’s inbound events (factory default:
+<code class="docutils literal notranslate"><span class="pre">{base_url}/bot/{bot_key}</span></code>).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>str</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">high_pri_on</span></span></dt>
+<dd><p>When True, high-priority alert flows are enabled.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>bool | None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">send_alerts</span></span></dt>
+<dd><p>When True, alerts are sent via the configured <code class="docutils literal notranslate"><span class="pre">alert_type</span></code>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>bool | None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">responders</span></span></dt>
+<dd><p>Responder references resolved at startup (emails, teams, etc.).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>List[str]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">room_title_template</span></span></dt>
+<dd><p>Jinja template for incident room titles.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>str | None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">customer_service_message_template</span></span></dt>
+<dd><p>Message posted while responders are paged.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>str | None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">incident_prompt_card_template</span></span></dt>
+<dd><p>Inline Adaptive Card template JSON.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>str | None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">incident_prompt_card_template_path</span></span></dt>
+<dd><p>Filesystem path to card template JSON.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>str | None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">alert_type</span></span></dt>
+<dd><p>Alert plugin module name under <code class="docutils literal notranslate"><span class="pre">alerts.plugins</span></code>; use <code class="docutils literal notranslate"><span class="pre">&quot;null&quot;</span></code>
+when <code class="docutils literal notranslate"><span class="pre">send_alerts</span></code> is False.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>str</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">team_description</span></span></dt>
+<dd><p>Human-readable team name used in templates and alerts.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>str</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">emergency_warning_message</span></span></dt>
+<dd><p>Optional warning shown for emergency incidents.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>str | None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">handle</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></em></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">endpoint</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></em></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">high_pri_on</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">bool</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></em></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">send_alerts</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">bool</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></em></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">responders</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">ResolvedStringList</span></em></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">room_title_template</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></em></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">customer_service_message_template</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></em></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">incident_prompt_card_template</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></em></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">incident_prompt_card_template_path</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></em></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">alert_type</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></em></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">team_description</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></em></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">emergency_warning_message</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></em></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">consistent_alert_settings</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span><a class="reference internal" href="../_modules/bots/base.html#BaseChatBotConfig.consistent_alert_settings"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+<dd><p>Enforce consistent <code class="docutils literal notranslate"><span class="pre">send_alerts</span></code>, <code class="docutils literal notranslate"><span class="pre">alert_type</span></code>, and <code class="docutils literal notranslate"><span class="pre">high_pri_on</span></code> values.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Returns<span class="colon">:</span></dt>
+<dd class="field-odd"><p>This config instance when validation passes.</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><p><strong>ValueError</strong> – When alert-related fields are mutually inconsistent.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><em>BaseChatBotConfig</em></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">model_config</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">ClassVar</span><span class="p"><span class="pre">[</span></span><span class="pre">ConfigDict</span><span class="p"><span class="pre">]</span></span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">{}</span></em></dt>
+<dd><p>Configuration for the model, should be a dictionary conforming to [<cite>ConfigDict</cite>][pydantic.config.ConfigDict].</p>
+</dd></dl>
+
+</dd></dl>
+
 </section>
 <section id="lookup-plugins">
 <h2>Lookup plugins<a class="headerlink" href="#lookup-plugins" title="Link to this heading">¶</a></h2>
+<dl class="py class">
+<dt class="sig sig-object py">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">lookup.base.</span></span><span class="sig-name descname"><span class="pre">BaseLookupPluginConfig</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">default_team_ttl_seconds</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">14400</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/lookup/base.html#BaseLookupPluginConfig"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">BaseModel</span></code></p>
+<p>Shared lookup cache configuration for all lookup plugins.</p>
+<p>The process-global DB is opened via <code class="xref py py-func docutils literal notranslate"><span class="pre">gemstone_utils.db.init_db()</span></code> (see
+<code class="xref py py-func docutils literal notranslate"><span class="pre">thaum.db_bootstrap.init_app_db()</span></code> / server bootstrap). Configure the URL
+under <code class="docutils literal notranslate"><span class="pre">[server.database].db_url</span></code>, not here.</p>
+<p>Expected TOML:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="o">[</span>lookup<span class="o">]</span>
+<span class="nv">default_team_ttl_seconds</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="m">14400</span>
+</pre></div>
+</div>
+<p>Plugin-specific overrides go under <code class="docutils literal notranslate"><span class="pre">[lookup.&lt;plugin_name&gt;]</span></code>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>default_team_ttl_seconds</strong> (<em>int</em>)</p>
+</dd>
+</dl>
+<dl class="py attribute">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">default_team_ttl_seconds</span></span></dt>
+<dd><p>Default TTL (seconds) for cached team membership
+snapshots before refresh.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>int</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">default_team_ttl_seconds</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">int</span></em></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">model_config</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">ClassVar</span><span class="p"><span class="pre">[</span></span><span class="pre">ConfigDict</span><span class="p"><span class="pre">]</span></span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">{'extra':</span> <span class="pre">'forbid',</span> <span class="pre">'validate_assignment':</span> <span class="pre">True}</span></em></dt>
+<dd><p>Configuration for the model, should be a dictionary conforming to [<cite>ConfigDict</cite>][pydantic.config.ConfigDict].</p>
+</dd></dl>
+
+</dd></dl>
+
+<dl class="py class">
+<dt class="sig sig-object py">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">lookup.base.</span></span><span class="sig-name descname"><span class="pre">BaseLookupPlugin</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">default_team_ttl_seconds</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">14400</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/lookup/base.html#BaseLookupPlugin"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">ABC</span></code></p>
+<p>Base class for lookup/caching plugins.</p>
+<p>Persistence uses ORM models on <code class="xref py py-class docutils literal notranslate"><span class="pre">gemstone_utils.db.GemstoneDB</span></code> (tables prefixed
+with <code class="docutils literal notranslate"><span class="pre">schema_</span></code> for portability). Call <code class="xref py py-func docutils literal notranslate"><span class="pre">thaum.db_bootstrap.init_app_db()</span></code>
+before constructing plugins.</p>
+<dl>
+<dt>Identity cache rules:</dt><dd><ul class="simple">
+<li><p>People are cached by (platform_key, platform_id) -&gt; email -&gt; ThaumPerson.</p></li>
+<li><p>Teams are cached by team name, and optionally mapped by (platform_key, platform_id) -&gt; team_name.</p></li>
+</ul>
+</dd>
+<dt>Intended call flow:</dt><dd><ol class="arabic simple">
+<li><p>Caller asks for cached person by bot plugin key:
+<cite>get_person_by_id(bot_plugin_name, person_id)</cite></p></li>
+<li><p>If miss, caller does the platform API lookup and builds a <em>partial</em>
+<cite>ThaumPerson</cite> keyed by email.</p></li>
+<li><p>Caller passes that partial object to <cite>merge_person(fragment)</cite> so the cache
+merges by email (and persists any new platform ids).</p></li>
+</ol>
+<p>Similarly, <cite>get_person_by_email(email)</cite> is the entry point for resolving a person
+by email: the default implementation reads only the DB cache; plugins override
+it to query their source of truth on miss, then <cite>merge_person</cite> and return.
+Subclasses that need the cache row without triggering remote lookup should call
+<code class="xref py py-meth docutils literal notranslate"><span class="pre">_get_cached_person_by_email()</span></code> (internal).</p>
+</dd>
+</dl>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>default_team_ttl_seconds</strong> (<em>int</em>)</p>
+</dd>
+</dl>
+<dl class="py attribute">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">plugin_name</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">'lookup'</span></em></dt>
+<dd></dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">__init__</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">default_team_ttl_seconds</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">14400</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/lookup/base.html#BaseLookupPlugin.__init__"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+<dd><p>Initialize lookup plugin state.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>default_team_ttl_seconds</strong> (<em>int</em>) – Default TTL for cached team rows when a
+team does not specify its own <code class="docutils literal notranslate"><span class="pre">ttl</span></code>.</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">get_person_by_id</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">bot_plugin_name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">person_id</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/lookup/base.html#BaseLookupPlugin.get_person_by_id"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+<dd><p>Return a cached person for a bot or agent platform id.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>bot_plugin_name</strong> (<em>str</em>) – Bot/plugin key (e.g. <code class="docutils literal notranslate"><span class="pre">&quot;webex&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;jira&quot;</span></code>, <code class="docutils literal notranslate"><span class="pre">&quot;ldap&quot;</span></code>).</p></li>
+<li><p><strong>person_id</strong> (<em>str</em>) – Platform-specific person identifier.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Cached <code class="xref py py-class docutils literal notranslate"><span class="pre">thaum.types.ThaumPerson</span></code>, or <code class="docutils literal notranslate"><span class="pre">None</span></code> on cache miss.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><em>ThaumPerson</em> | None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">get_person_by_email</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">email</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/lookup/base.html#BaseLookupPlugin.get_person_by_email"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+<dd><p>Return a person for an email address.</p>
+<p>Default behavior is cache-only (same as
+<code class="xref py py-meth docutils literal notranslate"><span class="pre">_get_cached_person_by_email()</span></code>). Subclasses override this to query
+their directory or API on miss, merge fragments with
+<code class="xref py py-meth docutils literal notranslate"><span class="pre">merge_person()</span></code>, and return the merged row.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>email</strong> (<em>str</em>) – Canonical email address to resolve.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Resolved <code class="xref py py-class docutils literal notranslate"><span class="pre">thaum.types.ThaumPerson</span></code>, or <code class="docutils literal notranslate"><span class="pre">None</span></code> when not found.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><em>ThaumPerson</em> | None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">merge_person</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">fragment</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/lookup/base.html#BaseLookupPlugin.merge_person"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+<dd><p>Merge a partial person fragment into the canonical cache row.</p>
+<p>Merges by email and persists any new platform ids.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>fragment</strong> (<em>ThaumPerson</em>) – Partial <code class="xref py py-class docutils literal notranslate"><span class="pre">thaum.types.ThaumPerson</span></code> from a platform lookup.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Fully merged person record after persistence.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><em>ThaumPerson</em></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">resolve_responder_refs</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">bot</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">refs</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">source_plugin</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">'config'</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">team_name_normalizer</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/lookup/base.html#BaseLookupPlugin.resolve_responder_refs"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+<dd><p>Resolve responder reference strings into a <code class="xref py py-class docutils literal notranslate"><span class="pre">thaum.types.RespondersList</span></code>.</p>
+<p>Supported reference forms:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">person:&lt;email&gt;</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">team:&lt;team_name&gt;</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">id:team:&lt;team_id&gt;</span></code></p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">id:person:&lt;person_id&gt;</span></code></p></li>
+<li><p>plain email (contains <code class="docutils literal notranslate"><span class="pre">&#64;</span></code>)</p></li>
+<li><p>bare team name</p></li>
+</ul>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>bot</strong> (<em>Any</em>) – Chat bot instance used when resolving team membership.</p></li>
+<li><p><strong>refs</strong> (<em>List</em><em>[</em><em>str</em><em>]</em>) – List of responder reference strings from config.</p></li>
+<li><p><strong>source_plugin</strong> (<em>str</em>) – <code class="docutils literal notranslate"><span class="pre">source_plugin</span></code> value for synthetic person rows.</p></li>
+<li><p><strong>team_name_normalizer</strong> (<em>Callable</em><em>[</em><em>[</em><em>str</em><em>]</em><em>, </em><em>str</em><em>] </em><em>| </em><em>None</em>) – Optional callable to normalize team names before
+lookup (defaults to strip whitespace).</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Typed list of resolved people and teams.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><em>RespondersList</em></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">get_team_by_name</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">bot</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">team_name</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/lookup/base.html#BaseLookupPlugin.get_team_by_name"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+<dd><p>Return a cached team by canonical team name.</p>
+<p>Performs fuzzy name matching (cutoff 0.88) when an exact cache key is
+not found.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>bot</strong> (<em>Any</em>) – Chat bot instance attached to the returned <code class="xref py py-class docutils literal notranslate"><span class="pre">thaum.types.ThaumTeam</span></code>.</p></li>
+<li><p><strong>team_name</strong> (<em>str</em>) – Team name to look up in the identity cache.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Cached team with member snapshot, or <code class="docutils literal notranslate"><span class="pre">None</span></code> when not found.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><em>ThaumTeam</em> | None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">get_team_by_id</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">bot</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">bot_plugin_name</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">team_id</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/lookup/base.html#BaseLookupPlugin.get_team_by_id"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+<dd><p>Return a cached team by platform team id.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>bot</strong> (<em>Any</em>) – Chat bot instance attached to the returned team.</p></li>
+<li><p><strong>bot_plugin_name</strong> (<em>str</em>) – Platform key for the team id (e.g. <code class="docutils literal notranslate"><span class="pre">&quot;jira&quot;</span></code>).</p></li>
+<li><p><strong>team_id</strong> (<em>str</em>) – Platform-specific team identifier.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Cached <code class="xref py py-class docutils literal notranslate"><span class="pre">thaum.types.ThaumTeam</span></code>, or <code class="docutils literal notranslate"><span class="pre">None</span></code> when unmapped.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><em>ThaumTeam</em> | None</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">cache_team</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">team</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">bot_plugin_name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">team_id</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/lookup/base.html#BaseLookupPlugin.cache_team"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+<dd><p>Persist a team membership snapshot into the identity cache.</p>
+<p>When <code class="docutils literal notranslate"><span class="pre">bot_plugin_name</span></code> and <code class="docutils literal notranslate"><span class="pre">team_id</span></code> are provided, also stores a
+platform id mapping so callers can resolve the team via
+<code class="xref py py-meth docutils literal notranslate"><span class="pre">get_team_by_id()</span></code>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>team</strong> (<em>ThaumTeam</em>) – Team object whose members and metadata should be cached.</p></li>
+<li><p><strong>bot_plugin_name</strong> (<em>str</em><em> | </em><em>None</em>) – Optional platform key for <code class="docutils literal notranslate"><span class="pre">team_id</span></code> mapping.</p></li>
+<li><p><strong>team_id</strong> (<em>str</em><em> | </em><em>None</em>) – Optional platform team id to associate with <code class="docutils literal notranslate"><span class="pre">team</span></code>.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The same <code class="docutils literal notranslate"><span class="pre">team</span></code> instance after persistence.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><em>ThaumTeam</em></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">merge_team</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">team</span></span></em>, <em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">bot_plugin_name</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">team_id</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/lookup/base.html#BaseLookupPlugin.merge_team"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+<dd><p>Merge team members into the people cache, then persist the team snapshot.</p>
+<p>Each member is merged via <code class="xref py py-meth docutils literal notranslate"><span class="pre">merge_person()</span></code> before the team row is
+written with <code class="xref py py-meth docutils literal notranslate"><span class="pre">cache_team()</span></code>.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>team</strong> (<em>ThaumTeam</em>) – Team whose <code class="docutils literal notranslate"><span class="pre">_members</span></code> should be merged and cached.</p></li>
+<li><p><strong>bot_plugin_name</strong> (<em>str</em><em> | </em><em>None</em>) – Optional platform key for <code class="docutils literal notranslate"><span class="pre">team_id</span></code> mapping.</p></li>
+<li><p><strong>team_id</strong> (<em>str</em><em> | </em><em>None</em>) – Optional platform team id to associate with <code class="docutils literal notranslate"><span class="pre">team</span></code>.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>The team after member merge and cache persistence.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><em>ThaumTeam</em></p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">lookup_team_members</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">team</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/lookup/base.html#BaseLookupPlugin.lookup_team_members"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+<dd><p>Fetch current team members from the backing source and persist them.</p>
+<p>Calls <code class="xref py py-meth docutils literal notranslate"><span class="pre">fetch_team_members()</span></code>, then <code class="xref py py-meth docutils literal notranslate"><span class="pre">merge_team()</span></code> to update the
+identity cache.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>team</strong> (<em>ThaumTeam</em>) – Team to refresh from the remote directory or API.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>Merged list of <code class="xref py py-class docutils literal notranslate"><span class="pre">thaum.types.ThaumPerson</span></code> objects for the team.</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p><em>List</em>[<em>ThaumPerson</em>]</p>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py">
+<em class="property"><span class="k"><span class="pre">abstractmethod</span></span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">fetch_team_members</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">team</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/lookup/base.html#BaseLookupPlugin.fetch_team_members"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+<dd><p>Fetch team members from the backing system (LDAP, Jira, etc.).</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>team</strong> (<em>ThaumTeam</em>) – Team to query in the remote source.</p>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>List of person fragments to merge via <code class="xref py py-meth docutils literal notranslate"><span class="pre">merge_team()</span></code>.</p>
+</dd>
+<dt class="field-odd">Raises<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>NotImplementedError</strong> – Subclasses must implement this method.</p>
+</dd>
+<dt class="field-even">Return type<span class="colon">:</span></dt>
+<dd class="field-even"><p><em>List</em>[<em>ThaumPerson</em>]</p>
+</dd>
+</dl>
+</dd></dl>
+
+</dd></dl>
+
 </section>
 <section id="connection-profiles">
 <h2>Connection profiles<a class="headerlink" href="#connection-profiles" title="Link to this heading">¶</a></h2>
+<p>Shared base types for connection config plugins (Atlassian Cloud, future providers).</p>
+<dl class="py class">
+<dt class="sig sig-object py">
+<em class="property"><span class="k"><span class="pre">class</span></span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">connections.base.</span></span><span class="sig-name descname"><span class="pre">BaseConnectionConfig</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="keyword-only-separator o"><abbr title="Keyword-only parameters separator (PEP 3102)"><span class="pre">*</span></abbr></span></em>, <em class="sig-param"><span class="n"><span class="pre">plugin</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/connections/base.html#BaseConnectionConfig"><span class="viewcode-link"><span class="pre">[source]</span></span></a></dt>
+<dd><p>Bases: <code class="xref py py-class docutils literal notranslate"><span class="pre">BaseModel</span></code></p>
+<p>Discriminated connection profile loaded from <code class="docutils literal notranslate"><span class="pre">[connections.&lt;name&gt;]</span></code> in config.</p>
+<p>Concrete plugins set <code class="docutils literal notranslate"><span class="pre">plugin</span></code> to a fixed literal (e.g. <code class="docutils literal notranslate"><span class="pre">&quot;atlassian&quot;</span></code>).
+Fields may be optional at this layer; merged configs (connection → defaults →
+consumer) are validated again by each consumer.</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><p><strong>plugin</strong> (<em>str</em>)</p>
+</dd>
+</dl>
+<dl class="py attribute">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">plugin</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">str</span></em></dt>
+<dd></dd></dl>
+
+<dl class="py attribute">
+<dt class="sig sig-object py">
+<span class="sig-name descname"><span class="pre">model_config</span></span><em class="property"><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="pre">ClassVar</span><span class="p"><span class="pre">[</span></span><span class="pre">ConfigDict</span><span class="p"><span class="pre">]</span></span></em><em class="property"><span class="w"> </span><span class="p"><span class="pre">=</span></span><span class="w"> </span><span class="pre">{'extra':</span> <span class="pre">'forbid',</span> <span class="pre">'validate_assignment':</span> <span class="pre">True}</span></em></dt>
+<dd><p>Configuration for the model, should be a dictionary conforming to [<cite>ConfigDict</cite>][pydantic.config.ConfigDict].</p>
+</dd></dl>
+
+</dd></dl>
+
 </section>
 <section id="utility-scripts">
 <h2>Utility scripts<a class="headerlink" href="#utility-scripts" title="Link to this heading">¶</a></h2>
@@ -433,14 +1638,14 @@ python<span class="w"> </span>scripts/python/thaum_log_override.py<span class="w
         
         <div class="related-pages">
           
-          <a class="prev-page" href="../STYLE_GUIDE.html">
+          <a class="prev-page" href="../release-notes.html">
               <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
               <div class="page-info">
                 <div class="context">
                   <span>Previous</span>
                 </div>
                 
-                <div class="title">Thaum Style Guide</div>
+                <div class="title">Thaum release notes</div>
                 
               </div>
             </a>
