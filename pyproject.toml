@@ -12,7 +12,7 @@ readme = "README.md"
 license = "MPL-2.0"
 requires-python = ">=3.11"
 dependencies = [
-    "gemstone_utils==0.4.1",
+    "gemstone_utils==0.5.0a2",
     'tzdata; platform_system == "Windows"',
     "Flask",
     "gunicorn",

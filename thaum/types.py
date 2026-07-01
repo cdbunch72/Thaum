@@ -18,6 +18,14 @@ if TYPE_CHECKING:
 # When True, ResolvedSecret / OptionalResolvedSecret keep raw reference strings (no env/file/secret I/O).
 config_schema_only: ContextVar[bool] = ContextVar("config_schema_only", default=False)
 
+# Only these prefixes are routed through resolve_secret on optional / list fields (URLs, team:, etc. pass through).
+_SECRET_REF_PREFIXES: tuple[str, ...] = ("env:", "file:", "secret:", "literal:")
+
+
+def _looks_like_secret_reference(value: str) -> bool:
+    low = value.lower()
+    return any(low.startswith(p) for p in _SECRET_REF_PREFIXES)
+
 
 @contextmanager
 def schema_only_validation() -> Iterator[None]:
@@ -43,6 +51,8 @@ def _optional_resolved_secret(v: object) -> Optional[str]:
         return None
     if config_schema_only.get():
         return s
+    if not _looks_like_secret_reference(s):
+        return s
     return str(resolve_secret(s))
 
 
@@ -51,6 +61,8 @@ def _resolved_list_entry(v: object) -> str:
     if not s:
         return ""
     if config_schema_only.get():
+        return s
+    if not _looks_like_secret_reference(s):
         return s
     return str(resolve_secret(s))
 

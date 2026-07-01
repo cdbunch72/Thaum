@@ -5,6 +5,7 @@ import logging
 import tomllib
 from typing import Any, Dict
 
+from thaum.secrets_bootstrap import wire_gemstone_secrets_resolver
 from thaum.types import ServerConfig, LogConfig
 
 logger = logging.getLogger("thaum.config")
@@ -19,6 +20,7 @@ def load_and_validate(path: str) -> Dict[str, Any]:
     include ``alert_type`` and a nested ``[bots.<id>.alert]`` table (exposed as key ``alert``);
     no normalization — bootstrap merges defaults later.
     """
+    wire_gemstone_secrets_resolver()
     try:
         with open(path, "rb") as f:
             config_raw = tomllib.load(f)
