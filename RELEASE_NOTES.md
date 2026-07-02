@@ -4,6 +4,42 @@
 
 ---
 
+## v0.7.0rc2 (release candidate 2) — 2026-07-01
+
+**`pyproject.toml`** is **`0.7.0rc2`**.
+
+Second **0.7.0** release candidate. Adds helpdesk-style incident prompt card identity fields and documentation-site release-notes integration since **`v0.7.0rc1`**. Breaking changes are unlikely but not impossible before **v0.7.0** stable.
+
+### Highlights
+
+**Incident prompt cards — helpdesk identity**
+- Optional bot config: **`display_name`**, **`phone_number`** (display-only mnemonic text; no **`tel:`** autogeneration), and **`card_extra_text_template`** (pre-rendered into **`extra_card_text`**).
+- Builtin default and [`incident_prompt_card.sample.j2`](incident_prompt_card.sample.j2) add **`ColumnSet`** rows for bot name and phone plus optional extra prose; optional rows use **`isVisible`**.
+- Card Jinja context adds **`bot_name`**, **`phone_number`**, **`send_alerts`**, **`extra_card_text`**, **`show_phone`**, and **`show_extra_card_text`**.
+
+**Documentation**
+- Sphinx docs build materializes **`docs/release-notes.md`** from repo-root **`RELEASE_NOTES.md`**; index includes a release-notes section.
+- **`publish-docs`** workflow caches dependencies from both **`pyproject.toml`** and **`requirements.txt`**.
+
+### Upgrade from v0.7.0rc1
+
+- **pip / venv**: **`pip install -U .`** (or your lockfile workflow) to pick up **`0.7.0rc2`**.
+- **Containers**: pull **`0.7.0rc2`**, **`:devel`**, or **`:edge`** on **`thaum`** / **`thaum-external-db`** (not **`:latest`** — RC is a prerelease).
+- Helpdesk bots: optionally set **`display_name`**, **`phone_number`**, and **`card_extra_text_template`** (see commented examples in [`sample.thaum.toml`](sample.thaum.toml)).
+- Custom incident cards: if you forked the old default template, adjust hard-coded **`body[N]`** indices for the new identity block.
+
+No manual schema migration is required (**`init_db`** creates ORM tables on startup).
+
+### Dependencies
+
+Unchanged from **`v0.7.0rc1`**: **`gemstone_utils`** **`0.4.1`** from **PyPI**.
+
+### Release candidate caveats
+
+- Breaking changes are unlikely but not impossible before **v0.7.0** stable.
+
+---
+
 ## v0.7.0rc1 (release candidate 1) — 2026-06-29
 
 **`pyproject.toml`** is **`0.7.0rc1`**.
@@ -96,7 +132,6 @@ Existing **`-azure`** digests on GHCR are not deleted but will not receive new r
 
 ### Highlights since v0.7.0a2
 
-- **Incident prompt cards — helpdesk identity** — Optional bot config: ``display_name``, ``phone_number`` (display-only mnemonic text; no ``tel:`` autogeneration), and ``card_extra_text_template`` (pre-rendered into ``extra_card_text``). Builtin default and [`incident_prompt_card.sample.j2`](incident_prompt_card.sample.j2) add ``ColumnSet`` rows for bot name and phone plus optional extra prose; optional rows use ``isVisible``. Card Jinja context adds ``bot_name``, ``phone_number``, ``send_alerts``, ``extra_card_text``, ``show_phone``, and ``show_extra_card_text``. Custom card authors who forked the old default may need to adjust hard-coded ``body[N]`` indices.
 - **Incident prompt cards** — Builtin default and [`incident_prompt_card.sample.j2`](incident_prompt_card.sample.j2) always include the priority `Input.Toggle` with Adaptive Cards **`isVisible`** driven by `show_priority_toggle` (no Jinja `{% if %}` blocks). Submit `data` is only `{ "action": "submit_incident" }`; missing `is_emergency` from a hidden toggle is treated as normal priority. Jinja context adds resolved **`base_url`** (`bot.base_url` from `[server].base_url`). Sample template includes a logo `Image` at `{{ base_url }}/static/Thaum_wizard_cgi.jpg`.
 - **Static assets** — Flask serves **`GET /static/<filename>`** from the repo [`static/`](static/) directory (bundled **`Thaum_wizard_cgi.jpg`** for the sample card).
 - **Azure quickstart** — Expanded ACA / Key Vault documentation; example **`Dockerfile.azexp.example`** and interactive Key Vault secret scripts (bash and PowerShell).
