@@ -18,6 +18,9 @@ _log = logging.getLogger(__name__)
 _jinja_env = Environment(undefined=StrictUndefined)
 
 DEFAULT_INCIDENT_PROMPT_CARD_TEMPLATE = """
+{# Card context: team_description, bot_name, phone_number, send_alerts,
+   extra_card_text, show_phone, show_extra_card_text, default_high_priority,
+   show_priority_toggle, base_url. Optional rows use isVisible, not {% if %}. #}
 {
   "$schema": "http://adaptivecards.io/schemas/adaptive-card.json",
   "type": "AdaptiveCard",
@@ -27,6 +30,64 @@ DEFAULT_INCIDENT_PROMPT_CARD_TEMPLATE = """
       "type": "TextBlock",
       "text": {{ ("How can " ~ team_description ~ " help you today?") | tojson }},
       "wrap": true
+    },
+    {
+      "type": "ColumnSet",
+      "columns": [
+        {
+          "type": "Column",
+          "width": "auto",
+          "items": [{
+            "type": "TextBlock",
+            "text": "Bot:",
+            "weight": "Bolder",
+            "spacing": "None"
+          }]
+        },
+        {
+          "type": "Column",
+          "width": "stretch",
+          "items": [{
+            "type": "TextBlock",
+            "text": {{ bot_name | tojson }},
+            "wrap": true,
+            "spacing": "None"
+          }]
+        }
+      ]
+    },
+    {
+      "type": "ColumnSet",
+      "isVisible": {{ show_phone | tojson }},
+      "columns": [
+        {
+          "type": "Column",
+          "width": "auto",
+          "items": [{
+            "type": "TextBlock",
+            "text": "Phone:",
+            "weight": "Bolder",
+            "spacing": "None"
+          }]
+        },
+        {
+          "type": "Column",
+          "width": "stretch",
+          "items": [{
+            "type": "TextBlock",
+            "text": {{ phone_number | tojson }},
+            "wrap": true,
+            "spacing": "None"
+          }]
+        }
+      ]
+    },
+    {
+      "type": "TextBlock",
+      "text": {{ extra_card_text | tojson }},
+      "wrap": true,
+      "isVisible": {{ show_extra_card_text | tojson }},
+      "spacing": "Small"
     },
     {
       "type": "Input.Text",
@@ -74,16 +135,40 @@ def _is_valid_incident_card(card: Any) -> bool:
 
 def _incident_prompt_card(
     bot: "BaseChatBot",
-    team_description: str,
     default_high_priority: bool,
-    show_priority_toggle: bool,
 ) -> Dict[str, Any]:
     inline_template = (getattr(bot, "incident_prompt_card_template", None) or "").strip()
     template_path = (getattr(bot, "incident_prompt_card_template_path", None) or "").strip()
+
+    team_description = bot.team_description
+    bot_name = (getattr(bot, "display_name", None) or "").strip() or bot.handle
+    phone_number = (getattr(bot, "phone_number", None) or "").strip()
+    send_alerts = bool(bot.send_alerts)
+
+    extra_card_text = ""
+    extra_tpl = (getattr(bot, "card_extra_text_template", None) or "").strip()
+    if extra_tpl:
+        try:
+            extra_card_text = _jinja_env.from_string(extra_tpl).render(
+                team_description=team_description,
+                bot_name=bot_name,
+                phone_number=phone_number,
+                send_alerts=send_alerts,
+                default_high_priority=default_high_priority,
+            ).strip()
+        except Exception as exc:
+            _log.warning("Could not render card_extra_text_template: %s", exc)
+
     context = {
         "team_description": team_description,
+        "bot_name": bot_name,
+        "phone_number": phone_number,
+        "send_alerts": send_alerts,
+        "extra_card_text": extra_card_text,
+        "show_phone": bool(phone_number),
+        "show_extra_card_text": bool(extra_card_text),
         "default_high_priority": default_high_priority,
-        "show_priority_toggle": show_priority_toggle,
+        "show_priority_toggle": bool(bot.high_pri_on),
         "base_url": getattr(bot, "base_url", "") or "",
     }
 
@@ -159,9 +244,7 @@ def bind_thaum_handlers(bot: 'BaseChatBot') -> None:
         else:
             card = _incident_prompt_card(
                 bot,
-                bot.team_description,
                 default_high_priority=(cmd == "emergency"),
-                show_priority_toggle=bool(bot.high_pri_on),
             )
             bot.send_card(
                 message.room_id,

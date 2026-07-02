@@ -16,6 +16,10 @@
 # Incident prompt card for help/emergency can be customized per bot via Jinja JSON:
 # - incident_prompt_card_template_path = "./incident_prompt_card.sample.j2"
 # - incident_prompt_card_template = """{ ... jinja json ... }"""   # inline override
+# Optional helpdesk-style card fields (display-only phone; no tel: autogeneration):
+# - display_name = "Myrddin Helpdesk"
+# - phone_number = "1-800-HELP-DESK (1-800-435-7335)"
+# - card_extra_text_template = "..."
 # =============================================================================
 
 [server]
@@ -208,5 +212,8 @@ responders = ["team:Helpdesk"]
 emergency_warning_message = ""
 token = "secret:webex-tok-helpdesk"
 # hmac_secret = "secret:webex-hmac-help"
+# display_name = "Myrddin Helpdesk"
+# phone_number = "1-800-HELP-DESK (1-800-435-7335)"
+# card_extra_text_template = "..."
 
 # No [bots.helpdesk.alert] — null alert plugin; help still creates incident rooms via engine.

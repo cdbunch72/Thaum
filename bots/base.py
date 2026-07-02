@@ -73,6 +73,9 @@ class BaseChatBot(ABC):
         self.customer_service_message_template = config.customer_service_message_template
         self.incident_prompt_card_template = config.incident_prompt_card_template
         self.incident_prompt_card_template_path = config.incident_prompt_card_template_path
+        self.display_name = config.display_name
+        self.phone_number = config.phone_number
+        self.card_extra_text_template = config.card_extra_text_template
         self.emergency_warning_message = config.emergency_warning_message
         # Set by the server bootstrap code; shared by all bots on a server.
         self.lookup_plugin: Optional[Any] = None
@@ -292,6 +295,9 @@ class BaseChatBotConfig(BaseModel):
         customer_service_message_template: Message posted while responders are paged.
         incident_prompt_card_template: Inline Adaptive Card template JSON.
         incident_prompt_card_template_path: Filesystem path to card template JSON.
+        display_name: Human-facing bot name for cards; not the @-mention ``handle``.
+        phone_number: Display-only phone text for cards (not E.164 / not dialable).
+        card_extra_text_template: Jinja string pre-rendered into optional card prose.
         alert_type: Alert plugin module name under ``alerts.plugins``; use ``"null"``
             when ``send_alerts`` is False.
         team_description: Human-readable team name used in templates and alerts.
@@ -311,6 +317,9 @@ class BaseChatBotConfig(BaseModel):
     )
     incident_prompt_card_template: Optional[str] = None
     incident_prompt_card_template_path: Optional[str] = None
+    display_name: Optional[str] = None
+    phone_number: Optional[str] = None
+    card_extra_text_template: Optional[str] = None
     # Alert plugin module name under ``alerts.plugins``; use ``null`` when send_alerts is False.
     alert_type: str = "null"
     team_description: str
