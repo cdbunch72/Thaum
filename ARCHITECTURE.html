@@ -376,9 +376,18 @@ for that bot’s alert instance (e.g. responders)</p></li>
 <li><p><code class="docutils literal notranslate"><span class="pre">incident_prompt_card_template</span></code> (inline Jinja template)</p></li>
 <li><p>Inline template takes precedence if both are set.</p></li>
 <li><p>Templates render to JSON and are parsed before send; use <code class="docutils literal notranslate"><span class="pre">|tojson</span></code> for interpolated values.</p></li>
-<li><p>Jinja context includes <code class="docutils literal notranslate"><span class="pre">team_description</span></code>, <code class="docutils literal notranslate"><span class="pre">default_high_priority</span></code>,
-<code class="docutils literal notranslate"><span class="pre">show_priority_toggle</span></code> (maps to Adaptive Cards <code class="docutils literal notranslate"><span class="pre">isVisible</span></code> on optional inputs),
+<li><p><strong>Incident prompt card</strong> Jinja context: <code class="docutils literal notranslate"><span class="pre">team_description</span></code>, <code class="docutils literal notranslate"><span class="pre">bot_name</span></code> (from
+config <code class="docutils literal notranslate"><span class="pre">display_name</span></code>, else <code class="docutils literal notranslate"><span class="pre">handle</span></code>), <code class="docutils literal notranslate"><span class="pre">phone_number</span></code> (display-only text),
+<code class="docutils literal notranslate"><span class="pre">send_alerts</span></code>, <code class="docutils literal notranslate"><span class="pre">extra_card_text</span></code>, <code class="docutils literal notranslate"><span class="pre">show_phone</span></code>, <code class="docutils literal notranslate"><span class="pre">show_extra_card_text</span></code>,
+<code class="docutils literal notranslate"><span class="pre">default_high_priority</span></code>, <code class="docutils literal notranslate"><span class="pre">show_priority_toggle</span></code> (Adaptive Cards <code class="docutils literal notranslate"><span class="pre">isVisible</span></code>),
 and <code class="docutils literal notranslate"><span class="pre">base_url</span></code> (resolved <code class="docutils literal notranslate"><span class="pre">[server].base_url</span></code> for absolute <code class="docutils literal notranslate"><span class="pre">Image.url</span></code> values).</p></li>
+<li><p><strong><code class="docutils literal notranslate"><span class="pre">card_extra_text_template</span></code></strong> (optional) is pre-rendered separately; its context is
+<code class="docutils literal notranslate"><span class="pre">team_description</span></code>, <code class="docutils literal notranslate"><span class="pre">bot_name</span></code>, <code class="docutils literal notranslate"><span class="pre">phone_number</span></code>, <code class="docutils literal notranslate"><span class="pre">send_alerts</span></code>,
+<code class="docutils literal notranslate"><span class="pre">default_high_priority</span></code> only.</p></li>
+<li><p><strong>Room title / customer service</strong> templates: <code class="docutils literal notranslate"><span class="pre">summary</span></code>, <code class="docutils literal notranslate"><span class="pre">requester_name</span></code>,
+<code class="docutils literal notranslate"><span class="pre">team_description</span></code>, <code class="docutils literal notranslate"><span class="pre">date</span></code> (unchanged).</p></li>
+<li><p>Default and sample cards use <code class="docutils literal notranslate"><span class="pre">ColumnSet</span></code> rows for bot name and phone; optional
+rows are gated with <code class="docutils literal notranslate"><span class="pre">isVisible</span></code>, not Jinja <code class="docutils literal notranslate"><span class="pre">{%</span> <span class="pre">if</span> <span class="pre">%}</span></code> blocks.</p></li>
 <li><p>Bundled static assets are served at <code class="docutils literal notranslate"><span class="pre">GET</span> <span class="pre">/static/&lt;filename&gt;</span></code> (e.g.
 <code class="docutils literal notranslate"><span class="pre">{{</span> <span class="pre">base_url</span> <span class="pre">}}/static/Thaum_wizard_cgi.jpg</span></code> in the sample template); hosts
 such as Webex require HTTPS URLs reachable from their network.</p></li>
@@ -688,7 +697,7 @@ foundation for complex operational automation.</p>
       
     </aside>
   </div>
-</div><script src="_static/documentation_options.js?v=61228ca7"></script>
+</div><script src="_static/documentation_options.js?v=56da06cd"></script>
     <script src="_static/doctools.js?v=9bcbadda"></script>
     <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="_static/scripts/furo.js?v=46bd48cc"></script>

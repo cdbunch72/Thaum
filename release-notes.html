@@ -277,6 +277,45 @@
 <section id="unreleased">
 <h2>Unreleased<a class="headerlink" href="#unreleased" title="Link to this heading">¶</a></h2>
 </section>
+<section id="v0-7-0rc2-release-candidate-2-2026-07-01">
+<h2>v0.7.0rc2 (release candidate 2) — 2026-07-01<a class="headerlink" href="#v0-7-0rc2-release-candidate-2-2026-07-01" title="Link to this heading">¶</a></h2>
+<p><strong><code class="docutils literal notranslate"><span class="pre">pyproject.toml</span></code></strong> is <strong><code class="docutils literal notranslate"><span class="pre">0.7.0rc2</span></code></strong>.</p>
+<p>Second <strong>0.7.0</strong> release candidate. Adds helpdesk-style incident prompt card identity fields and documentation-site release-notes integration since <strong><code class="docutils literal notranslate"><span class="pre">v0.7.0rc1</span></code></strong>. Breaking changes are unlikely but not impossible before <strong>v0.7.0</strong> stable.</p>
+<section id="highlights">
+<h3>Highlights<a class="headerlink" href="#highlights" title="Link to this heading">¶</a></h3>
+<p><strong>Incident prompt cards — helpdesk identity</strong></p>
+<ul class="simple">
+<li><p>Optional bot config: <strong><code class="docutils literal notranslate"><span class="pre">display_name</span></code></strong>, <strong><code class="docutils literal notranslate"><span class="pre">phone_number</span></code></strong> (display-only mnemonic text; no <strong><code class="docutils literal notranslate"><span class="pre">tel:</span></code></strong> autogeneration), and <strong><code class="docutils literal notranslate"><span class="pre">card_extra_text_template</span></code></strong> (pre-rendered into <strong><code class="docutils literal notranslate"><span class="pre">extra_card_text</span></code></strong>).</p></li>
+<li><p>Builtin default and <a class="reference internal" href="#incident_prompt_card.sample.j2"><span class="xref myst"><code class="docutils literal notranslate"><span class="pre">incident_prompt_card.sample.j2</span></code></span></a> add <strong><code class="docutils literal notranslate"><span class="pre">ColumnSet</span></code></strong> rows for bot name and phone plus optional extra prose; optional rows use <strong><code class="docutils literal notranslate"><span class="pre">isVisible</span></code></strong>.</p></li>
+<li><p>Card Jinja context adds <strong><code class="docutils literal notranslate"><span class="pre">bot_name</span></code></strong>, <strong><code class="docutils literal notranslate"><span class="pre">phone_number</span></code></strong>, <strong><code class="docutils literal notranslate"><span class="pre">send_alerts</span></code></strong>, <strong><code class="docutils literal notranslate"><span class="pre">extra_card_text</span></code></strong>, <strong><code class="docutils literal notranslate"><span class="pre">show_phone</span></code></strong>, and <strong><code class="docutils literal notranslate"><span class="pre">show_extra_card_text</span></code></strong>.</p></li>
+</ul>
+<p><strong>Documentation</strong></p>
+<ul class="simple">
+<li><p>Sphinx docs build materializes <strong><code class="docutils literal notranslate"><span class="pre">docs/release-notes.md</span></code></strong> from repo-root <strong><code class="docutils literal notranslate"><span class="pre">RELEASE_NOTES.md</span></code></strong>; index includes a release-notes section.</p></li>
+<li><p><strong><code class="docutils literal notranslate"><span class="pre">publish-docs</span></code></strong> workflow caches dependencies from both <strong><code class="docutils literal notranslate"><span class="pre">pyproject.toml</span></code></strong> and <strong><code class="docutils literal notranslate"><span class="pre">requirements.txt</span></code></strong>.</p></li>
+</ul>
+</section>
+<section id="upgrade-from-v0-7-0rc1">
+<h3>Upgrade from v0.7.0rc1<a class="headerlink" href="#upgrade-from-v0-7-0rc1" title="Link to this heading">¶</a></h3>
+<ul class="simple">
+<li><p><strong>pip / venv</strong>: <strong><code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">-U</span> <span class="pre">.</span></code></strong> (or your lockfile workflow) to pick up <strong><code class="docutils literal notranslate"><span class="pre">0.7.0rc2</span></code></strong>.</p></li>
+<li><p><strong>Containers</strong>: pull <strong><code class="docutils literal notranslate"><span class="pre">0.7.0rc2</span></code></strong>, <strong><code class="docutils literal notranslate"><span class="pre">:devel</span></code></strong>, or <strong><code class="docutils literal notranslate"><span class="pre">:edge</span></code></strong> on <strong><code class="docutils literal notranslate"><span class="pre">thaum</span></code></strong> / <strong><code class="docutils literal notranslate"><span class="pre">thaum-external-db</span></code></strong> (not <strong><code class="docutils literal notranslate"><span class="pre">:latest</span></code></strong> — RC is a prerelease).</p></li>
+<li><p>Helpdesk bots: optionally set <strong><code class="docutils literal notranslate"><span class="pre">display_name</span></code></strong>, <strong><code class="docutils literal notranslate"><span class="pre">phone_number</span></code></strong>, and <strong><code class="docutils literal notranslate"><span class="pre">card_extra_text_template</span></code></strong> (see commented examples in <a class="reference internal" href="#sample.thaum.toml"><span class="xref myst"><code class="docutils literal notranslate"><span class="pre">sample.thaum.toml</span></code></span></a>).</p></li>
+<li><p>Custom incident cards: if you forked the old default template, adjust hard-coded <strong><code class="docutils literal notranslate"><span class="pre">body[N]</span></code></strong> indices for the new identity block.</p></li>
+</ul>
+<p>No manual schema migration is required (<strong><code class="docutils literal notranslate"><span class="pre">init_db</span></code></strong> creates ORM tables on startup).</p>
+</section>
+<section id="dependencies">
+<h3>Dependencies<a class="headerlink" href="#dependencies" title="Link to this heading">¶</a></h3>
+<p>Unchanged from <strong><code class="docutils literal notranslate"><span class="pre">v0.7.0rc1</span></code></strong>: <strong><code class="docutils literal notranslate"><span class="pre">gemstone_utils</span></code></strong> <strong><code class="docutils literal notranslate"><span class="pre">0.4.1</span></code></strong> from <strong>PyPI</strong>.</p>
+</section>
+<section id="release-candidate-caveats">
+<h3>Release candidate caveats<a class="headerlink" href="#release-candidate-caveats" title="Link to this heading">¶</a></h3>
+<ul class="simple">
+<li><p>Breaking changes are unlikely but not impossible before <strong>v0.7.0</strong> stable.</p></li>
+</ul>
+</section>
+</section>
 <section id="v0-7-0rc1-release-candidate-1-2026-06-29">
 <h2>v0.7.0rc1 (release candidate 1) — 2026-06-29<a class="headerlink" href="#v0-7-0rc1-release-candidate-1-2026-06-29" title="Link to this heading">¶</a></h2>
 <p><strong><code class="docutils literal notranslate"><span class="pre">pyproject.toml</span></code></strong> is <strong><code class="docutils literal notranslate"><span class="pre">0.7.0rc1</span></code></strong>.</p>
@@ -316,8 +355,8 @@
 </table>
 </div>
 </section>
-<section id="highlights">
-<h3>Highlights<a class="headerlink" href="#highlights" title="Link to this heading">¶</a></h3>
+<section id="id1">
+<h3>Highlights<a class="headerlink" href="#id1" title="Link to this heading">¶</a></h3>
 <p><strong>Logging and startup (a1)</strong></p>
 <ul class="simple">
 <li><p>Optional JSON structured logs (<code class="docutils literal notranslate"><span class="pre">[logging]</span></code>, <code class="docutils literal notranslate"><span class="pre">python-json-logger</span></code>); <strong>SPAM</strong> diagnostics behind <strong><code class="docutils literal notranslate"><span class="pre">THAUM_LOG_SPAM=1</span></code></strong>.</p></li>
@@ -354,8 +393,8 @@
 <li><p>Customer service message template typo (“shortlly” → “shortly”) and simplified template retrieval.</p></li>
 </ul>
 </section>
-<section id="dependencies">
-<h3>Dependencies<a class="headerlink" href="#dependencies" title="Link to this heading">¶</a></h3>
+<section id="id2">
+<h3>Dependencies<a class="headerlink" href="#id2" title="Link to this heading">¶</a></h3>
 <p><strong><code class="docutils literal notranslate"><span class="pre">gemstone_utils</span></code></strong> <strong><code class="docutils literal notranslate"><span class="pre">0.4.1</span></code></strong> from <strong>PyPI</strong> (was <strong><code class="docutils literal notranslate"><span class="pre">0.4.0</span></code></strong> on the <strong><code class="docutils literal notranslate"><span class="pre">0.7.0a3</span></code></strong> tag). See <strong><code class="docutils literal notranslate"><span class="pre">pyproject.toml</span></code></strong>, <strong><code class="docutils literal notranslate"><span class="pre">requirements.txt</span></code></strong>, and <strong><code class="docutils literal notranslate"><span class="pre">GEMSTONE_UTILS_REF</span></code></strong> in <strong><code class="docutils literal notranslate"><span class="pre">Dockerfile</span></code></strong>.</p>
 </section>
 <section id="upgrade-from-v0-7-0a3">
@@ -369,8 +408,8 @@
 </ul>
 <p>No manual schema migration is required (<strong><code class="docutils literal notranslate"><span class="pre">init_db</span></code></strong> creates ORM tables on startup).</p>
 </section>
-<section id="release-candidate-caveats">
-<h3>Release candidate caveats<a class="headerlink" href="#release-candidate-caveats" title="Link to this heading">¶</a></h3>
+<section id="id3">
+<h3>Release candidate caveats<a class="headerlink" href="#id3" title="Link to this heading">¶</a></h3>
 <ul class="simple">
 <li><p>Breaking changes are unlikely but not impossible before <strong>v0.7.0</strong> stable.</p></li>
 <li><p>See sections below for per-alpha detail (<strong>v0.7.0a1</strong>–<strong>a3</strong>).</p></li>
@@ -422,8 +461,8 @@
 <li><p><strong>CI</strong> — Release workflow builds only the default and <strong><code class="docutils literal notranslate"><span class="pre">-external-db</span></code></strong> images; GitHub Actions updated to current action major versions.</p></li>
 </ul>
 </section>
-<section id="id1">
-<h3>Dependencies<a class="headerlink" href="#id1" title="Link to this heading">¶</a></h3>
+<section id="id4">
+<h3>Dependencies<a class="headerlink" href="#id4" title="Link to this heading">¶</a></h3>
 <p><strong><code class="docutils literal notranslate"><span class="pre">gemstone_utils</span></code></strong> <strong><code class="docutils literal notranslate"><span class="pre">0.4.0</span></code></strong> from <strong>PyPI</strong> (replaces the <strong><code class="docutils literal notranslate"><span class="pre">v0.4.0rc1</span></code></strong> git pin on the <strong><code class="docutils literal notranslate"><span class="pre">0.7.0a2</span></code></strong> tag). See <strong><code class="docutils literal notranslate"><span class="pre">pyproject.toml</span></code></strong>, <strong><code class="docutils literal notranslate"><span class="pre">requirements.txt</span></code></strong>, and <strong><code class="docutils literal notranslate"><span class="pre">GEMSTONE_UTILS_REF</span></code></strong> in <strong><code class="docutils literal notranslate"><span class="pre">Dockerfile</span></code></strong>.</p>
 </section>
 <section id="upgrade-from-v0-7-0a2">
@@ -455,8 +494,8 @@
 <li><p><strong>Server / config (forward-port from v0.6.1)</strong> — <code class="docutils literal notranslate"><span class="pre">[server].base_url</span></code> may be omitted in TOML when <code class="docutils literal notranslate"><span class="pre">THAUM_BASE_URL</span></code> is set; clearer precedence and URL candidate normalization in <code class="docutils literal notranslate"><span class="pre">thaum.types.ServerConfig</span></code> (<code class="docutils literal notranslate"><span class="pre">_resolve_base_url</span></code>, <code class="docutils literal notranslate"><span class="pre">_strip_base_url_candidate</span></code>). Quickstart READMEs, <code class="docutils literal notranslate"><span class="pre">sample.thaum.toml</span></code>, and <code class="docutils literal notranslate"><span class="pre">scripts/python/thaum_config_check.py</span></code> aligned (<code class="docutils literal notranslate"><span class="pre">--schema-check</span></code> when <code class="docutils literal notranslate"><span class="pre">base_url</span></code> is omitted). Covered by <code class="docutils literal notranslate"><span class="pre">tests/test_server_config_base_url.py</span></code>.</p></li>
 </ul>
 </section>
-<section id="id2">
-<h3>Dependencies<a class="headerlink" href="#id2" title="Link to this heading">¶</a></h3>
+<section id="id5">
+<h3>Dependencies<a class="headerlink" href="#id5" title="Link to this heading">¶</a></h3>
 <p><strong><code class="docutils literal notranslate"><span class="pre">gemstone_utils</span></code></strong> <strong><code class="docutils literal notranslate"><span class="pre">0.4.0</span></code></strong> from <strong>PyPI</strong> (see <strong><code class="docutils literal notranslate"><span class="pre">pyproject.toml</span></code></strong>, <strong><code class="docutils literal notranslate"><span class="pre">requirements.txt</span></code></strong>; <strong><code class="docutils literal notranslate"><span class="pre">GEMSTONE_UTILS_REF</span></code></strong> in <strong><code class="docutils literal notranslate"><span class="pre">Dockerfile</span></code></strong> passes this version for image builds).</p>
 </section>
 <section id="upgrade-from-v0-7-0a1">
@@ -467,8 +506,8 @@
 </ul>
 <p>No manual schema migration is required (<strong><code class="docutils literal notranslate"><span class="pre">init_db</span></code></strong> creates ORM tables on startup).</p>
 </section>
-<section id="id3">
-<h3>Alpha caveats<a class="headerlink" href="#id3" title="Link to this heading">¶</a></h3>
+<section id="id6">
+<h3>Alpha caveats<a class="headerlink" href="#id6" title="Link to this heading">¶</a></h3>
 <ul class="simple">
 <li><p>Breaking changes may occur before <strong>v0.7.0</strong> stable.</p></li>
 </ul>
@@ -502,12 +541,12 @@
 <li><p><strong>Tests</strong> — <strong><code class="docutils literal notranslate"><span class="pre">tests/test_server_config_base_url.py</span></code></strong> exercises server <strong><code class="docutils literal notranslate"><span class="pre">base_url</span></code></strong> resolution.</p></li>
 </ul>
 </section>
-<section id="id4">
-<h3>Dependencies<a class="headerlink" href="#id4" title="Link to this heading">¶</a></h3>
+<section id="id7">
+<h3>Dependencies<a class="headerlink" href="#id7" title="Link to this heading">¶</a></h3>
 <p>Unchanged from <strong>v0.6.0</strong>: <strong><code class="docutils literal notranslate"><span class="pre">gemstone_utils</span></code></strong> <strong><code class="docutils literal notranslate"><span class="pre">v0.4.0rc1</span></code></strong> (<strong><code class="docutils literal notranslate"><span class="pre">pyproject.toml</span></code></strong>, <strong><code class="docutils literal notranslate"><span class="pre">requirements.txt</span></code></strong>, <strong><code class="docutils literal notranslate"><span class="pre">GEMSTONE_UTILS_REF</span></code></strong> in <strong><code class="docutils literal notranslate"><span class="pre">Dockerfile</span></code></strong>).</p>
 </section>
-<section id="id5">
-<h3>Upgrade from v0.6.0<a class="headerlink" href="#id5" title="Link to this heading">¶</a></h3>
+<section id="id8">
+<h3>Upgrade from v0.6.0<a class="headerlink" href="#id8" title="Link to this heading">¶</a></h3>
 <ul class="simple">
 <li><p><strong>pip / venv</strong>: <strong><code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">-U</span> <span class="pre">.</span></code></strong> (or your lockfile workflow) to pick up <strong><code class="docutils literal notranslate"><span class="pre">0.6.1</span></code></strong>.</p></li>
 <li><p><strong>Containers</strong>: rebuild or pull an image tagged <strong><code class="docutils literal notranslate"><span class="pre">0.6.1</span></code></strong> when published.</p></li>
@@ -539,8 +578,8 @@
 <li><p><strong>CI / containers</strong> — <strong><code class="docutils literal notranslate"><span class="pre">:edge</span></code></strong> tracks prerelease and stable GitHub Releases (and manual <strong><code class="docutils literal notranslate"><span class="pre">main</span></code></strong> workflow).</p></li>
 </ul>
 </section>
-<section id="id6">
-<h3>Dependencies<a class="headerlink" href="#id6" title="Link to this heading">¶</a></h3>
+<section id="id9">
+<h3>Dependencies<a class="headerlink" href="#id9" title="Link to this heading">¶</a></h3>
 <p><strong><code class="docutils literal notranslate"><span class="pre">gemstone_utils</span></code></strong> is pinned to <strong><code class="docutils literal notranslate"><span class="pre">v0.4.0rc1</span></code></strong> from <strong><code class="docutils literal notranslate"><span class="pre">gemstone-software-dev/gemstone_utils</span></code></strong> on GitHub (see <strong><code class="docutils literal notranslate"><span class="pre">pyproject.toml</span></code></strong>, <strong><code class="docutils literal notranslate"><span class="pre">requirements.txt</span></code></strong>, <strong><code class="docutils literal notranslate"><span class="pre">GEMSTONE_UTILS_REF</span></code></strong> in <strong><code class="docutils literal notranslate"><span class="pre">Dockerfile</span></code></strong>).</p>
 </section>
 <section id="upgrade-from-v0-6-0rc2-or-earlier-prereleases">
@@ -568,8 +607,8 @@
 <li><p><strong>CI / containers</strong> — <strong><code class="docutils literal notranslate"><span class="pre">:edge</span></code></strong> updated on <strong>prerelease</strong> and <strong>stable</strong> GitHub Releases (and manual <strong><code class="docutils literal notranslate"><span class="pre">main</span></code></strong> workflow) so it tracks the current image.</p></li>
 </ul>
 </section>
-<section id="id7">
-<h3>Dependencies<a class="headerlink" href="#id7" title="Link to this heading">¶</a></h3>
+<section id="id10">
+<h3>Dependencies<a class="headerlink" href="#id10" title="Link to this heading">¶</a></h3>
 <p><strong><code class="docutils literal notranslate"><span class="pre">gemstone_utils</span></code></strong> is pinned to <strong><code class="docutils literal notranslate"><span class="pre">v0.4.0rc1</span></code></strong> and installed from <strong><code class="docutils literal notranslate"><span class="pre">gemstone-software-dev/gemstone_utils</span></code></strong> on GitHub (Git tag only; <strong>not</strong> yet on PyPI). See <strong><code class="docutils literal notranslate"><span class="pre">pyproject.toml</span></code></strong>, <strong><code class="docutils literal notranslate"><span class="pre">requirements.txt</span></code></strong>, and the <strong><code class="docutils literal notranslate"><span class="pre">GEMSTONE_UTILS_REF</span></code></strong> build-arg in <strong><code class="docutils literal notranslate"><span class="pre">Dockerfile</span></code></strong>.</p>
 </section>
 <section id="upgrade-from-v0-3-0a1">
@@ -579,8 +618,8 @@
 <li><p><strong>Containers</strong>: rebuild or pull an image tagged <strong><code class="docutils literal notranslate"><span class="pre">0.6.0rc1</span></code></strong> when published; no manual schema migration required for the default layout (<strong><code class="docutils literal notranslate"><span class="pre">init_db</span></code></strong> creates any new ORM tables on startup).</p></li>
 </ul>
 </section>
-<section id="id8">
-<h3>Release candidate caveats<a class="headerlink" href="#id8" title="Link to this heading">¶</a></h3>
+<section id="id11">
+<h3>Release candidate caveats<a class="headerlink" href="#id11" title="Link to this heading">¶</a></h3>
 <ul class="simple">
 <li><p><strong>v0.6.0</strong> stable shipped <strong>2026-05-02</strong> (see section above); this RC section remains for historical context.</p></li>
 </ul>
@@ -589,8 +628,8 @@
 <section id="v0-3-0a1-alpha-1-2026-04-16">
 <h2>v0.3.0a1 (alpha 1) — 2026-04-16<a class="headerlink" href="#v0-3-0a1-alpha-1-2026-04-16" title="Link to this heading">¶</a></h2>
 <p>First <strong>0.3.x</strong> prerelease: Atlassian-aware lookup, shared connection profiles, and coordinated multi-worker bootstrap.</p>
-<section id="id9">
-<h3>Highlights<a class="headerlink" href="#id9" title="Link to this heading">¶</a></h3>
+<section id="id12">
+<h3>Highlights<a class="headerlink" href="#id12" title="Link to this heading">¶</a></h3>
 <ul class="simple">
 <li><p><strong>Connections (<code class="docutils literal notranslate"><span class="pre">connections.plugins.*</span></code>)</strong> — Named <strong><code class="docutils literal notranslate"><span class="pre">[connections.&lt;name&gt;]</span></code></strong> profiles (initially <strong><code class="docutils literal notranslate"><span class="pre">atlassian</span></code></strong>: <code class="docutils literal notranslate"><span class="pre">site_url</span></code>, <code class="docutils literal notranslate"><span class="pre">cloud_id</span></code>, <code class="docutils literal notranslate"><span class="pre">org_id</span></code>, optional <code class="docutils literal notranslate"><span class="pre">user</span></code> / <code class="docutils literal notranslate"><span class="pre">api_token</span></code>). Validated via Pydantic; no runtime behavior beyond config merge.</p></li>
 <li><p><strong>Lookup merge</strong> — <strong><code class="docutils literal notranslate"><span class="pre">[lookup.&lt;plugin&gt;].connection_ref</span></code></strong> merges a connection profile into lookup settings (connection first, plugin table wins on conflicts). Used by <strong><code class="docutils literal notranslate"><span class="pre">lookup.atlassian</span></code></strong> to share Cloud identity with other consumers.</p></li>
@@ -608,8 +647,8 @@
 <li><p><strong>Containers</strong>: rebuild or pull an image tagged <strong><code class="docutils literal notranslate"><span class="pre">0.3.0a1</span></code></strong> when published; existing <strong><code class="docutils literal notranslate"><span class="pre">/var/lib/thaum</span></code></strong> volume usage is unchanged aside from new metadata rows.</p></li>
 </ul>
 </section>
-<section id="id10">
-<h3>Alpha caveats<a class="headerlink" href="#id10" title="Link to this heading">¶</a></h3>
+<section id="id13">
+<h3>Alpha caveats<a class="headerlink" href="#id13" title="Link to this heading">¶</a></h3>
 <ul class="simple">
 <li><p>Breaking changes may occur before <strong>v0.3.0</strong> stable.</p></li>
 </ul>
@@ -633,8 +672,8 @@
 <li><p><strong>pip / venv</strong>: no dependency pin changes from <strong>a5</strong>; upgrade for the packaging version and runtime fixes above.</p></li>
 </ul>
 </section>
-<section id="id11">
-<h3>Alpha caveats<a class="headerlink" href="#id11" title="Link to this heading">¶</a></h3>
+<section id="id14">
+<h3>Alpha caveats<a class="headerlink" href="#id14" title="Link to this heading">¶</a></h3>
 <ul class="simple">
 <li><p>Breaking changes may occur before <strong>v0.2.0</strong> stable.</p></li>
 </ul>
@@ -652,8 +691,8 @@
 <li><p><strong>pip / venv</strong>: no dependency changes from <strong>a4</strong>; upgrade only if you want the packaging version bump.</p></li>
 </ul>
 </section>
-<section id="id12">
-<h3>Alpha caveats<a class="headerlink" href="#id12" title="Link to this heading">¶</a></h3>
+<section id="id15">
+<h3>Alpha caveats<a class="headerlink" href="#id15" title="Link to this heading">¶</a></h3>
 <ul class="simple">
 <li><p>Breaking changes may occur before <strong>v0.2.0</strong> stable.</p></li>
 </ul>
@@ -673,8 +712,8 @@
 <li><p><strong>Containers</strong>: <strong><code class="docutils literal notranslate"><span class="pre">ghcr.io</span></code></strong> (or your registry) <strong><code class="docutils literal notranslate"><span class="pre">0.2.0a4</span></code></strong> and <strong><code class="docutils literal notranslate"><span class="pre">:devel</span></code></strong> images include the same dependency pin; no database or probe changes from <strong>a3</strong>.</p></li>
 </ul>
 </section>
-<section id="id13">
-<h3>Alpha caveats<a class="headerlink" href="#id13" title="Link to this heading">¶</a></h3>
+<section id="id16">
+<h3>Alpha caveats<a class="headerlink" href="#id16" title="Link to this heading">¶</a></h3>
 <ul class="simple">
 <li><p>Breaking changes may occur before <strong>v0.2.0</strong> stable.</p></li>
 </ul>
@@ -693,8 +732,8 @@
 <li><p><strong>pip / containerless venvs</strong>: reinstall or <strong><code class="docutils literal notranslate"><span class="pre">pip</span> <span class="pre">install</span> <span class="pre">-U</span> <span class="pre">.</span></code></strong> (or <strong><code class="docutils literal notranslate"><span class="pre">-r</span> <span class="pre">requirements.txt</span></code></strong>) so <strong>gunicorn</strong> is installed from project metadata if you previously installed it manually.</p></li>
 </ul>
 </section>
-<section id="id14">
-<h3>Alpha caveats<a class="headerlink" href="#id14" title="Link to this heading">¶</a></h3>
+<section id="id17">
+<h3>Alpha caveats<a class="headerlink" href="#id17" title="Link to this heading">¶</a></h3>
 <ul class="simple">
 <li><p>Breaking changes may occur before <strong>v0.2.0</strong> stable.</p></li>
 </ul>
@@ -710,8 +749,8 @@
 <li><p>If you <strong>pinned</strong> <strong><code class="docutils literal notranslate"><span class="pre">db_url</span></code></strong> with <strong><code class="docutils literal notranslate"><span class="pre">host=/var/run/postgresql</span></code></strong>, update it to <strong><code class="docutils literal notranslate"><span class="pre">host=/run/thaum/postgres</span></code></strong> (or rely on the default by omitting an explicit bundled URL).</p></li>
 </ul>
 </section>
-<section id="id15">
-<h3>Alpha caveats<a class="headerlink" href="#id15" title="Link to this heading">¶</a></h3>
+<section id="id18">
+<h3>Alpha caveats<a class="headerlink" href="#id18" title="Link to this heading">¶</a></h3>
 <ul class="simple">
 <li><p>Breaking changes may occur before <strong>v0.2.0</strong> stable.</p></li>
 </ul>
@@ -730,8 +769,8 @@
 <li><p><strong>Config</strong> — Stricter <strong>Pydantic</strong> validation, <strong><code class="docutils literal notranslate"><span class="pre">ResolvedSecret</span></code></strong> and related patterns for secrets in config (e.g. database URL), and tooling/scripts for configuration checks.</p></li>
 </ul>
 </section>
-<section id="id16">
-<h3>Alpha caveats<a class="headerlink" href="#id16" title="Link to this heading">¶</a></h3>
+<section id="id19">
+<h3>Alpha caveats<a class="headerlink" href="#id19" title="Link to this heading">¶</a></h3>
 <ul class="simple">
 <li><p>Breaking changes may occur before <strong>v0.2.0</strong> stable.</p></li>
 <li><p>Validate behavior in your environment before relying on Thaum for critical on-call paths.</p></li>
@@ -768,15 +807,15 @@
 <li><p><a class="reference internal" href="#docs/admin-log-level.md"><span class="xref myst">docs/admin-log-level.md</span></a> — signed log-level admin API.</p></li>
 </ul>
 </section>
-<section id="id17">
-<h3>Alpha caveats<a class="headerlink" href="#id17" title="Link to this heading">¶</a></h3>
+<section id="id20">
+<h3>Alpha caveats<a class="headerlink" href="#id20" title="Link to this heading">¶</a></h3>
 <ul class="simple">
 <li><p>Breaking changes may occur before <strong>v0.1.0</strong> stable.</p></li>
 <li><p>Production hardening (packaging, upgrade paths, and broader platform coverage) is still evolving; validate behavior in your environment before relying on it for critical on-call paths.</p></li>
 </ul>
 </section>
-<section id="id18">
-<h3>Thanks<a class="headerlink" href="#id18" title="Link to this heading">¶</a></h3>
+<section id="id21">
+<h3>Thanks<a class="headerlink" href="#id21" title="Link to this heading">¶</a></h3>
 <p>Feedback and patches are welcome as Thaum moves toward a stable <strong>0.1</strong> line.</p>
 </section>
 </section>
@@ -839,28 +878,35 @@
             <ul>
 <li><a class="reference internal" href="#">Thaum release notes</a><ul>
 <li><a class="reference internal" href="#unreleased">Unreleased</a></li>
+<li><a class="reference internal" href="#v0-7-0rc2-release-candidate-2-2026-07-01">v0.7.0rc2 (release candidate 2) — 2026-07-01</a><ul>
+<li><a class="reference internal" href="#highlights">Highlights</a></li>
+<li><a class="reference internal" href="#upgrade-from-v0-7-0rc1">Upgrade from v0.7.0rc1</a></li>
+<li><a class="reference internal" href="#dependencies">Dependencies</a></li>
+<li><a class="reference internal" href="#release-candidate-caveats">Release candidate caveats</a></li>
+</ul>
+</li>
 <li><a class="reference internal" href="#v0-7-0rc1-release-candidate-1-2026-06-29">v0.7.0rc1 (release candidate 1) — 2026-06-29</a><ul>
 <li><a class="reference internal" href="#breaking-changes">Breaking changes</a></li>
-<li><a class="reference internal" href="#highlights">Highlights</a></li>
+<li><a class="reference internal" href="#id1">Highlights</a></li>
 <li><a class="reference internal" href="#fixes-post-a3">Fixes (post-a3)</a></li>
-<li><a class="reference internal" href="#dependencies">Dependencies</a></li>
+<li><a class="reference internal" href="#id2">Dependencies</a></li>
 <li><a class="reference internal" href="#upgrade-from-v0-7-0a3">Upgrade from v0.7.0a3</a></li>
-<li><a class="reference internal" href="#release-candidate-caveats">Release candidate caveats</a></li>
+<li><a class="reference internal" href="#id3">Release candidate caveats</a></li>
 </ul>
 </li>
 <li><a class="reference internal" href="#v0-7-0a3-alpha-3-2026-05-23">v0.7.0a3 (alpha 3) — 2026-05-23</a><ul>
 <li><a class="reference internal" href="#breaking-cloud-neutral-container-images">Breaking — cloud-neutral container images</a></li>
 <li><a class="reference internal" href="#highlights-since-v0-7-0a2">Highlights since v0.7.0a2</a></li>
-<li><a class="reference internal" href="#id1">Dependencies</a></li>
+<li><a class="reference internal" href="#id4">Dependencies</a></li>
 <li><a class="reference internal" href="#upgrade-from-v0-7-0a2">Upgrade from v0.7.0a2</a></li>
 <li><a class="reference internal" href="#alpha-caveats">Alpha caveats</a></li>
 </ul>
 </li>
 <li><a class="reference internal" href="#v0-7-0a2-alpha-2-2026-05-07">v0.7.0a2 (alpha 2) — 2026-05-07</a><ul>
 <li><a class="reference internal" href="#highlights-since-v0-7-0a1">Highlights since v0.7.0a1</a></li>
-<li><a class="reference internal" href="#id2">Dependencies</a></li>
+<li><a class="reference internal" href="#id5">Dependencies</a></li>
 <li><a class="reference internal" href="#upgrade-from-v0-7-0a1">Upgrade from v0.7.0a1</a></li>
-<li><a class="reference internal" href="#id3">Alpha caveats</a></li>
+<li><a class="reference internal" href="#id6">Alpha caveats</a></li>
 </ul>
 </li>
 <li><a class="reference internal" href="#v0-7-0a1-alpha-1-2026-05-04">v0.7.0a1 (alpha 1) — 2026-05-04</a><ul>
@@ -869,58 +915,58 @@
 </li>
 <li><a class="reference internal" href="#v0-6-1-2026-05-06">v0.6.1 — 2026-05-06</a><ul>
 <li><a class="reference internal" href="#changes-since-tag-v0-6-0">Changes since tag v0.6.0</a></li>
-<li><a class="reference internal" href="#id4">Dependencies</a></li>
-<li><a class="reference internal" href="#id5">Upgrade from v0.6.0</a></li>
+<li><a class="reference internal" href="#id7">Dependencies</a></li>
+<li><a class="reference internal" href="#id8">Upgrade from v0.6.0</a></li>
 </ul>
 </li>
 <li><a class="reference internal" href="#v0-6-0-2026-05-02">v0.6.0 — 2026-05-02</a><ul>
 <li><a class="reference internal" href="#changes-since-tag-v0-6-0rc2">Changes since tag v0.6.0rc2</a></li>
 <li><a class="reference internal" href="#highlights-carried-forward-from-the-0-6-rc-line">Highlights carried forward from the 0.6 RC line</a></li>
-<li><a class="reference internal" href="#id6">Dependencies</a></li>
+<li><a class="reference internal" href="#id9">Dependencies</a></li>
 <li><a class="reference internal" href="#upgrade-from-v0-6-0rc2-or-earlier-prereleases">Upgrade from v0.6.0rc2 or earlier prereleases</a></li>
 </ul>
 </li>
 <li><a class="reference internal" href="#v0-6-0rc1-release-candidate-1-2026-04-superseded-by-v0-6-0">v0.6.0rc1 (release candidate 1) — 2026-04 (superseded by v0.6.0)</a><ul>
 <li><a class="reference internal" href="#highlights-since-v0-3-0a1">Highlights since v0.3.0a1</a></li>
-<li><a class="reference internal" href="#id7">Dependencies</a></li>
+<li><a class="reference internal" href="#id10">Dependencies</a></li>
 <li><a class="reference internal" href="#upgrade-from-v0-3-0a1">Upgrade from v0.3.0a1</a></li>
-<li><a class="reference internal" href="#id8">Release candidate caveats</a></li>
+<li><a class="reference internal" href="#id11">Release candidate caveats</a></li>
 </ul>
 </li>
 <li><a class="reference internal" href="#v0-3-0a1-alpha-1-2026-04-16">v0.3.0a1 (alpha 1) — 2026-04-16</a><ul>
-<li><a class="reference internal" href="#id9">Highlights</a></li>
+<li><a class="reference internal" href="#id12">Highlights</a></li>
 <li><a class="reference internal" href="#upgrade-from-v0-2-0a6">Upgrade from v0.2.0a6</a></li>
-<li><a class="reference internal" href="#id10">Alpha caveats</a></li>
+<li><a class="reference internal" href="#id13">Alpha caveats</a></li>
 </ul>
 </li>
 <li><a class="reference internal" href="#v0-2-0a6-alpha-6-2026-04-13">v0.2.0a6 (alpha 6) — 2026-04-13</a><ul>
 <li><a class="reference internal" href="#upgrade-from-v0-2-0a5">Upgrade from v0.2.0a5</a></li>
-<li><a class="reference internal" href="#id11">Alpha caveats</a></li>
+<li><a class="reference internal" href="#id14">Alpha caveats</a></li>
 </ul>
 </li>
 <li><a class="reference internal" href="#v0-2-0a5-alpha-5-2026-04-12">v0.2.0a5 (alpha 5) — 2026-04-12</a><ul>
 <li><a class="reference internal" href="#upgrade-from-v0-2-0a4">Upgrade from v0.2.0a4</a></li>
-<li><a class="reference internal" href="#id12">Alpha caveats</a></li>
+<li><a class="reference internal" href="#id15">Alpha caveats</a></li>
 </ul>
 </li>
 <li><a class="reference internal" href="#v0-2-0a4-alpha-4-2026-04-12">v0.2.0a4 (alpha 4) — 2026-04-12</a><ul>
 <li><a class="reference internal" href="#upgrade-from-v0-2-0a3">Upgrade from v0.2.0a3</a></li>
-<li><a class="reference internal" href="#id13">Alpha caveats</a></li>
+<li><a class="reference internal" href="#id16">Alpha caveats</a></li>
 </ul>
 </li>
 <li><a class="reference internal" href="#v0-2-0a3-alpha-3-2026-04-12">v0.2.0a3 (alpha 3) — 2026-04-12</a><ul>
 <li><a class="reference internal" href="#upgrade-from-v0-2-0a2">Upgrade from v0.2.0a2</a></li>
-<li><a class="reference internal" href="#id14">Alpha caveats</a></li>
+<li><a class="reference internal" href="#id17">Alpha caveats</a></li>
 </ul>
 </li>
 <li><a class="reference internal" href="#v0-2-0a2-alpha-2-2026-04-11">v0.2.0a2 (alpha 2) — 2026-04-11</a><ul>
 <li><a class="reference internal" href="#upgrade-from-v0-2-0a1">Upgrade from v0.2.0a1</a></li>
-<li><a class="reference internal" href="#id15">Alpha caveats</a></li>
+<li><a class="reference internal" href="#id18">Alpha caveats</a></li>
 </ul>
 </li>
 <li><a class="reference internal" href="#v0-2-0a1-alpha-1-2026-04-11">v0.2.0a1 (alpha 1) — 2026-04-11</a><ul>
 <li><a class="reference internal" href="#highlights-since-v0-1-0a1">Highlights since v0.1.0a1</a></li>
-<li><a class="reference internal" href="#id16">Alpha caveats</a></li>
+<li><a class="reference internal" href="#id19">Alpha caveats</a></li>
 <li><a class="reference internal" href="#thanks">Thanks</a></li>
 </ul>
 </li>
@@ -928,8 +974,8 @@
 <li><a class="reference internal" href="#what-thaum-is">What Thaum is</a></li>
 <li><a class="reference internal" href="#highlights-in-this-alpha">Highlights in this alpha</a></li>
 <li><a class="reference internal" href="#documentation-layout">Documentation layout</a></li>
-<li><a class="reference internal" href="#id17">Alpha caveats</a></li>
-<li><a class="reference internal" href="#id18">Thanks</a></li>
+<li><a class="reference internal" href="#id20">Alpha caveats</a></li>
+<li><a class="reference internal" href="#id21">Thanks</a></li>
 </ul>
 </li>
 </ul>
@@ -943,7 +989,7 @@
       
     </aside>
   </div>
-</div><script src="_static/documentation_options.js?v=61228ca7"></script>
+</div><script src="_static/documentation_options.js?v=56da06cd"></script>
     <script src="_static/doctools.js?v=9bcbadda"></script>
     <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="_static/scripts/furo.js?v=46bd48cc"></script>

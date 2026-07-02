@@ -104,9 +104,18 @@ Thaum uses a layered configuration model.
   - ``incident_prompt_card_template`` (inline Jinja template)
   - Inline template takes precedence if both are set.
   - Templates render to JSON and are parsed before send; use ``|tojson`` for interpolated values.
-  - Jinja context includes ``team_description``, ``default_high_priority``,
-    ``show_priority_toggle`` (maps to Adaptive Cards ``isVisible`` on optional inputs),
+  - **Incident prompt card** Jinja context: ``team_description``, ``bot_name`` (from
+    config ``display_name``, else ``handle``), ``phone_number`` (display-only text),
+    ``send_alerts``, ``extra_card_text``, ``show_phone``, ``show_extra_card_text``,
+    ``default_high_priority``, ``show_priority_toggle`` (Adaptive Cards ``isVisible``),
     and ``base_url`` (resolved ``[server].base_url`` for absolute ``Image.url`` values).
+  - **`card_extra_text_template`** (optional) is pre-rendered separately; its context is
+    ``team_description``, ``bot_name``, ``phone_number``, ``send_alerts``,
+    ``default_high_priority`` only.
+  - **Room title / customer service** templates: ``summary``, ``requester_name``,
+    ``team_description``, ``date`` (unchanged).
+  - Default and sample cards use ``ColumnSet`` rows for bot name and phone; optional
+    rows are gated with ``isVisible``, not Jinja ``{% if %}`` blocks.
   - Bundled static assets are served at ``GET /static/<filename>`` (e.g.
     ``{{ base_url }}/static/Thaum_wizard_cgi.jpg`` in the sample template); hosts
     such as Webex require HTTPS URLs reachable from their network.

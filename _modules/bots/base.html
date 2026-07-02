@@ -351,6 +351,9 @@
         <span class="bp">self</span><span class="o">.</span><span class="n">customer_service_message_template</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">customer_service_message_template</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">incident_prompt_card_template</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">incident_prompt_card_template</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">incident_prompt_card_template_path</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">incident_prompt_card_template_path</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">display_name</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">display_name</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">phone_number</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">phone_number</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">card_extra_text_template</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">card_extra_text_template</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">emergency_warning_message</span> <span class="o">=</span> <span class="n">config</span><span class="o">.</span><span class="n">emergency_warning_message</span>
         <span class="c1"># Set by the server bootstrap code; shared by all bots on a server.</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">lookup_plugin</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="n">Any</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
@@ -616,6 +619,9 @@
 <span class="sd">        customer_service_message_template: Message posted while responders are paged.</span>
 <span class="sd">        incident_prompt_card_template: Inline Adaptive Card template JSON.</span>
 <span class="sd">        incident_prompt_card_template_path: Filesystem path to card template JSON.</span>
+<span class="sd">        display_name: Human-facing bot name for cards; not the @-mention ``handle``.</span>
+<span class="sd">        phone_number: Display-only phone text for cards (not E.164 / not dialable).</span>
+<span class="sd">        card_extra_text_template: Jinja string pre-rendered into optional card prose.</span>
 <span class="sd">        alert_type: Alert plugin module name under ``alerts.plugins``; use ``&quot;null&quot;``</span>
 <span class="sd">            when ``send_alerts`` is False.</span>
 <span class="sd">        team_description: Human-readable team name used in templates and alerts.</span>
@@ -635,6 +641,9 @@
     <span class="p">)</span>
     <span class="n">incident_prompt_card_template</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
     <span class="n">incident_prompt_card_template_path</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">display_name</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">phone_number</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
+    <span class="n">card_extra_text_template</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span>
     <span class="c1"># Alert plugin module name under ``alerts.plugins``; use ``null`` when send_alerts is False.</span>
     <span class="n">alert_type</span><span class="p">:</span> <span class="nb">str</span> <span class="o">=</span> <span class="s2">&quot;null&quot;</span>
     <span class="n">team_description</span><span class="p">:</span> <span class="nb">str</span>
@@ -704,7 +713,7 @@
       
     </aside>
   </div>
-</div><script src="../../_static/documentation_options.js?v=61228ca7"></script>
+</div><script src="../../_static/documentation_options.js?v=56da06cd"></script>
     <script src="../../_static/doctools.js?v=9bcbadda"></script>
     <script src="../../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../../_static/scripts/furo.js?v=46bd48cc"></script>
