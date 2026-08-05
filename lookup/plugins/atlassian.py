@@ -10,11 +10,12 @@ from types import SimpleNamespace
 from typing import Any, Dict, Iterator, List, Optional, Tuple
 
 import requests
-from pydantic import Field, model_validator
+from pydantic import Field, field_validator, model_validator
 from requests.auth import HTTPBasicAuth
 
 from lookup.base import BaseLookupPlugin, BaseLookupPluginConfig
 from thaum.http_timeouts import timeout_pair
+from thaum.https_url import normalize_https_base_url
 from thaum.types import LogLevel, OptionalResolvedSecret, ServerConfig, ThaumPerson, ThaumTeam
 
 # Platform id key shared with Jira alert integration and BaseLookupPlugin.resolve_responder_refs.
@@ -46,6 +47,13 @@ class AtlassianLookupPluginConfig(BaseLookupPluginConfig):
             "see thaum.http_timeouts.HTTP_CONNECT_TIMEOUT)."
         ),
     )
+
+    @field_validator("site_url", mode="after")
+    @classmethod
+    def _normalize_site_url(cls, v: Optional[str]) -> Optional[str]:
+        if v is None or not str(v).strip():
+            return v
+        return normalize_https_base_url(str(v))
 
     @model_validator(mode="after")
     def _require_atlassian_fields(self) -> AtlassianLookupPluginConfig:

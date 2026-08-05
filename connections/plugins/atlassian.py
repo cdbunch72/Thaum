@@ -6,9 +6,10 @@ from __future__ import annotations
 
 from typing import Literal, Optional
 
-from pydantic import Field
+from pydantic import Field, field_validator
 
 from connections.base import BaseConnectionConfig
+from thaum.https_url import normalize_https_base_url
 from thaum.types import OptionalResolvedSecret
 
 
@@ -42,6 +43,13 @@ class AtlassianConnectionConfig(BaseConnectionConfig):
         default=None,
         description="API token for ``user`` (Basic auth to site REST and compatible endpoints).",
     )
+
+    @field_validator("site_url", mode="after")
+    @classmethod
+    def _normalize_site_url(cls, v: Optional[str]) -> Optional[str]:
+        if v is None or not str(v).strip():
+            return v
+        return normalize_https_base_url(str(v))
 
 # -- End Class AtlassianConnectionConfig
 

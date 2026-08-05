@@ -33,6 +33,7 @@ import urllib.request
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Dict, Tuple
+from urllib.parse import urlparse
 
 try:
     import tomllib
@@ -91,13 +92,22 @@ def _canonical(route_id: str, epoch: int, nonce_hex: str, level: str) -> bytes:
 
 
 def _extract_route_from_post_url(post_url: str) -> str:
-    from urllib.parse import urlparse
-
     u = urlparse(post_url)
     parts = [p for p in u.path.split("/") if p]
     if len(parts) < 2 or parts[-1] != "log-level":
         raise ValueError("PostUrl path must end with /<RouteId>/log-level")
     return parts[-2]
+
+
+def _require_https_url(url: str, *, label: str) -> str:
+    """Reject non-https or hostless URLs (standalone; no Thaum import)."""
+    raw = (url or "").strip()
+    parsed = urlparse(raw)
+    if parsed.scheme.lower() != "https":
+        raise SystemExit(f"{label} must use https scheme.")
+    if not parsed.hostname:
+        raise SystemExit(f"{label} must include a hostname.")
+    return raw
 
 
 def _build_request(post_url: str, route_id: str, secret_b64u: str, loglevel_raw: str) -> Tuple[dict, dict]:
@@ -159,15 +169,16 @@ def main() -> int:
         raise SystemExit("HmacSecretB64Url is required (profile or --secret-b64url).")
 
     if post_url:
-        route_for_sign = _extract_route_from_post_url(post_url)
-        final_url = post_url
+        final_url = _require_https_url(post_url, label="PostUrl")
+        route_for_sign = _extract_route_from_post_url(final_url)
     else:
         if not base_url or not route_id:
             raise SystemExit("Need PostUrl or both BaseUrl and RouteId.")
         if not _ROUTE_RE.match(route_id):
             raise SystemExit("RouteId is invalid (expected 8-128 chars [A-Za-z0-9_-]).")
+        base_https = _require_https_url(base_url, label="BaseUrl")
         route_for_sign = route_id
-        final_url = f"{base_url.rstrip('/')}/{route_id}/log-level"
+        final_url = f"{base_https.rstrip('/')}/{route_id}/log-level"
 
     headers, body = _build_request(final_url, route_for_sign, secret, args.loglevel)
     req = urllib.request.Request(
@@ -176,7 +187,7 @@ def main() -> int:
         method="POST",
         headers=headers,
     )
-    with urllib.request.urlopen(req) as resp:
+    with urllib.request.urlopen(req, timeout=30) as resp:
         text = resp.read().decode("utf-8", errors="replace")
         if text.strip():
             print(text)
