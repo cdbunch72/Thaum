@@ -49,8 +49,8 @@ From a clean worktree on the commit you want to ship. The bare version must matc
 That will:
 
 1. Validate pins and write `dist/NOTES.md` from `RELEASE_NOTES.md`
-2. Write repo-root **`SHA256SUMS.txt`** in GNU text form (`HASH  PATH`, CRLF folded to LF) over runtime Python, `scripts/`, `docker/`, `Dockerfile`, `pyproject.toml`, and `requirements.txt` (not docs, tests, or repo metadata), detach-sign it with **`code@gemstone.software`**, and **commit** `SHA256SUMS.txt` plus `SHA256SUMS.txt.asc` before tagging (that git commit is not signed with `git-commit@`; the file signature is the `.asc`)
-3. Zip `thaum-utils` into `dist/`, write binary **`dist/SHA256SUMS.zip`** (`HASH *thaum-utils-<tag>.zip`), and detach-sign the zip and that sumfile with `code@`
+2. Write repo-root **`SHA256SUMS.txt`** in GNU text form (`HASH  PATH`, CRLF folded to LF) with a `#` header (version, UTC date, **hashed-commit** = `git rev-parse HEAD` at generate time, what is covered/omitted). Detach-sign with **`code@gemstone.software`**, and **commit** `SHA256SUMS.txt` plus `SHA256SUMS.txt.asc` before tagging (that git commit is not signed with `git-commit@`; the file signature is the `.asc`). The tag is usually `hashed-commit` or its child that only adds the sums files.
+3. Zip `thaum-utils` into `dist/`, write binary **`dist/SHA256SUMS.zip`** (`HASH *thaum-utils-<tag>.zip`) with the **same** version/date/hashed-commit header, and detach-sign the zip and that sumfile with `code@`
 4. `git tag -s v<version>`, push the checksum commit and tag
 5. `gh release create --verify-tag` with the zip, zip `.asc`, `dist/SHA256SUMS.zip` plus `.asc`, and the committed source checksum files (`--prerelease` when the version is not a final PEP 440 release)
 6. Build and push GHCR images, then `cosign sign --key` **by digest** (unless `--skip-images`)
@@ -71,6 +71,26 @@ cosign generate-key-pair --output-key-prefix .release/cosign
 ```
 
 `SKIP_LOGIN` is `--skip-login` on `publish-images.sh` (`-SkipLogin` in PowerShell). `THAUM_IMAGE` still overrides the default `ghcr.io/<owner>/<repo>` from `gh repo view`. `CONTAINER_ENGINE` forces `docker` or `podman`. `PYTHON_VERSION` defaults to `3.13`.
+
+Each sumfile starts with `#` comments GNU `sha256sum -c` ignores: **version**, UTC **date**, **hashed-commit** (the git object whose files were hashed, captured before the sums commit), **files**, **mode**, **covers** / **omits**. That header is the long-lived record of what the hashes actually cover.
+
+```
+# Thaum SHA256SUMS.txt
+# GNU sha256sum -c ignores '#' comment lines (coreutils >= 8.31)
+#
+# This file checksums committed Thaum source listed below.
+# It does not checksum this file, SHA256SUMS.txt.asc, the
+# thaum-utils zip, docs/, tests/, quickstart/, .github/,
+# .release/, samples, or other repo metadata.
+#
+# version: 0.7.0rc2
+# date: 2026-08-16T03:37:00Z
+# hashed-commit: <full SHA of HEAD at generate time>
+# files: 74
+# mode: text (CRLF/CR folded to LF before hashing; GNU form HASH  PATH)
+# covers: runtime Python (thaum/, alerts/, bots/, connections/, lookup/, and root *.py); scripts/; docker/; Dockerfile; pyproject.toml; requirements.txt
+# omits: docs/, tests/, quickstart/, .github/, .release/, samples, and other repo metadata
+```
 
 Verify:
 

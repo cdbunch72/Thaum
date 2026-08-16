@@ -13,6 +13,9 @@ Omitted from source sums: docs/, tests/, quickstart/, GitHub/release tooling.
 Binary (``--binary`` plus explicit files): ``HASH *PATH`` of exact bytes,
 for artifacts such as dist/thaum-utils-*.zip. Paths are relative to the
 sumfile directory so ``sha256sum -c`` works next to the files.
+
+Each file starts with ``#`` comment lines (version, UTC date, hashed-commit,
+what is covered) that GNU ``sha256sum -c`` ignores (coreutils >= 8.31).
 """
 
 from __future__ import annotations
@@ -20,8 +23,15 @@ from __future__ import annotations
 import argparse
 import hashlib
 import re
+import subprocess
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
+
+try:
+    import tomllib
+except ImportError:  # pragma: no cover
+    import tomli as tomllib  # type: ignore[no-redef]
 
 SKIP_DIR_NAMES = frozenset({"__pycache__", ".git"})
 SKIP_SUFFIXES = (".pyc", ".pyo", ".pyd")
@@ -30,6 +40,15 @@ TREE_DIRS = PACKAGE_DIRS + ("scripts", "docker")
 ROOT_FILES = ("Dockerfile", "pyproject.toml", "requirements.txt")
 SUMS_NAME = "SHA256SUMS.txt"
 LINE_RE = re.compile(r"^([0-9a-fA-F]{64}) ([ *])(.*)$")
+SOURCE_COVERS = (
+    "runtime Python (thaum/, alerts/, bots/, connections/, lookup/, "
+    "and root *.py); scripts/; docker/; Dockerfile; pyproject.toml; "
+    "requirements.txt"
+)
+SOURCE_OMITS = (
+    "docs/, tests/, quickstart/, .github/, .release/, samples, "
+    "and other repo metadata"
+)
 
 
 def repo_root() -> Path:
@@ -72,6 +91,94 @@ def file_sha256(path: Path, *, binary: bool) -> str:
     if not binary:
         data = data.replace(b"\r\n", b"\n").replace(b"\r", b"\n")
     return hashlib.sha256(data).hexdigest()
+
+
+def git_head(root: Path) -> str:
+    result = subprocess.run(
+        ["git", "-C", str(root), "rev-parse", "HEAD"],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode != 0:
+        err = (result.stderr or result.stdout or "git failed").strip()
+        raise SystemExit(f"git rev-parse HEAD failed: {err}")
+    sha = result.stdout.strip()
+    if not sha:
+        raise SystemExit("git rev-parse HEAD returned empty")
+    return sha
+
+
+def project_version(root: Path) -> str:
+    with (root / "pyproject.toml").open("rb") as fh:
+        version = tomllib.load(fh)["project"]["version"]
+    if not isinstance(version, str) or not version.strip():
+        raise SystemExit("pyproject.toml [project].version is missing")
+    return version.strip()
+
+
+def utc_now() -> str:
+    return datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def format_header(
+    *,
+    label: str,
+    version: str,
+    date: str,
+    hashed_commit: str,
+    binary: bool,
+    covers: str,
+    file_count: int,
+) -> str:
+    """GNU sha256sum -c ignores '# ...' lines (coreutils >= 8.31)."""
+    if binary:
+        what = (
+            "# This file checksums the exact bytes of the listed artifact(s)",
+            "# next to this sumfile. It does not checksum git source or",
+            "# SHA256SUMS.txt.",
+        )
+        mode = "binary (exact file bytes; GNU form HASH *PATH)"
+        verify = "cd dist && sha256sum -c SHA256SUMS.zip"
+        extra = [
+            "# note: checksums the packaged zip, not git blobs.",
+            "#   hashed-commit is the same generate-time HEAD as SHA256SUMS.txt.",
+        ]
+    else:
+        what = (
+            "# This file checksums committed Thaum source listed below.",
+            "# It does not checksum this file, SHA256SUMS.txt.asc, the",
+            "# thaum-utils zip, docs/, tests/, quickstart/, .github/,",
+            "# .release/, samples, or other repo metadata.",
+        )
+        mode = (
+            "text (CRLF/CR folded to LF before hashing; GNU form HASH  PATH)"
+        )
+        verify = "sha256sum -c SHA256SUMS.txt"
+        extra = [
+            f"# omits: {SOURCE_OMITS}",
+            "# note: hashed-commit is git rev-parse HEAD when these hashes",
+            "#   were generated (the tree whose files were hashed).",
+            "#   The signed tag usually points at that commit, or at its",
+            "#   child that only adds SHA256SUMS.txt and SHA256SUMS.txt.asc.",
+        ]
+    lines = [
+        f"# Thaum {label}",
+        "# GNU sha256sum -c ignores '#' comment lines (coreutils >= 8.31)",
+        "#",
+        *what,
+        "#",
+        f"# version: {version}",
+        f"# date: {date}",
+        f"# hashed-commit: {hashed_commit}",
+        f"# files: {file_count}",
+        f"# mode: {mode}",
+        f"# covers: {covers}",
+        *extra,
+        f"# verify: {verify}",
+        "#",
+    ]
+    return "\n".join(lines) + "\n"
 
 
 def gnu_line(digest: str, rel: str, *, binary: bool) -> str:
@@ -189,6 +296,21 @@ def main(argv: list[str] | None = None) -> int:
         help="Verify --output against current files instead of rewriting",
     )
     parser.add_argument(
+        "--version",
+        default="",
+        help="Release version for the header (default: pyproject.toml)",
+    )
+    parser.add_argument(
+        "--date",
+        default="",
+        help="UTC timestamp for the header (default: now, YYYY-MM-DDTHH:MM:SSZ)",
+    )
+    parser.add_argument(
+        "--hashed-commit",
+        default="",
+        help="git SHA whose files were hashed (default: git rev-parse HEAD)",
+    )
+    parser.add_argument(
         "files",
         nargs="*",
         help="Explicit files (use with --binary for dist/*.zip)",
@@ -212,11 +334,35 @@ def main(argv: list[str] | None = None) -> int:
         return check_sums(root, output, source=source)
 
     output.parent.mkdir(parents=True, exist_ok=True)
+    version = args.version.strip() or project_version(root)
+    date = args.date.strip() or utc_now()
+    hashed_commit = args.hashed_commit.strip() or git_head(root)
     if args.files:
         paths = [(root / f if not Path(f).is_absolute() else Path(f)) for f in args.files]
-        text = format_file_sums(paths, output, binary=True)
+        covers = ", ".join(path_for_sumfile(p, output) for p in paths)
+        body = format_file_sums(paths, output, binary=True)
+        header = format_header(
+            label=output.name,
+            version=version,
+            date=date,
+            hashed_commit=hashed_commit,
+            binary=True,
+            covers=covers,
+            file_count=sum(1 for line in body.splitlines() if line),
+        )
+        text = header + body
     else:
-        text = format_source_sums(root)
+        body = format_source_sums(root)
+        header = format_header(
+            label=output.name,
+            version=version,
+            date=date,
+            hashed_commit=hashed_commit,
+            binary=False,
+            covers=SOURCE_COVERS,
+            file_count=sum(1 for line in body.splitlines() if line),
+        )
+        text = header + body
     output.write_text(text, encoding="utf-8", newline="\n")
     try:
         shown = output.relative_to(root).as_posix()

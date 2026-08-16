@@ -105,8 +105,15 @@ fi
 
 SUMS="${ROOT}/SHA256SUMS.txt"
 SUMS_ASC="${SUMS}.asc"
+HASHED_COMMIT="$(git rev-parse HEAD)"
+SUMS_DATE="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+SUMS_META=(
+  --version "$THAUM_RELEASE_VERSION"
+  --date "$SUMS_DATE"
+  --hashed-commit "$HASHED_COMMIT"
+)
 
-"$PYTHON" "${ROOT}/.release/generate_checksums.py" --output "$SUMS"
+"$PYTHON" "${ROOT}/.release/generate_checksums.py" "${SUMS_META[@]}" --output "$SUMS"
 
 SUMS_CHANGED=1
 if git cat-file -e "HEAD:SHA256SUMS.txt" 2>/dev/null && git diff --quiet -- SHA256SUMS.txt; then
@@ -130,7 +137,8 @@ fi
 "${ROOT}/.release/package-thaum-utils.sh" "$THAUM_RELEASE_TAG"
 ZIP="${ROOT}/dist/thaum-utils-${THAUM_RELEASE_TAG}.zip"
 ZIP_SUMS="${ROOT}/dist/SHA256SUMS.zip"
-"$PYTHON" "${ROOT}/.release/generate_checksums.py" --binary --output "$ZIP_SUMS" "$ZIP"
+"$PYTHON" "${ROOT}/.release/generate_checksums.py" "${SUMS_META[@]}" \
+  --binary --output "$ZIP_SUMS" "$ZIP"
 "${ROOT}/.release/sign-artifacts.sh" --key "$CODE_KEY" "$ZIP" "$ZIP_SUMS"
 
 git tag -s -u "$GIT_COMMIT_KEY" -m "Thaum ${THAUM_RELEASE_TAG}" "$THAUM_RELEASE_TAG"

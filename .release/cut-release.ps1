@@ -74,8 +74,18 @@ if ($LASTEXITCODE -eq 0) {
 
 $sums = Join-Path $Root 'SHA256SUMS.txt'
 $sumsAsc = Join-Path $Root 'SHA256SUMS.txt.asc'
+$hashedCommit = (git rev-parse HEAD).Trim()
+if ($LASTEXITCODE -ne 0 -or -not $hashedCommit) {
+    throw 'git rev-parse HEAD failed'
+}
+$sumsDate = [datetime]::UtcNow.ToString("yyyy-MM-ddTHH:mm:ss'Z'")
+$sumsMeta = @(
+    '--version', [string] $meta.version,
+    '--date', $sumsDate,
+    '--hashed-commit', $hashedCommit
+)
 
-& $python.Source (Join-Path $Root '.release\generate_checksums.py') --output $sums
+& $python.Source (Join-Path $Root '.release\generate_checksums.py') @sumsMeta --output $sums
 if ($LASTEXITCODE -ne 0) {
     throw 'generate_checksums.py failed'
 }
@@ -113,7 +123,7 @@ Record SHA256SUMS signed by ${CodeKey} for ${tag}.
 & (Join-Path $PSScriptRoot 'package-thaum-utils.ps1') -Tag $tag
 $zip = Join-Path $Root "dist\thaum-utils-${tag}.zip"
 $zipSums = Join-Path $Root 'dist\SHA256SUMS.zip'
-& $python.Source (Join-Path $Root '.release\generate_checksums.py') --binary --output $zipSums $zip
+& $python.Source (Join-Path $Root '.release\generate_checksums.py') @sumsMeta --binary --output $zipSums $zip
 if ($LASTEXITCODE -ne 0) {
     throw 'generate_checksums.py --binary failed'
 }
