@@ -19,7 +19,7 @@ Unsigned smoke builds go to `thaum-debug` / `thaum-debug-external-db` via **Acti
 GPG keys (secret keys stay on this machine):
 
 - `git-commit@gemstone.software` — annotated signed git tags only (`git tag -s`)
-- `code@gemstone.software` — detached signature of `SHA256SUMS.txt` (source integrity) and of the `thaum-utils` zip
+- `code@gemstone.software` — detached signature of `SHA256SUMS.txt` (source), `dist/SHA256SUMS.zip` (utils zip), and of the zip itself
 
 Override keys on the command line (`--code-key`, `--git-commit-key`, `--cosign-key`); there are no environment-variable key overrides.
 
@@ -49,10 +49,10 @@ From a clean worktree on the commit you want to ship. The bare version must matc
 That will:
 
 1. Validate pins and write `dist/NOTES.md` from `RELEASE_NOTES.md`
-2. Write repo-root **`SHA256SUMS.txt`** in GNU `sha256sum -b` form (`HASH *PATH`) over runtime Python, `scripts/`, `docker/`, `Dockerfile`, `pyproject.toml`, and `requirements.txt` (not docs, tests, or repo metadata), detach-sign it with **`code@gemstone.software`**, and **commit** `SHA256SUMS.txt` plus `SHA256SUMS.txt.asc` before tagging (that git commit is not signed with `git-commit@`; the file signature is the `.asc`)
-3. Zip `thaum-utils` into `dist/` and detach-sign the zip (convenience asset, not what `SHA256SUMS.txt` covers)
+2. Write repo-root **`SHA256SUMS.txt`** in GNU text form (`HASH  PATH`, CRLF folded to LF) over runtime Python, `scripts/`, `docker/`, `Dockerfile`, `pyproject.toml`, and `requirements.txt` (not docs, tests, or repo metadata), detach-sign it with **`code@gemstone.software`**, and **commit** `SHA256SUMS.txt` plus `SHA256SUMS.txt.asc` before tagging (that git commit is not signed with `git-commit@`; the file signature is the `.asc`)
+3. Zip `thaum-utils` into `dist/`, write binary **`dist/SHA256SUMS.zip`** (`HASH *thaum-utils-<tag>.zip`), and detach-sign the zip and that sumfile with `code@`
 4. `git tag -s v<version>`, push the checksum commit and tag
-5. `gh release create --verify-tag` with the zip, zip `.asc`, and the committed checksum files (`--prerelease` when the version is not a final PEP 440 release)
+5. `gh release create --verify-tag` with the zip, zip `.asc`, `dist/SHA256SUMS.zip` plus `.asc`, and the committed source checksum files (`--prerelease` when the version is not a final PEP 440 release)
 6. Build and push GHCR images, then `cosign sign --key` **by digest** (unless `--skip-images`)
 
 Prerelease tags: `:<version> :devel :edge`. Stable adds `:latest`.
@@ -78,6 +78,8 @@ Verify:
 cosign verify --key .release/cosign.pub ghcr.io/<owner>/thaum@sha256:<digest>
 gpg --verify SHA256SUMS.txt.asc SHA256SUMS.txt
 sha256sum -c SHA256SUMS.txt
+gpg --verify dist/SHA256SUMS.zip.asc dist/SHA256SUMS.zip
+(cd dist && sha256sum -c SHA256SUMS.zip)
 gpg --verify dist/thaum-utils-v0.7.0rc2.zip.asc dist/thaum-utils-v0.7.0rc2.zip
 ```
 

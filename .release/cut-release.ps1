@@ -112,7 +112,12 @@ Record SHA256SUMS signed by ${CodeKey} for ${tag}.
 
 & (Join-Path $PSScriptRoot 'package-thaum-utils.ps1') -Tag $tag
 $zip = Join-Path $Root "dist\thaum-utils-${tag}.zip"
-& (Join-Path $PSScriptRoot 'sign-artifacts.ps1') -Key $CodeKey $zip
+$zipSums = Join-Path $Root 'dist\SHA256SUMS.zip'
+& $python.Source (Join-Path $Root '.release\generate_checksums.py') --binary --output $zipSums $zip
+if ($LASTEXITCODE -ne 0) {
+    throw 'generate_checksums.py --binary failed'
+}
+& (Join-Path $PSScriptRoot 'sign-artifacts.ps1') -Key $CodeKey $zip $zipSums
 
 git tag -s -u $GitCommitKey -m "Thaum ${tag}" $tag
 if ($LASTEXITCODE -ne 0) {
@@ -132,7 +137,7 @@ $ghArgs = @(
 if ($meta.prerelease) {
     $ghArgs += '--prerelease'
 }
-$ghArgs += @($zip, "${zip}.asc", $sums, "${sums}.asc")
+$ghArgs += @($zip, "${zip}.asc", $zipSums, "${zipSums}.asc", $sums, "${sums}.asc")
 & gh @ghArgs
 if ($LASTEXITCODE -ne 0) {
     throw 'gh release create failed'

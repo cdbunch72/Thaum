@@ -9,14 +9,14 @@ usage() {
 usage: cut-release.sh <bare-version> [options]
 
 Validate pins, write SHA256SUMS.txt, detach-sign it with code@gemstone.software,
-commit the sums (unsigned git commit; integrity is the code@ .asc), package and
-GPG-sign thaum-utils, create signed tag v<version> with
-git-commit@gemstone.software, publish the GitHub Release, and (unless
---skip-images) build/push/cosign GHCR images.
+commit the sums (unsigned git commit; integrity is the code@ .asc), package the
+zip, write binary dist/SHA256SUMS.zip, GPG-sign zip and both sum files, create
+signed tag v<version> with git-commit@gemstone.software, publish the GitHub
+Release, and (unless --skip-images) build/push/cosign GHCR images.
 
 Options:
   --skip-images              Do not build or push GHCR images
-  --code-key USER            GPG user id for SHA256SUMS.txt and the zip
+  --code-key USER            GPG user id for sum files and the zip
                              (default: code@gemstone.software)
   --git-commit-key USER      GPG user id for git tag -s
                              (default: git-commit@gemstone.software)
@@ -129,7 +129,9 @@ fi
 
 "${ROOT}/.release/package-thaum-utils.sh" "$THAUM_RELEASE_TAG"
 ZIP="${ROOT}/dist/thaum-utils-${THAUM_RELEASE_TAG}.zip"
-"${ROOT}/.release/sign-artifacts.sh" --key "$CODE_KEY" "$ZIP"
+ZIP_SUMS="${ROOT}/dist/SHA256SUMS.zip"
+"$PYTHON" "${ROOT}/.release/generate_checksums.py" --binary --output "$ZIP_SUMS" "$ZIP"
+"${ROOT}/.release/sign-artifacts.sh" --key "$CODE_KEY" "$ZIP" "$ZIP_SUMS"
 
 git tag -s -u "$GIT_COMMIT_KEY" -m "Thaum ${THAUM_RELEASE_TAG}" "$THAUM_RELEASE_TAG"
 git push origin HEAD "refs/tags/${THAUM_RELEASE_TAG}"
@@ -146,6 +148,8 @@ gh release create "$THAUM_RELEASE_TAG" \
   "${PRE[@]}" \
   "$ZIP" \
   "${ZIP}.asc" \
+  "$ZIP_SUMS" \
+  "${ZIP_SUMS}.asc" \
   "$SUMS" \
   "$SUMS_ASC"
 
