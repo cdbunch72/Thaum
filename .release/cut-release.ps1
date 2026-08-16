@@ -11,7 +11,8 @@
     Bare version without a leading v (e.g. 0.7.0rc2).
 
 .PARAMETER SkipImages
-    Package, sign, tag, and create the GitHub Release without building/pushing GHCR images.
+    Writes and commits signed SHA256SUMS.txt, then packages, tags, and publishes
+    without building/pushing GHCR images.
 #>
 [CmdletBinding()]
 param(
@@ -60,19 +61,56 @@ if ($LASTEXITCODE -eq 0) {
     throw "tag ${tag} already exists"
 }
 
+$gitKey = if ($env:GIT_COMMIT_SIGNING_KEY) { $env:GIT_COMMIT_SIGNING_KEY } else { 'git-commit@gemstone.software' }
+$sums = Join-Path $Root 'SHA256SUMS.txt'
+$sumsAsc = Join-Path $Root 'SHA256SUMS.txt.asc'
+
+& $python.Source (Join-Path $Root '.release\generate_checksums.py') --output $sums
+if ($LASTEXITCODE -ne 0) {
+    throw 'generate_checksums.py failed'
+}
+
+$sumsChanged = $true
+git cat-file -e 'HEAD:SHA256SUMS.txt' 2>$null | Out-Null
+if ($LASTEXITCODE -eq 0) {
+    git diff --quiet -- SHA256SUMS.txt
+    if ($LASTEXITCODE -eq 0) {
+        $sumsChanged = $false
+    }
+}
+if ($sumsChanged -or -not (Test-Path -LiteralPath $sumsAsc -PathType Leaf)) {
+    & (Join-Path $PSScriptRoot 'sign-artifacts.ps1') $sums
+}
+
+git add -- SHA256SUMS.txt SHA256SUMS.txt.asc
+if ($LASTEXITCODE -ne 0) {
+    throw 'git add SHA256SUMS failed'
+}
+git diff --cached --quiet -- SHA256SUMS.txt SHA256SUMS.txt.asc
+if ($LASTEXITCODE -eq 0) {
+    Write-Output 'SHA256SUMS.txt already committed'
+} else {
+    $msg = @"
+Record signed SHA256SUMS for ${tag}.
+
+"@
+    git commit -S -u $gitKey -m $msg
+    if ($LASTEXITCODE -ne 0) {
+        throw 'git commit of SHA256SUMS failed'
+    }
+}
+
 & (Join-Path $PSScriptRoot 'package-thaum-utils.ps1') -Tag $tag
 $zip = Join-Path $Root "dist\thaum-utils-${tag}.zip"
-$sums = Join-Path $Root 'dist\SHA256SUMS.txt'
-& (Join-Path $PSScriptRoot 'sign-artifacts.ps1') $zip $sums
+& (Join-Path $PSScriptRoot 'sign-artifacts.ps1') $zip
 
-$gitKey = if ($env:GIT_COMMIT_SIGNING_KEY) { $env:GIT_COMMIT_SIGNING_KEY } else { 'git-commit@gemstone.software' }
 git tag -s -u $gitKey -m "Thaum ${tag}" $tag
 if ($LASTEXITCODE -ne 0) {
     throw 'git tag -s failed'
 }
-git push origin "refs/tags/${tag}"
+git push origin HEAD "refs/tags/${tag}"
 if ($LASTEXITCODE -ne 0) {
-    throw 'git push of signed tag failed'
+    throw 'git push of checksum commit and signed tag failed'
 }
 
 $ghArgs = @(

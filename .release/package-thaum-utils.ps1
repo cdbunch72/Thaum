@@ -5,7 +5,7 @@
 # This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
 <#
 .SYNOPSIS
-    Package thaum-utils into dist/thaum-utils-<tag>.zip and SHA256SUMS.txt.
+    Package thaum-utils into dist/thaum-utils-<tag>.zip.
 
 .PARAMETER Tag
     Git/GitHub tag including the v prefix (e.g. v0.7.0rc2).
@@ -27,7 +27,6 @@ $Out = Join-Path $Root 'dist'
 $Staging = Join-Path $Out 'thaum-utils'
 $ZipName = "thaum-utils-${Tag}.zip"
 $ZipPath = Join-Path $Out $ZipName
-$SumsPath = Join-Path $Out 'SHA256SUMS.txt'
 
 if (Test-Path $Staging) {
     Remove-Item -Recurse -Force $Staging
@@ -42,9 +41,6 @@ Copy-Item (Join-Path $Root 'incident_prompt_card.sample.j2') $Staging
 if (Test-Path $ZipPath) {
     Remove-Item -Force $ZipPath
 }
-if (Test-Path $SumsPath) {
-    Remove-Item -Force $SumsPath
-}
 
 Push-Location $Out
 try {
@@ -57,12 +53,8 @@ try {
     } else {
         Compress-Archive -Path 'thaum-utils' -DestinationPath $ZipName
     }
-    $hash = (Get-FileHash -Algorithm SHA256 -Path $ZipName).Hash.ToLowerInvariant()
-    # GNU sha256sum text mode: two spaces between hash and filename
-    Set-Content -Path $SumsPath -Value "$hash  $ZipName" -Encoding ascii
 } finally {
     Pop-Location
 }
 
 Write-Output $ZipPath
-Write-Output $SumsPath

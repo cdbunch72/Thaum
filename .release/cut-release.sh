@@ -8,8 +8,9 @@ usage() {
   cat <<'EOF'
 usage: cut-release.sh <bare-version> [--skip-images]
 
-Validate pins, package and GPG-sign thaum-utils, create signed tag v<version>
-with git-commit@gemstone.software, publish the GitHub Release, and (unless
+Validate pins, write and commit signed SHA256SUMS.txt for source integrity,
+package (and GPG-sign) thaum-utils, create signed tag v<version> with
+git-commit@gemstone.software, publish the GitHub Release, and (unless
 --skip-images) build/push/cosign GHCR images.
 EOF
 }
@@ -78,14 +79,37 @@ if git rev-parse -q --verify "refs/tags/${THAUM_RELEASE_TAG}" >/dev/null; then
   exit 1
 fi
 
+GIT_KEY="${GIT_COMMIT_SIGNING_KEY:-git-commit@gemstone.software}"
+SUMS="${ROOT}/SHA256SUMS.txt"
+SUMS_ASC="${SUMS}.asc"
+
+"$PYTHON" "${ROOT}/.release/generate_checksums.py" --output "$SUMS"
+
+SUMS_CHANGED=1
+if git cat-file -e "HEAD:SHA256SUMS.txt" 2>/dev/null && git diff --quiet -- SHA256SUMS.txt; then
+  SUMS_CHANGED=0
+fi
+if [[ "$SUMS_CHANGED" -eq 1 || ! -f "$SUMS_ASC" ]]; then
+  "${ROOT}/.release/sign-artifacts.sh" "$SUMS"
+fi
+
+git add -- SHA256SUMS.txt SHA256SUMS.txt.asc
+if git diff --cached --quiet -- SHA256SUMS.txt SHA256SUMS.txt.asc; then
+  echo "SHA256SUMS.txt already committed"
+else
+  git commit -S -u "$GIT_KEY" -m "$(cat <<EOF
+Record signed SHA256SUMS for ${THAUM_RELEASE_TAG}.
+
+EOF
+)"
+fi
+
 "${ROOT}/.release/package-thaum-utils.sh" "$THAUM_RELEASE_TAG"
 ZIP="${ROOT}/dist/thaum-utils-${THAUM_RELEASE_TAG}.zip"
-SUMS="${ROOT}/dist/SHA256SUMS.txt"
-"${ROOT}/.release/sign-artifacts.sh" "$ZIP" "$SUMS"
+"${ROOT}/.release/sign-artifacts.sh" "$ZIP"
 
-GIT_KEY="${GIT_COMMIT_SIGNING_KEY:-git-commit@gemstone.software}"
 git tag -s -u "$GIT_KEY" -m "Thaum ${THAUM_RELEASE_TAG}" "$THAUM_RELEASE_TAG"
-git push origin "refs/tags/${THAUM_RELEASE_TAG}"
+git push origin HEAD "refs/tags/${THAUM_RELEASE_TAG}"
 
 PRE=()
 if [[ "${THAUM_RELEASE_PRERELEASE}" == "1" ]]; then
@@ -100,7 +124,7 @@ gh release create "$THAUM_RELEASE_TAG" \
   "$ZIP" \
   "${ZIP}.asc" \
   "$SUMS" \
-  "${SUMS}.asc"
+  "$SUMS_ASC"
 
 if [[ "$SKIP_IMAGES" -eq 0 ]]; then
   "${ROOT}/.release/publish-images.sh" "$VERSION"

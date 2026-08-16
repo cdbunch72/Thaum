@@ -41,7 +41,7 @@ classes, plus Sphinx and the Furo theme.
 
 Signed production images are **`ghcr.io/<owner>/thaum`** and **`thaum-external-db`** (bundled PostgreSQL + supervisord, and gunicorn-only). Maintainers publish them locally with [`.release/cut-release.sh`](.release/cut-release.sh) (or the PowerShell twin): GPG-signed `thaum-utils` zip on the GitHub Release, a signed git tag, then Docker/Podman build, push, and **cosign** by digest. See [`.release/README.md`](.release/README.md). Cloud-specific Python extras (for example `gemstone_utils[azure]` for experimental `azexp:` references) belong in **deploy-repo** images, not in the published Thaum tags—see [Thaum Cloud](https://gemstone-software-dev.github.io/thaum-cloud/).
 
-Each GitHub Release also includes **`thaum-utils-<tag>.zip`**, a detached `.asc` signature (`code@gemstone.software`), **`SHA256SUMS.txt`**, and **`SHA256SUMS.txt.asc`**. The archive contains a `thaum-utils/` folder with `quickstart/`, `docs/`, `scripts/`, `sample.thaum.toml`, and `incident_prompt_card.sample.j2`.
+Each GitHub Release includes **`thaum-utils-<tag>.zip`** (and a detached `.asc`). The archive contains a `thaum-utils/` folder with `quickstart/`, `docs/`, `scripts/`, `sample.thaum.toml`, and `incident_prompt_card.sample.j2`. Source integrity is **`SHA256SUMS.txt`** / **`SHA256SUMS.txt.asc`** in the tagged commit (runtime Python, `scripts/`, `docker/`, `Dockerfile`, `pyproject.toml`, `requirements.txt`), also attached to the release.
 
 Unsigned CI smoke images are **`thaum-debug`** and **`thaum-debug-external-db`**, published only from the **Debug images** workflow (`workflow_dispatch`). They never share tags with the signed packages.
 
