@@ -8,7 +8,7 @@ Cloud deploy documentation and example artifacts (Dockerfile, CI workflows, Azur
 | **Azure Container Apps quickstart** | https://gemstone-software-dev.github.io/thaum-cloud/quickstart/azure/quickstart_aca.html |
 | **Template repository** | https://github.com/gemstone-software-dev/thaum-cloud |
 
-Fork or copy **thaum-cloud** for org-specific `thaum.toml`, Dockerfile, and GitHub Actions. Upstream Thaum publishes **cloud-neutral** container images (`thaum`, `thaum-external-db`); see the main [README](../../README.md) “Container images (CI)”.
+Fork or copy **thaum-cloud** for org-specific `thaum.toml`, Dockerfile, and GitHub Actions. Upstream Thaum publishes **cloud-neutral** container images (`thaum`, `thaum-external-db`); see the main [README](../../README.md) “Container images”.
 
 For **Kubernetes** (any cluster), use the in-repo guide: [quickstart/kubernetes/README.md](../kubernetes/README.md).
 

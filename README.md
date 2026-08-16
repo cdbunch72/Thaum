@@ -33,23 +33,25 @@ classes, plus Sphinx and the Furo theme.
 - [Style guide](docs/STYLE_GUIDE.md) — code and test conventions.
 - [Admin log level API](docs/admin-log-level.md) — signed runtime log level changes.
 - [Release notes](RELEASE_NOTES.md)
+- [Cut a release](.release/README.md)
 
 **Container / load-balancer probes:** `GET /health` returns 200 when the process can serve HTTP (liveness). `GET /ready` returns 200 when the app can reach its database (`SELECT 1` via the normal SQLAlchemy pool); it returns 503 if the database check fails (readiness). Example: `curl -sf http://127.0.0.1:5165/health` and `curl -sf http://127.0.0.1:5165/ready` (adjust host/port to your bind).
 
-## Container images (CI)
+## Container images
 
-Publishing runs from [`.github/workflows/release.yml`](.github/workflows/release.yml) when a **GitHub Release is published** or when you **Run workflow** manually (`workflow_dispatch`). The job runs the unit tests, then builds [`Dockerfile`](Dockerfile) and pushes **two** image name variants to your registry (same tag scheme on each): the default image (bundled PostgreSQL + supervisord) and **`<name>-external-db`** (gunicorn only; set `[server.database].db_url`). Cloud-specific Python extras (for example `gemstone_utils[azure]` for experimental `azexp:` references) belong in **deploy-repo** images, not in the published Thaum tags—see [Thaum Cloud](https://gemstone-software-dev.github.io/thaum-cloud/).
+Signed production images are **`ghcr.io/<owner>/thaum`** and **`thaum-external-db`** (bundled PostgreSQL + supervisord, and gunicorn-only). Maintainers publish them locally with [`.release/cut-release.sh`](.release/cut-release.sh) (or the PowerShell twin): GPG-signed `thaum-utils` zip on the GitHub Release, a signed git tag, then Docker/Podman build, push, and **cosign** by digest. See [`.release/README.md`](.release/README.md). Cloud-specific Python extras (for example `gemstone_utils[azure]` for experimental `azexp:` references) belong in **deploy-repo** images, not in the published Thaum tags—see [Thaum Cloud](https://gemstone-software-dev.github.io/thaum-cloud/).
 
-On **GitHub Release publish** (including **prereleases**), the workflow also uploads **`thaum-utils-<release-tag>.zip`** to that release. The archive contains a `thaum-utils/` folder with `quickstart/`, `docs/`, `scripts/`, `sample.thaum.toml`, and `incident_prompt_card.sample.j2`.
+Each GitHub Release also includes **`thaum-utils-<tag>.zip`**, a detached `.asc` signature (`code@gemstone.software`), **`SHA256SUMS.txt`**, and **`SHA256SUMS.txt.asc`**. The archive contains a `thaum-utils/` folder with `quickstart/`, `docs/`, `scripts/`, `sample.thaum.toml`, and `incident_prompt_card.sample.j2`.
 
-| Tag | When it is updated | Use case |
-|-----|-------------------|----------|
-| **`<version>`** | Every **release** publish | Immutable tag matching `[project].version` in `pyproject.toml` (pin to a specific release). |
-| **`:latest`** | **Stable** release (not a GitHub prerelease) | Rolling tag for the latest stable release. |
-| **`:devel`** | **Prerelease** or **stable** release publish | On a **prerelease**, points at that prerelease image. On a **stable** release, updated to the **same digest as `:latest`** so it tracks the latest published release; the **next prerelease** moves `:devel` to that prerelease image. |
-| **`:edge`** | **Stable** or **prerelease** GitHub Release publish, or **manual** workflow from branch **`main`** | Always points at the **image from the most recent** of those events (same digest as that build’s version tag). Rolling “current” image for smoke tests and releases. |
-| **`:edge-<branch>`** | **Manual** workflow from any **other** branch | Same as `:edge`, but tag is **`edge-`** plus a sanitized branch name (e.g. `feature-foo` from `feature/foo`) so topic branches do not overwrite `:edge`. Long suffixes are truncated to fit registry tag limits. |
+Unsigned CI smoke images are **`thaum-debug`** and **`thaum-debug-external-db`**, published only from the **Debug images** workflow (`workflow_dispatch`). They never share tags with the signed packages.
 
-CI passes **`THAUM_IMAGE_VERSION`** and **`THAUM_IMAGE_CHANNEL`** into the image build; the runtime image sets OCI-style labels (`org.opencontainers.image.version`, `thaum.image.channel`). Inspect with `docker inspect` / `podman inspect` on a pulled image.
+| Image | Tag | When it is updated | Trust |
+|-------|-----|-------------------|--------|
+| **`thaum`** / **`thaum-external-db`** | **`<version>`** | Every local cut-release | Signed (cosign). Pin production here. |
+| | **`:latest`** | Stable cut-release (not a prerelease) | Signed. Rolling latest stable. |
+| | **`:devel`** | Prerelease or stable cut-release | Signed. On a prerelease, that build; on stable, same digest as `:latest`. |
+| | **`:edge`** | Every cut-release (stable or pre) | Signed. Most recently published (pre)release. |
+| **`thaum-debug`** / **`thaum-debug-external-db`** | **`:edge`** | **Debug images** dispatch from **`main`** | Unsigned. Do not use in production. |
+| | **`:edge-<branch>`** | **Debug images** dispatch from any other branch | Unsigned. Sanitized branch name (e.g. `feature-foo` from `feature/foo`). |
 
-By default images go to **GitHub Container Registry** (`ghcr.io/<owner>/<repo>`, lowercase). The workflow needs **`packages: write`** (already set) for GHCR. To use **Docker Hub** instead, run the workflow with inputs `registry: docker.io` and `image: docker.io/<user>/<name>`, and configure repository secrets **`DOCKERHUB_USERNAME`** and **`DOCKERHUB_TOKEN`**. Other registries can use secrets **`REGISTRY_USERNAME`** and **`REGISTRY_PASSWORD`** with the `registry` / `image` inputs.
+Build args **`THAUM_IMAGE_VERSION`** and **`THAUM_IMAGE_CHANNEL`** are baked into OCI-style labels (`org.opencontainers.image.version`, `thaum.image.channel`). Inspect with `docker inspect` / `podman inspect`. Verify a signed image with `cosign verify --key .release/cosign.pub <image>@<digest>` after you have committed the public key.

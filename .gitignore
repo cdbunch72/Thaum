@@ -204,3 +204,6 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# Cosign private key (commit .release/cosign.pub only)
+.release/cosign.key

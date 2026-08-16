@@ -1,0 +1,107 @@
+# SPDX-License-Identifier: MPL-2.0
+# Copyright 2026 Clinton Bunch
+name: Debug images
+
+on:
+  workflow_dispatch:
+    inputs:
+      python_version:
+        description: PYTHON_VERSION passed to the Dockerfile build-arg
+        type: string
+        default: "3.13"
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+
+      - name: Install package and dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install .
+
+      - name: Run tests
+        run: python -m unittest discover -s tests -t .
+
+  build-and-push:
+    runs-on: ubuntu-latest
+    needs: test
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Resolve debug image names and tags
+        run: |
+          set -euo pipefail
+          eval "$(python3 .release/release_meta.py project --format env)"
+          EDGE_TAG=$(python3 .release/release_meta.py edge-tag --ref-name "${{ github.ref_name }}")
+          REPO_LOWER=$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')
+          IMAGE="ghcr.io/${REPO_LOWER}-debug"
+          IMAGE_EXTERNAL="${IMAGE}-external-db"
+          PYVER="${{ github.event.inputs.python_version }}"
+          if [ -z "${PYVER}" ]; then
+            PYVER="3.13"
+          fi
+          {
+            echo "EDGE_TAG=${EDGE_TAG}"
+            echo "IMAGE=${IMAGE}"
+            echo "IMAGE_EXTERNAL=${IMAGE_EXTERNAL}"
+            echo "GEMSTONE_UTILS_REF=${GEMSTONE_UTILS_REF}"
+            echo "THAUM_IMAGE_VERSION=${THAUM_RELEASE_VERSION}"
+            echo "THAUM_IMAGE_CHANNEL=${EDGE_TAG}"
+            echo "PYTHON_VERSION=${PYVER}"
+          } >> "$GITHUB_ENV"
+
+      - name: Echo resolved image metadata
+        run: |
+          echo "IMAGE=${{ env.IMAGE }}"
+          echo "IMAGE_EXTERNAL=${{ env.IMAGE_EXTERNAL }}"
+          echo "THAUM_IMAGE_VERSION=${{ env.THAUM_IMAGE_VERSION }}"
+          echo "THAUM_IMAGE_CHANNEL=${{ env.THAUM_IMAGE_CHANNEL }}"
+          echo "PYTHON_VERSION=${{ env.PYTHON_VERSION }}"
+          echo "GEMSTONE_UTILS_REF=${{ env.GEMSTONE_UTILS_REF }}"
+          echo "TAG=${{ env.EDGE_TAG }}"
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Build and push debug image
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          push: true
+          build-args: |
+            PYTHON_VERSION=${{ env.PYTHON_VERSION }}
+            GEMSTONE_UTILS_REF=${{ env.GEMSTONE_UTILS_REF }}
+            THAUM_BUNDLED_POSTGRES=1
+            THAUM_IMAGE_VERSION=${{ env.THAUM_IMAGE_VERSION }}
+            THAUM_IMAGE_CHANNEL=${{ env.THAUM_IMAGE_CHANNEL }}
+          tags: ${{ env.IMAGE }}:${{ env.EDGE_TAG }}
+
+      - name: Build and push debug external-db image
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          push: true
+          build-args: |
+            PYTHON_VERSION=${{ env.PYTHON_VERSION }}
+            GEMSTONE_UTILS_REF=${{ env.GEMSTONE_UTILS_REF }}
+            THAUM_BUNDLED_POSTGRES=0
+            THAUM_IMAGE_VERSION=${{ env.THAUM_IMAGE_VERSION }}
+            THAUM_IMAGE_CHANNEL=${{ env.THAUM_IMAGE_CHANNEL }}
+          tags: ${{ env.IMAGE_EXTERNAL }}:${{ env.EDGE_TAG }}

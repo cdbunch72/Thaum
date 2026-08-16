@@ -4,7 +4,7 @@ Run Thaum on **any** conformant Kubernetes cluster (on-premises, EKS, GKE, AKS, 
 
 - Main quickstart index: [QUICKSTART.md](../QUICKSTART.md)
 - Example TOML (trim for ConfigMaps / secrets): [systemd/thaum.conf.example](../systemd/thaum.conf.example)
-- Container images and tags: [README.md](../../README.md) (*Container images (CI)*)
+- Container images and tags: [README.md](../../README.md) (*Container images*)
 - Architecture (election, bootstrap): [ARCHITECTURE.md](../../docs/ARCHITECTURE.md)
 
 ## Scope
