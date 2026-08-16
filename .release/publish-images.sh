@@ -6,19 +6,51 @@ set -euo pipefail
 
 usage() {
   cat <<'EOF'
-usage: publish-images.sh <bare-version>
+usage: publish-images.sh <bare-version> [--cosign-key PATH]
 
 Builds thaum and thaum-external-db, pushes version plus floating tags
 (devel/edge, and latest when stable), and cosign-signs each image digest.
-Requires docker or podman, gh, and cosign. COSIGN_KEY defaults to
-.release/cosign.key. Set SKIP_LOGIN=1 to skip ghcr.io login.
+Requires docker or podman, gh, and cosign. --cosign-key defaults to
+.release/cosign.key.
 EOF
 }
 
-VERSION="${1:-}"
-if [[ -z "$VERSION" || "$VERSION" == "-h" || "$VERSION" == "--help" ]]; then
-  usage
-  [[ -n "$VERSION" ]] && exit 0
+SKIP_LOGIN=0
+VERSION=""
+COSIGN_KEY=""
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --cosign-key)
+      COSIGN_KEY="${2:?publish-images.sh: --cosign-key requires a path}"
+      shift 2
+      ;;
+    --skip-login)
+      SKIP_LOGIN=1
+      shift
+      ;;
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    -*)
+      echo "unknown option: $1" >&2
+      usage >&2
+      exit 2
+      ;;
+    *)
+      if [[ -n "$VERSION" ]]; then
+        echo "unexpected argument: $1" >&2
+        usage >&2
+        exit 2
+      fi
+      VERSION="$1"
+      shift
+      ;;
+  esac
+done
+
+if [[ -z "$VERSION" ]]; then
+  usage >&2
   exit 2
 fi
 
@@ -40,7 +72,9 @@ if [[ -z "${THAUM_RELEASE_VERSION:-}" || "${THAUM_RELEASE_VERSION}" != "$VERSION
 fi
 
 PYTHON_VERSION="${PYTHON_VERSION:-3.13}"
-COSIGN_KEY="${COSIGN_KEY:-${ROOT}/.release/cosign.key}"
+if [[ -z "$COSIGN_KEY" ]]; then
+  COSIGN_KEY="${ROOT}/.release/cosign.key"
+fi
 if [[ ! -f "$COSIGN_KEY" ]]; then
   echo "cosign private key not found: ${COSIGN_KEY}" >&2
   echo "Generate with: cosign generate-key-pair --output-key-prefix ${ROOT}/.release/cosign" >&2
@@ -77,7 +111,7 @@ if [[ -z "${THAUM_IMAGE:-}" ]]; then
 fi
 IMAGE_EXTERNAL="${THAUM_IMAGE}-external-db"
 
-if [[ "${SKIP_LOGIN:-0}" != "1" ]]; then
+if [[ "$SKIP_LOGIN" != "1" ]]; then
   GHCR_USER="$(gh api user --jq .login)"
   gh auth token | "$ENGINE" login ghcr.io -u "$GHCR_USER" --password-stdin
 fi

@@ -1,16 +1,48 @@
 #!/usr/bin/env bash
 # SPDX-License-Identifier: MPL-2.0
 # Copyright 2026 Clinton Bunch
-# Detached-sign files with code@gemstone.software (or CODE_GPG_KEY).
+# Detached-sign files with code@gemstone.software (override with --key).
 set -euo pipefail
 
-if [[ $# -lt 1 ]]; then
-  echo "usage: sign-artifacts.sh <file> [file...]" >&2
+usage() {
+  echo "usage: sign-artifacts.sh [--key USER] <file> [file...]" >&2
+}
+
+KEY="code@gemstone.software"
+FILES=()
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --key)
+      KEY="${2:?sign-artifacts.sh: --key requires a GPG user id}"
+      shift 2
+      ;;
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    --)
+      shift
+      FILES+=("$@")
+      break
+      ;;
+    -*)
+      echo "unknown option: $1" >&2
+      usage
+      exit 2
+      ;;
+    *)
+      FILES+=("$1")
+      shift
+      ;;
+  esac
+done
+
+if [[ ${#FILES[@]} -lt 1 ]]; then
+  usage
   exit 2
 fi
 
-KEY="${CODE_GPG_KEY:-code@gemstone.software}"
-for f in "$@"; do
+for f in "${FILES[@]}"; do
   if [[ ! -f "$f" ]]; then
     echo "not a file: $f" >&2
     exit 1

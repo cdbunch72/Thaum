@@ -6,22 +6,46 @@ set -euo pipefail
 
 usage() {
   cat <<'EOF'
-usage: cut-release.sh <bare-version> [--skip-images]
+usage: cut-release.sh <bare-version> [options]
 
-Validate pins, write and commit signed SHA256SUMS.txt for source integrity,
-package (and GPG-sign) thaum-utils, create signed tag v<version> with
+Validate pins, write SHA256SUMS.txt, detach-sign it with code@gemstone.software,
+commit the sums (unsigned git commit; integrity is the code@ .asc), package and
+GPG-sign thaum-utils, create signed tag v<version> with
 git-commit@gemstone.software, publish the GitHub Release, and (unless
 --skip-images) build/push/cosign GHCR images.
+
+Options:
+  --skip-images              Do not build or push GHCR images
+  --code-key USER            GPG user id for SHA256SUMS.txt and the zip
+                             (default: code@gemstone.software)
+  --git-commit-key USER      GPG user id for git tag -s
+                             (default: git-commit@gemstone.software)
+  --cosign-key PATH          Cosign private key for publish-images.sh
 EOF
 }
 
 SKIP_IMAGES=0
 VERSION=""
+CODE_KEY="code@gemstone.software"
+GIT_COMMIT_KEY="git-commit@gemstone.software"
+COSIGN_KEY=""
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --skip-images)
       SKIP_IMAGES=1
       shift
+      ;;
+    --code-key)
+      CODE_KEY="${2:?cut-release.sh: --code-key requires a GPG user id}"
+      shift 2
+      ;;
+    --git-commit-key)
+      GIT_COMMIT_KEY="${2:?cut-release.sh: --git-commit-key requires a GPG user id}"
+      shift 2
+      ;;
+    --cosign-key)
+      COSIGN_KEY="${2:?cut-release.sh: --cosign-key requires a path}"
+      shift 2
       ;;
     -h|--help)
       usage
@@ -79,7 +103,6 @@ if git rev-parse -q --verify "refs/tags/${THAUM_RELEASE_TAG}" >/dev/null; then
   exit 1
 fi
 
-GIT_KEY="${GIT_COMMIT_SIGNING_KEY:-git-commit@gemstone.software}"
 SUMS="${ROOT}/SHA256SUMS.txt"
 SUMS_ASC="${SUMS}.asc"
 
@@ -90,15 +113,15 @@ if git cat-file -e "HEAD:SHA256SUMS.txt" 2>/dev/null && git diff --quiet -- SHA2
   SUMS_CHANGED=0
 fi
 if [[ "$SUMS_CHANGED" -eq 1 || ! -f "$SUMS_ASC" ]]; then
-  "${ROOT}/.release/sign-artifacts.sh" "$SUMS"
+  "${ROOT}/.release/sign-artifacts.sh" --key "$CODE_KEY" "$SUMS"
 fi
 
 git add -- SHA256SUMS.txt SHA256SUMS.txt.asc
 if git diff --cached --quiet -- SHA256SUMS.txt SHA256SUMS.txt.asc; then
   echo "SHA256SUMS.txt already committed"
 else
-  git commit -S -u "$GIT_KEY" -m "$(cat <<EOF
-Record signed SHA256SUMS for ${THAUM_RELEASE_TAG}.
+  git commit -m "$(cat <<EOF
+Record SHA256SUMS signed by ${CODE_KEY} for ${THAUM_RELEASE_TAG}.
 
 EOF
 )"
@@ -106,9 +129,9 @@ fi
 
 "${ROOT}/.release/package-thaum-utils.sh" "$THAUM_RELEASE_TAG"
 ZIP="${ROOT}/dist/thaum-utils-${THAUM_RELEASE_TAG}.zip"
-"${ROOT}/.release/sign-artifacts.sh" "$ZIP"
+"${ROOT}/.release/sign-artifacts.sh" --key "$CODE_KEY" "$ZIP"
 
-git tag -s -u "$GIT_KEY" -m "Thaum ${THAUM_RELEASE_TAG}" "$THAUM_RELEASE_TAG"
+git tag -s -u "$GIT_COMMIT_KEY" -m "Thaum ${THAUM_RELEASE_TAG}" "$THAUM_RELEASE_TAG"
 git push origin HEAD "refs/tags/${THAUM_RELEASE_TAG}"
 
 PRE=()
@@ -127,5 +150,9 @@ gh release create "$THAUM_RELEASE_TAG" \
   "$SUMS_ASC"
 
 if [[ "$SKIP_IMAGES" -eq 0 ]]; then
-  "${ROOT}/.release/publish-images.sh" "$VERSION"
+  if [[ -n "$COSIGN_KEY" ]]; then
+    "${ROOT}/.release/publish-images.sh" "$VERSION" --cosign-key "$COSIGN_KEY"
+  else
+    "${ROOT}/.release/publish-images.sh" "$VERSION"
+  fi
 fi

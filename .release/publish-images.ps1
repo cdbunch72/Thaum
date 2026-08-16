@@ -9,11 +9,19 @@
 
 .PARAMETER Version
     Bare version without a leading v (e.g. 0.7.0rc2).
+
+.PARAMETER CosignKey
+    Cosign private key file (default: .release/cosign.key).
+
+.PARAMETER SkipLogin
+    Do not run docker/podman login to ghcr.io.
 #>
 [CmdletBinding()]
 param(
     [Parameter(Mandatory = $true, Position = 0)]
-    [string] $Version
+    [string] $Version,
+    [string] $CosignKey,
+    [switch] $SkipLogin
 )
 
 Set-StrictMode -Version Latest
@@ -48,10 +56,12 @@ if ($needMeta) {
 }
 
 $pythonVersion = if ($env:PYTHON_VERSION) { $env:PYTHON_VERSION } else { '3.13' }
-$cosignKey = if ($env:COSIGN_KEY) { $env:COSIGN_KEY } else { Join-Path $Root '.release\cosign.key' }
-if (-not (Test-Path -LiteralPath $cosignKey -PathType Leaf)) {
+if (-not $CosignKey) {
+    $CosignKey = Join-Path $Root '.release\cosign.key'
+}
+if (-not (Test-Path -LiteralPath $CosignKey -PathType Leaf)) {
     throw @"
-cosign private key not found: $cosignKey
+cosign private key not found: $CosignKey
 Generate with: cosign generate-key-pair --output-key-prefix $($Root)\.release\cosign
 Commit the .pub file; keep the private key off GitHub.
 "@
@@ -89,7 +99,7 @@ if (-not $thaumImage) {
 }
 $imageExternal = "${thaumImage}-external-db"
 
-if ($env:SKIP_LOGIN -ne '1') {
+if (-not $SkipLogin) {
     $user = gh api user --jq .login
     if ($LASTEXITCODE -ne 0) {
         throw 'gh api user failed'
@@ -153,7 +163,7 @@ function Publish-Variant([string] $Image, [string] $Bundled) {
     }
 
     $digest = Get-ImageDigest $versionRef
-    & cosign sign --yes --key $cosignKey $digest
+    & cosign sign --yes --key $CosignKey $digest
     if ($LASTEXITCODE -ne 0) {
         throw "cosign sign failed for $digest"
     }

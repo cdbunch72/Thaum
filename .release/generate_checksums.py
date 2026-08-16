@@ -9,12 +9,16 @@ Dockerfile, pyproject.toml, requirements.txt.
 
 Omitted: docs/, tests/, quickstart/, GitHub/release tooling, and other
 repo metadata. SHA256SUMS.txt itself is never listed.
+
+Output is GNU ``sha256sum -b`` form (``HASH *PATH``) so ``sha256sum -c``
+verifies the same bytes Python hashed.
 """
 
 from __future__ import annotations
 
 import argparse
 import hashlib
+import re
 import sys
 from pathlib import Path
 
@@ -75,7 +79,7 @@ def format_sums(root: Path) -> str:
         rel = path.relative_to(root).as_posix()
         if rel in (SUMS_NAME, f"{SUMS_NAME}.asc"):
             continue
-        lines.append(f"{file_sha256(path)}  {rel}")
+        lines.append(f"{file_sha256(path)} *{rel}")
     if not lines:
         raise SystemExit("no files matched checksum coverage")
     return "\n".join(lines) + "\n"
@@ -86,15 +90,23 @@ def write_sums(root: Path, output: Path) -> None:
 
 
 def parse_sums(text: str) -> list[tuple[str, str]]:
+    """Parse GNU sha256sum output (text '  ' or binary ' *' marker)."""
     rows: list[tuple[str, str]] = []
     for lineno, line in enumerate(text.splitlines(), start=1):
         if not line or line.startswith("#"):
             continue
-        if "  " not in line:
-            raise SystemExit(f"SHA256SUMS.txt:{lineno}: expected 'HASH  PATH'")
-        digest, rel = line.split("  ", 1)
-        if len(digest) != 64:
-            raise SystemExit(f"SHA256SUMS.txt:{lineno}: not a SHA-256 hex digest")
+        if line.startswith("\\"):
+            raise SystemExit(
+                f"SHA256SUMS.txt:{lineno}: escaped filenames are not supported"
+            )
+        match = re.match(r"^([0-9a-fA-F]{64}) ([ *])(.*)$", line)
+        if not match:
+            raise SystemExit(
+                f"SHA256SUMS.txt:{lineno}: expected GNU 'HASH  PATH' or 'HASH *PATH'"
+            )
+        digest, _marker, rel = match.group(1), match.group(2), match.group(3)
+        if not rel:
+            raise SystemExit(f"SHA256SUMS.txt:{lineno}: empty path")
         rows.append((digest.lower(), rel))
     return rows
 

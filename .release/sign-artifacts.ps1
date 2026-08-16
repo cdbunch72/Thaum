@@ -5,13 +5,17 @@
 # This Source Code Form is subject to the terms of the Mozilla Public License, v. 2.0.
 <#
 .SYNOPSIS
-    Create ASCII-armored detached GPG signatures with code@gemstone.software.
+    Create ASCII-armored detached GPG signatures.
+
+.PARAMETER Key
+    GPG user id (default: code@gemstone.software). Do not use git-commit@ for artifacts.
 
 .PARAMETER Path
     Files to sign. Each input FILE produces FILE.asc.
 #>
 [CmdletBinding()]
 param(
+    [string] $Key = 'code@gemstone.software',
     [Parameter(Mandatory = $true, Position = 0, ValueFromRemainingArguments = $true)]
     [string[]] $Path
 )
@@ -23,10 +27,8 @@ if (Test-Path variable:PSNativeCommandUseErrorActionPreference) {
 }
 
 if (-not $Path -or $Path.Count -lt 1) {
-    throw 'usage: sign-artifacts.ps1 <file> [file...]'
+    throw 'usage: sign-artifacts.ps1 [-Key USER] <file> [file...]'
 }
-
-$Key = if ($env:CODE_GPG_KEY) { $env:CODE_GPG_KEY } else { 'code@gemstone.software' }
 
 foreach ($f in $Path) {
     if (-not (Test-Path -LiteralPath $f -PathType Leaf)) {

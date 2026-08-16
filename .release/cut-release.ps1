@@ -11,14 +11,25 @@
     Bare version without a leading v (e.g. 0.7.0rc2).
 
 .PARAMETER SkipImages
-    Writes and commits signed SHA256SUMS.txt, then packages, tags, and publishes
-    without building/pushing GHCR images.
+    Do not build or push GHCR images.
+
+.PARAMETER CodeKey
+    GPG user id for SHA256SUMS.txt and the zip (default: code@gemstone.software).
+
+.PARAMETER GitCommitKey
+    GPG user id for git tag -s (default: git-commit@gemstone.software).
+
+.PARAMETER CosignKey
+    Cosign private key path forwarded to publish-images.ps1.
 #>
 [CmdletBinding()]
 param(
     [Parameter(Mandatory = $true, Position = 0)]
     [string] $Version,
-    [switch] $SkipImages
+    [switch] $SkipImages,
+    [string] $CodeKey = 'code@gemstone.software',
+    [string] $GitCommitKey = 'git-commit@gemstone.software',
+    [string] $CosignKey
 )
 
 Set-StrictMode -Version Latest
@@ -61,7 +72,6 @@ if ($LASTEXITCODE -eq 0) {
     throw "tag ${tag} already exists"
 }
 
-$gitKey = if ($env:GIT_COMMIT_SIGNING_KEY) { $env:GIT_COMMIT_SIGNING_KEY } else { 'git-commit@gemstone.software' }
 $sums = Join-Path $Root 'SHA256SUMS.txt'
 $sumsAsc = Join-Path $Root 'SHA256SUMS.txt.asc'
 
@@ -79,7 +89,7 @@ if ($LASTEXITCODE -eq 0) {
     }
 }
 if ($sumsChanged -or -not (Test-Path -LiteralPath $sumsAsc -PathType Leaf)) {
-    & (Join-Path $PSScriptRoot 'sign-artifacts.ps1') $sums
+    & (Join-Path $PSScriptRoot 'sign-artifacts.ps1') -Key $CodeKey $sums
 }
 
 git add -- SHA256SUMS.txt SHA256SUMS.txt.asc
@@ -91,10 +101,10 @@ if ($LASTEXITCODE -eq 0) {
     Write-Output 'SHA256SUMS.txt already committed'
 } else {
     $msg = @"
-Record signed SHA256SUMS for ${tag}.
+Record SHA256SUMS signed by ${CodeKey} for ${tag}.
 
 "@
-    git commit -S -u $gitKey -m $msg
+    git commit -m $msg
     if ($LASTEXITCODE -ne 0) {
         throw 'git commit of SHA256SUMS failed'
     }
@@ -102,9 +112,9 @@ Record signed SHA256SUMS for ${tag}.
 
 & (Join-Path $PSScriptRoot 'package-thaum-utils.ps1') -Tag $tag
 $zip = Join-Path $Root "dist\thaum-utils-${tag}.zip"
-& (Join-Path $PSScriptRoot 'sign-artifacts.ps1') $zip
+& (Join-Path $PSScriptRoot 'sign-artifacts.ps1') -Key $CodeKey $zip
 
-git tag -s -u $gitKey -m "Thaum ${tag}" $tag
+git tag -s -u $GitCommitKey -m "Thaum ${tag}" $tag
 if ($LASTEXITCODE -ne 0) {
     throw 'git tag -s failed'
 }
@@ -129,5 +139,10 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 if (-not $SkipImages) {
-    & (Join-Path $PSScriptRoot 'publish-images.ps1') -Version $Version
+    $publish = Join-Path $PSScriptRoot 'publish-images.ps1'
+    if ($CosignKey) {
+        & $publish -Version $Version -CosignKey $CosignKey
+    } else {
+        & $publish -Version $Version
+    }
 }
